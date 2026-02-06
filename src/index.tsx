@@ -42,7 +42,7 @@ app.get('/', (c) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EXIT 시스템 - 교도소 도서 판매 관리</title>
+    <title>엑시트 시스템 - EXIT System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -90,8 +90,8 @@ app.get('/', (c) => {
         <div class="bg-white p-8 rounded-lg shadow-2xl w-96">
             <div class="text-center mb-8">
                 <i class="fas fa-door-open text-6xl text-blue-500 mb-4"></i>
-                <h1 class="text-3xl font-bold text-gray-800">EXIT 시스템</h1>
-                <p class="text-gray-600 mt-2">교도소 도서 판매 관리 시스템</p>
+                <h1 class="text-3xl font-bold text-gray-800">엑시트 시스템</h1>
+                <p class="text-gray-600 mt-2">EXIT System - Integrated Management</p>
             </div>
             <form id="login-form" class="space-y-4">
                 <div>
@@ -119,8 +119,8 @@ app.get('/', (c) => {
                 <div class="flex items-center space-x-3">
                     <i class="fas fa-door-open text-3xl text-blue-500"></i>
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-800">EXIT 시스템</h1>
-                        <p class="text-sm text-gray-600">교도소 도서 판매 관리</p>
+                        <h1 class="text-2xl font-bold text-gray-800">엑시트 시스템</h1>
+                        <p class="text-sm text-gray-600">EXIT System</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
@@ -376,6 +376,227 @@ app.get('/', (c) => {
                 <div id="staff-list" class="space-y-4"></div>
             </div>
         </main>
+
+        <!-- 모달들 -->
+        
+        <!-- 경기 등록 모달 -->
+        <div id="new-match-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-futbol mr-2"></i>경기 등록</h3>
+                        <button onclick="closeNewMatchModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">경기명 *</label>
+                            <input type="text" id="match-name" class="w-full px-3 py-2 border rounded" placeholder="예: EPL 맨유 vs 리버풀">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1">경기 일시 *</label>
+                            <input type="datetime-local" id="match-date" class="w-full px-3 py-2 border rounded">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">홈 팀 *</label>
+                                <input type="text" id="home-team" class="w-full px-3 py-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">원정 팀 *</label>
+                                <input type="text" id="away-team" class="w-full px-3 py-2 border rounded">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">배팅 유형 *</label>
+                            <select id="betting-type" class="w-full px-3 py-2 border rounded" onchange="toggleBettingFields()">
+                                <option value="win_draw_lose">승무패</option>
+                                <option value="over_under">언오버</option>
+                                <option value="handicap">핸디캡</option>
+                            </select>
+                        </div>
+
+                        <!-- 승무패 배당률 -->
+                        <div id="win-draw-lose-fields">
+                            <label class="block text-sm font-medium mb-2">배당률 설정</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-600">홈 승</label>
+                                    <input type="number" id="home-odds" class="w-full px-3 py-2 border rounded" step="0.01" value="1.0">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">무승부</label>
+                                    <input type="number" id="draw-odds" class="w-full px-3 py-2 border rounded" step="0.01" value="1.0">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">원정 승</label>
+                                    <input type="number" id="away-odds" class="w-full px-3 py-2 border rounded" step="0.01" value="1.0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 언오버 설정 -->
+                        <div id="over-under-fields" class="hidden">
+                            <label class="block text-sm font-medium mb-2">언오버 설정</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-600">기준 점수</label>
+                                    <input type="number" id="over-under-line" class="w-full px-3 py-2 border rounded" step="0.5" value="2.5">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">오버 배당</label>
+                                    <input type="number" id="over-odds" class="w-full px-3 py-2 border rounded" step="0.01" value="1.0">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">언더 배당</label>
+                                    <input type="number" id="under-odds" class="w-full px-3 py-2 border rounded" step="0.01" value="1.0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 핸디캡 설정 -->
+                        <div id="handicap-fields" class="hidden">
+                            <label class="block text-sm font-medium mb-2">핸디캡 설정</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-600">핸디캡</label>
+                                    <input type="number" id="handicap-line" class="w-full px-3 py-2 border rounded" step="0.5" value="0">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">홈 배당</label>
+                                    <input type="number" id="handicap-home-odds" class="w-full px-3 py-2 border rounded" step="0.01" value="1.0">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">원정 배당</label>
+                                    <input type="number" id="handicap-away-odds" class="w-full px-3 py-2 border rounded" step="0.01" value="1.0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-2 mt-6">
+                            <button onclick="closeNewMatchModal()" class="btn btn-secondary">취소</button>
+                            <button onclick="createMatch()" class="btn btn-primary">등록</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 경기 결과 입력 모달 -->
+        <div id="match-result-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-md w-full p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold"><i class="fas fa-trophy mr-2"></i>경기 결과 입력</h3>
+                    <button onclick="closeMatchResultModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">경기 결과 선택</label>
+                        <select id="match-result" class="w-full px-3 py-2 border rounded">
+                            <option value="">선택하세요</option>
+                            <option value="home_win">홈 팀 승리</option>
+                            <option value="draw">무승부</option>
+                            <option value="away_win">원정 팀 승리</option>
+                            <option value="over">오버</option>
+                            <option value="under">언더</option>
+                            <option value="handicap_home">핸디캡 홈 승</option>
+                            <option value="handicap_away">핸디캡 원정 승</option>
+                            <option value="cancelled">취소</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="closeMatchResultModal()" class="btn btn-secondary">취소</button>
+                        <button onclick="submitMatchResult()" class="btn btn-primary">결과 입력</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 티켓 상세 모달 (배팅 폴더 포함) -->
+        <div id="ticket-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>티켓 상세</h3>
+                            <p class="text-sm text-gray-600">
+                                <span id="modal-ticket-number" class="font-mono"></span> - 
+                                <span id="modal-ticket-title"></span>
+                            </p>
+                            <p class="text-xs text-gray-500">회원: <span id="modal-ticket-member"></span></p>
+                        </div>
+                        <button onclick="closeTicketDetail()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- 배팅 접수 -->
+                        <div class="card">
+                            <h4 class="font-bold mb-3">
+                                <i class="fas fa-trophy mr-2"></i>배팅 접수
+                                <span class="text-sm text-gray-600 ml-2">
+                                    (잔액: <span id="member-betting-points">0</span>원)
+                                </span>
+                            </h4>
+                            
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-2">경기 선택 (<span id="folder-type-display">단폴더</span>)</label>
+                                <div id="betting-matches-list" class="space-y-2 max-h-96 overflow-y-auto border rounded p-2">
+                                    로딩중...
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">배팅 금액</label>
+                                    <input 
+                                        type="number" 
+                                        id="folder-bet-amount" 
+                                        class="w-full px-3 py-2 border rounded" 
+                                        placeholder="배팅 금액 입력"
+                                        oninput="updatePotentialWin()"
+                                    >
+                                </div>
+
+                                <div class="bg-blue-50 p-3 rounded">
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span>총 배당률:</span>
+                                        <span id="total-odds-display" class="font-bold">1.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span>예상 당첨금:</span>
+                                        <span id="potential-win-display" class="font-bold text-green-600">0원</span>
+                                    </div>
+                                </div>
+
+                                <button onclick="submitBetFolder()" class="btn btn-primary w-full">
+                                    <i class="fas fa-check mr-2"></i>배팅 접수
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 배팅 내역 -->
+                        <div class="card">
+                            <h4 class="font-bold mb-3"><i class="fas fa-history mr-2"></i>배팅 내역</h4>
+                            <div id="betting-history-list" class="space-y-2 max-h-[500px] overflow-y-auto">
+                                로딩중...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- JavaScript -->
@@ -887,14 +1108,408 @@ app.get('/', (c) => {
         }
 
         // 모달 함수들 (구현 필요)
+        // 헬퍼 함수들
+        function getStatusText(status) {
+            const map = {
+                'pending': '대기',
+                'won': '당첨',
+                'lost': '낙첨',
+                'cancelled': '취소',
+                'settled': '정산완료'
+            }
+            return map[status] || status
+        }
+
+        function getBetTypeText(type) {
+            const map = {
+                'home_win': '홈 승',
+                'away_win': '원정 승',
+                'draw': '무승부',
+                'over': '오버',
+                'under': '언더',
+                'handicap_home': '핸디캡 홈',
+                'handicap_away': '핸디캡 원정'
+            }
+            return map[type] || type
+        }
+
+        // 경기 등록 모달
+        function showNewMatchModal() {
+            document.getElementById('new-match-modal').classList.remove('hidden')
+        }
+
+        function closeNewMatchModal() {
+            document.getElementById('new-match-modal').classList.add('hidden')
+        }
+
+        async function createMatch() {
+            const matchName = document.getElementById('match-name').value
+            const matchDate = document.getElementById('match-date').value
+            const homeTeam = document.getElementById('home-team').value
+            const awayTeam = document.getElementById('away-team').value
+            const bettingType = document.getElementById('betting-type').value
+
+            if (!matchName || !matchDate || !homeTeam || !awayTeam) {
+                alert('필수 항목을 입력해주세요.')
+                return
+            }
+
+            const data = {
+                match_name: matchName,
+                match_date: matchDate,
+                home_team: homeTeam,
+                away_team: awayTeam,
+                betting_type: bettingType
+            }
+
+            // 배당률 입력
+            if (bettingType === 'win_draw_lose') {
+                data.home_odds = parseFloat(document.getElementById('home-odds').value) || 1.0
+                data.away_odds = parseFloat(document.getElementById('away-odds').value) || 1.0
+                data.draw_odds = parseFloat(document.getElementById('draw-odds').value) || 1.0
+            } else if (bettingType === 'over_under') {
+                data.over_under_line = parseFloat(document.getElementById('over-under-line').value) || 2.5
+                data.over_odds = parseFloat(document.getElementById('over-odds').value) || 1.0
+                data.under_odds = parseFloat(document.getElementById('under-odds').value) || 1.0
+            } else if (bettingType === 'handicap') {
+                data.handicap_line = parseFloat(document.getElementById('handicap-line').value) || 0
+                data.handicap_home_odds = parseFloat(document.getElementById('handicap-home-odds').value) || 1.0
+                data.handicap_away_odds = parseFloat(document.getElementById('handicap-away-odds').value) || 1.0
+            }
+
+            try {
+                await axios.post(\`\${API_BASE}/betting/matches\`, data)
+                alert('경기가 등록되었습니다.')
+                closeNewMatchModal()
+                if (currentView === 'betting') await loadBetting()
+            } catch (error) {
+                alert('경기 등록 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 경기 결과 입력 모달
+        let currentMatchId = null
+
+        function showMatchResultModal(matchId) {
+            currentMatchId = matchId
+            document.getElementById('match-result-modal').classList.remove('hidden')
+        }
+
+        function closeMatchResultModal() {
+            currentMatchId = null
+            document.getElementById('match-result-modal').classList.add('hidden')
+        }
+
+        async function submitMatchResult() {
+            const result = document.getElementById('match-result').value
+
+            if (!result) {
+                alert('결과를 선택해주세요.')
+                return
+            }
+
+            try {
+                await axios.post(\`\${API_BASE}/betting/matches/\${currentMatchId}/result\`, { result })
+                alert('경기 결과가 입력되고 자동 정산이 완료되었습니다.')
+                closeMatchResultModal()
+                if (currentView === 'betting') await loadBetting()
+            } catch (error) {
+                alert('결과 입력 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 정산 승인/거부
+        async function approveSettlement(settlementId) {
+            if (!confirm('이 정산을 승인하시겠습니까?')) return
+
+            try {
+                await axios.post(\`\${API_BASE}/betting/settlements/\${settlementId}/approve\`, {
+                    approved_by: currentStaff.id
+                })
+                alert('정산이 승인되었습니다.')
+                if (currentView === 'betting') await loadBetting()
+            } catch (error) {
+                alert('승인 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        async function rejectSettlement(settlementId) {
+            const reason = prompt('거부 사유를 입력해주세요:')
+            if (!reason) return
+
+            try {
+                await axios.post(\`\${API_BASE}/betting/settlements/\${settlementId}/reject\`, {
+                    rejected_by: currentStaff.id,
+                    reject_reason: reason
+                })
+                alert('정산이 거부되었습니다.')
+                if (currentView === 'betting') await loadBetting()
+            } catch (error) {
+                alert('거부 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 티켓 상세 모달 (배팅 폴더 포함)
+        let currentTicketId = null
+        let selectedMatches = [] // 다폴더용 선택된 경기들
+
+        async function showTicketDetail(ticketId) {
+            currentTicketId = ticketId
+            selectedMatches = []
+            
+            try {
+                const [ticketRes, matchesRes] = await Promise.all([
+                    axios.get(\`\${API_BASE}/tickets/\${ticketId}\`),
+                    axios.get(\`\${API_BASE}/betting/matches?status=scheduled\`)
+                ])
+
+                const ticket = ticketRes.data.ticket
+                const matches = matchesRes.data.matches || []
+
+                // 티켓 기본 정보
+                document.getElementById('modal-ticket-number').textContent = ticket.ticket_number
+                document.getElementById('modal-ticket-title').textContent = ticket.title
+                document.getElementById('modal-ticket-member').textContent = ticket.member_name || '-'
+
+                // 회원 배팅 포인트 로드
+                if (ticket.member_id) {
+                    const memberRes = await axios.get(\`\${API_BASE}/members/\${ticket.member_id}\`)
+                    document.getElementById('member-betting-points').textContent = 
+                        memberRes.data.member.betting_points.toLocaleString()
+                }
+
+                // 경기 목록 표시
+                const matchesHtml = matches.map(m => {
+                    let oddsInfo = ''
+                    if (m.betting_type === 'win_draw_lose') {
+                        oddsInfo = \`홈승: \${m.home_odds} | 무: \${m.draw_odds || '-'} | 원정승: \${m.away_odds}\`
+                    } else if (m.betting_type === 'over_under') {
+                        oddsInfo = \`기준: \${m.over_under_line} | 오버: \${m.over_odds} | 언더: \${m.under_odds}\`
+                    } else if (m.betting_type === 'handicap') {
+                        oddsInfo = \`핸디: \${m.handicap_line} | 홈: \${m.handicap_home_odds} | 원정: \${m.handicap_away_odds}\`
+                    }
+
+                    return \`
+                        <div class="border rounded p-3 hover:bg-gray-50 cursor-pointer" onclick="toggleMatchSelection(\${m.id})">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" id="match-select-\${m.id}" class="mr-2" disabled>
+                                        <h4 class="font-bold">\${m.match_name}</h4>
+                                    </div>
+                                    <p class="text-sm text-gray-600 ml-6">\${m.home_team} vs \${m.away_team}</p>
+                                    <p class="text-xs text-gray-500 ml-6">\${new Date(m.match_date).toLocaleString()}</p>
+                                    <p class="text-xs text-blue-600 ml-6 mt-1">\${oddsInfo}</p>
+                                </div>
+                            </div>
+                            <div id="bet-selection-\${m.id}" class="hidden mt-3 ml-6 space-y-2">
+                                \${getBetTypeOptions(m)}
+                            </div>
+                        </div>
+                    \`
+                }).join('')
+
+                document.getElementById('betting-matches-list').innerHTML = matchesHtml || 
+                    '<p class="text-gray-500 text-center py-4">예정된 경기가 없습니다.</p>'
+
+                // 기존 배팅 폴더 로드
+                if (ticket.member_id) {
+                    const foldersRes = await axios.get(\`\${API_BASE}/betting/folders?member_id=\${ticket.member_id}\`)
+                    const folders = foldersRes.data.folders || []
+                    
+                    const foldersHtml = folders.map(f => \`
+                        <div class="bg-gray-50 p-3 rounded">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-bold">\${f.folder_number} [\${f.folder_type === 'single' ? '단폴더' : '다폴더'}]</p>
+                                    <p class="text-sm text-gray-600">배팅: \${f.total_bet_amount.toLocaleString()}원 | 배당: \${f.total_odds.toFixed(2)}</p>
+                                    <p class="text-sm text-green-600">예상 당첨: \${f.potential_win.toLocaleString()}원</p>
+                                </div>
+                                <span class="status-badge status-\${f.status}">\${getStatusText(f.status)}</span>
+                            </div>
+                            <div class="mt-2 space-y-1 text-xs text-gray-600">
+                                \${(f.bets || []).map(b => \`
+                                    <p><i class="fas fa-chevron-right mr-1"></i>\${b.match_name}: \${getBetTypeText(b.bet_type)} (\${b.odds})</p>
+                                \`).join('')}
+                            </div>
+                        </div>
+                    \`).join('')
+
+                    document.getElementById('betting-history-list').innerHTML = foldersHtml || 
+                        '<p class="text-gray-500 text-sm">배팅 내역이 없습니다.</p>'
+                }
+
+                document.getElementById('ticket-detail-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('티켓 상세 로드 오류:', error)
+                alert('티켓 정보를 불러오는데 실패했습니다.')
+            }
+        }
+
+        function closeTicketDetail() {
+            currentTicketId = null
+            selectedMatches = []
+            document.getElementById('ticket-detail-modal').classList.add('hidden')
+        }
+
+        function getBetTypeOptions(match) {
+            if (match.betting_type === 'win_draw_lose') {
+                return \`
+                    <label class="flex items-center">
+                        <input type="radio" name="bet-type-\${match.id}" value="home_win" data-odds="\${match.home_odds}" class="mr-2">
+                        홈 승 (\${match.home_odds})
+                    </label>
+                    \${match.draw_odds ? \`
+                    <label class="flex items-center">
+                        <input type="radio" name="bet-type-\${match.id}" value="draw" data-odds="\${match.draw_odds}" class="mr-2">
+                        무승부 (\${match.draw_odds})
+                    </label>
+                    \` : ''}
+                    <label class="flex items-center">
+                        <input type="radio" name="bet-type-\${match.id}" value="away_win" data-odds="\${match.away_odds}" class="mr-2">
+                        원정 승 (\${match.away_odds})
+                    </label>
+                \`
+            } else if (match.betting_type === 'over_under') {
+                return \`
+                    <label class="flex items-center">
+                        <input type="radio" name="bet-type-\${match.id}" value="over" data-odds="\${match.over_odds}" class="mr-2">
+                        오버 \${match.over_under_line} (\${match.over_odds})
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="bet-type-\${match.id}" value="under" data-odds="\${match.under_odds}" class="mr-2">
+                        언더 \${match.over_under_line} (\${match.under_odds})
+                    </label>
+                \`
+            } else if (match.betting_type === 'handicap') {
+                return \`
+                    <label class="flex items-center">
+                        <input type="radio" name="bet-type-\${match.id}" value="handicap_home" data-odds="\${match.handicap_home_odds}" class="mr-2">
+                        홈 \${match.handicap_line > 0 ? '+' : ''}\${match.handicap_line} (\${match.handicap_home_odds})
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="bet-type-\${match.id}" value="handicap_away" data-odds="\${match.handicap_away_odds}" class="mr-2">
+                        원정 \${match.handicap_line < 0 ? '+' : ''}\${-match.handicap_line} (\${match.handicap_away_odds})
+                    </label>
+                \`
+            }
+            return ''
+        }
+
+        function toggleMatchSelection(matchId) {
+            const checkbox = document.getElementById(\`match-select-\${matchId}\`)
+            const selection = document.getElementById(\`bet-selection-\${matchId}\`)
+            
+            checkbox.checked = !checkbox.checked
+            
+            if (checkbox.checked) {
+                selection.classList.remove('hidden')
+                if (!selectedMatches.includes(matchId)) {
+                    selectedMatches.push(matchId)
+                }
+            } else {
+                selection.classList.add('hidden')
+                selectedMatches = selectedMatches.filter(id => id !== matchId)
+                // 라디오 버튼 해제
+                document.querySelectorAll(\`input[name="bet-type-\${matchId}"]\`).forEach(r => r.checked = false)
+            }
+
+            updateFolderType()
+        }
+
+        function updateFolderType() {
+            const folderType = selectedMatches.length > 1 ? '다폴더' : '단폴더'
+            document.getElementById('folder-type-display').textContent = folderType
+            
+            // 배당률 계산
+            let totalOdds = 1.0
+            selectedMatches.forEach(matchId => {
+                const selected = document.querySelector(\`input[name="bet-type-\${matchId}"]:checked\`)
+                if (selected) {
+                    totalOdds *= parseFloat(selected.dataset.odds)
+                }
+            })
+            document.getElementById('total-odds-display').textContent = totalOdds.toFixed(2)
+
+            // 예상 당첨금 계산
+            const betAmount = parseFloat(document.getElementById('folder-bet-amount').value) || 0
+            const potentialWin = betAmount * totalOdds
+            document.getElementById('potential-win-display').textContent = Math.floor(potentialWin).toLocaleString()
+        }
+
+        // 배팅 금액 입력 시 예상 당첨금 업데이트
+        function updatePotentialWin() {
+            updateFolderType()
+        }
+
+        // 배팅 타입 전환 함수
+        function toggleBettingFields() {
+            const bettingType = document.getElementById('betting-type').value
+            document.getElementById('win-draw-lose-fields').classList.add('hidden')
+            document.getElementById('over-under-fields').classList.add('hidden')
+            document.getElementById('handicap-fields').classList.add('hidden')
+            
+            if (bettingType === 'win_draw_lose') {
+                document.getElementById('win-draw-lose-fields').classList.remove('hidden')
+            } else if (bettingType === 'over_under') {
+                document.getElementById('over-under-fields').classList.remove('hidden')
+            } else if (bettingType === 'handicap') {
+                document.getElementById('handicap-fields').classList.remove('hidden')
+            }
+        }
+
+        async function submitBetFolder() {
+            if (selectedMatches.length === 0) {
+                alert('최소 1개 이상의 경기를 선택해주세요.')
+                return
+            }
+
+            const betAmount = parseFloat(document.getElementById('folder-bet-amount').value)
+            if (!betAmount || betAmount <= 0) {
+                alert('배팅 금액을 입력해주세요.')
+                return
+            }
+
+            // 각 경기의 배팅 타입 확인
+            const bets = []
+            for (const matchId of selectedMatches) {
+                const selected = document.querySelector(\`input[name="bet-type-\${matchId}"]:checked\`)
+                if (!selected) {
+                    alert('선택한 모든 경기의 배팅 타입을 선택해주세요.')
+                    return
+                }
+                bets.push({
+                    match_id: matchId,
+                    bet_type: selected.value,
+                    odds: parseFloat(selected.dataset.odds)
+                })
+            }
+
+            try {
+                const ticketRes = await axios.get(\`\${API_BASE}/tickets/\${currentTicketId}\`)
+                const ticket = ticketRes.data.ticket
+
+                await axios.post(\`\${API_BASE}/betting/folders\`, {
+                    ticket_id: currentTicketId,
+                    member_id: ticket.member_id,
+                    bets: bets,
+                    total_bet_amount: betAmount,
+                    created_by: currentStaff.id
+                })
+
+                alert('배팅 폴더가 접수되었습니다!')
+                selectedMatches = []
+                await showTicketDetail(currentTicketId) // 새로고침
+            } catch (error) {
+                alert('배팅 접수 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
         function showNewTicketModal() { alert('티켓 생성 모달 (구현 예정)') }
         function showNewMemberModal() { alert('회원 등록 모달 (구현 예정)') }
         function showNewBookModal() { alert('도서 등록 모달 (구현 예정)') }
-        function showNewMatchModal() { alert('경기 등록 모달 (구현 예정)') }
         function showNewStaffModal() { alert('직원 등록 모달 (구현 예정)') }
-        function showTicketDetail(id) { alert(\`티켓 상세 모달 (ID: \${id}) (구현 예정)\`) }
         function showMemberDetail(id) { alert(\`회원 상세 모달 (ID: \${id}) (구현 예정)\`) }
-        function showMatchResultModal(id) { alert(\`경기 결과 입력 모달 (ID: \${id}) (구현 예정)\`) }
     </script>
 </body>
 </html>

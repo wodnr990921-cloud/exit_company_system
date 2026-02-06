@@ -1,16 +1,16 @@
-# EXIT 시스템 v1.0
+# 엑시트 시스템 (EXIT System) v7.0 ✅ 완성
 
-**교도소 도서 판매 관리 시스템**
+**통합 관리 시스템 with 폴더 배팅 완성**
 
 ## 🌐 접속 정보
 
-- **데모 사이트**: https://3000-izz2akoud4rd9s8t7plxq-b32ec7bb.sandbox.novita.ai
 - **도메인**: manager-exit.cloud (예정)
-- **관리자 계정**: admin@manager-exit.cloud / admin123
+- **데모 URL**: https://3000-izz2akoud4rd9s8t7plxq-b32ec7bb.sandbox.novita.ai
+- **데모 계정**: admin@prison-books.kr / admin123
 
 ## 📋 프로젝트 개요
 
-EXIT 시스템은 교도소 도서 판매를 위한 종합 관리 시스템입니다. 티켓 기반 업무 처리, 회원 관리, 도서 재고 관리, 포인트 시스템, 그리고 **폴더 배팅 시스템** (단폴더/다폴더)을 지원합니다.
+엑시트 시스템은 티켓 기반 업무 처리, 회원 관리, 도서 재고 관리, 포인트 시스템, 그리고 **폴더 배팅 시스템** (단폴더/다폴더)을 지원하는 통합 관리 플랫폼입니다.
 
 ## ✨ 주요 기능
 
