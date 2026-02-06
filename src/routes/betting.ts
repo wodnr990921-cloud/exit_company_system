@@ -676,4 +676,216 @@ betting.get('/statistics', async (c) => {
   }
 })
 
+// ==========================================
+// 일일 마감 기능
+// ==========================================
+
+// 일일 마감 통계 조회
+betting.get('/daily-close', async (c) => {
+  try {
+    const date = c.req.query('date') || new Date().toISOString().split('T')[0]
+    
+    // 티켓 통계
+    const { results: ticketStats } = await c.env.DB.prepare(
+      `SELECT 
+        COUNT(*) as total_tickets,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tickets,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_tickets,
+        SUM(CASE WHEN ticket_type = 'ORDER' THEN 1 ELSE 0 END) as order_tickets,
+        SUM(CASE WHEN ticket_type = 'POINT_ADJUSTMENT' THEN 1 ELSE 0 END) as point_adjustment_tickets
+       FROM tickets
+       WHERE DATE(created_at) = ?`
+    ).bind(date).all()
+
+    // 배팅 통계
+    const { results: bettingStats } = await c.env.DB.prepare(
+      `SELECT 
+        COUNT(*) as total_bet_count,
+        SUM(total_bet_amount) as total_bet_amount,
+        SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END) as total_win_amount,
+        SUM(CASE WHEN status = 'won' THEN 1 ELSE 0 END) as won_count,
+        SUM(CASE WHEN status = 'lost' THEN 1 ELSE 0 END) as lost_count,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count
+       FROM bet_folders
+       WHERE DATE(created_at) = ?`
+    ).bind(date).all()
+
+    const bettingData = bettingStats?.[0] as any || {}
+    const total_bet_amount = Number(bettingData.total_bet_amount || 0)
+    const total_win_amount = Number(bettingData.total_win_amount || 0)
+    const net_profit = total_bet_amount - total_win_amount
+    const profit_margin = total_bet_amount > 0 ? ((net_profit / total_bet_amount) * 100).toFixed(2) : '0.00'
+
+    // 포인트 통계
+    const { results: pointStats } = await c.env.DB.prepare(
+      `SELECT 
+        SUM(CASE WHEN adjustment_type = 'add' THEN amount ELSE 0 END) as total_points_added,
+        SUM(CASE WHEN adjustment_type = 'subtract' THEN amount ELSE 0 END) as total_points_subtracted,
+        SUM(CASE WHEN point_type = 'regular' THEN amount ELSE 0 END) as regular_points,
+        SUM(CASE WHEN point_type = 'betting' THEN amount ELSE 0 END) as betting_points
+       FROM point_transactions
+       WHERE DATE(created_at) = ?`
+    ).bind(date).all()
+
+    // 직원 출근 통계
+    const { results: attendanceStats } = await c.env.DB.prepare(
+      `SELECT 
+        COUNT(DISTINCT staff_id) as total_staff,
+        AVG(CASE WHEN checkout_time IS NOT NULL 
+          THEN (julianday(checkout_time) - julianday(checkin_time)) * 24 
+          ELSE 0 END) as avg_work_hours
+       FROM attendance
+       WHERE DATE(checkin_time) = ?`
+    ).bind(date).all()
+
+    // 도서 통계
+    const { results: bookStats } = await c.env.DB.prepare(
+      `SELECT 
+        COUNT(*) as total_books,
+        SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available_books,
+        SUM(CASE WHEN status = 'out_of_stock' THEN 1 ELSE 0 END) as out_of_stock_books,
+        SUM(stock) as total_stock
+       FROM books`
+    ).bind().all()
+
+    // 회원별 활동 통계
+    const { results: memberActivity } = await c.env.DB.prepare(
+      `SELECT 
+        m.name as member_name,
+        COUNT(DISTINCT t.id) as ticket_count,
+        COUNT(DISTINCT bf.id) as bet_count,
+        SUM(bf.total_bet_amount) as total_bet_amount
+       FROM members m
+       LEFT JOIN tickets t ON m.id = t.member_id AND DATE(t.created_at) = ?
+       LEFT JOIN bet_folders bf ON m.id = bf.member_id AND DATE(bf.created_at) = ?
+       GROUP BY m.id, m.name
+       HAVING ticket_count > 0 OR bet_count > 0
+       ORDER BY total_bet_amount DESC
+       LIMIT 10`
+    ).bind(date, date).all()
+
+    return c.json({
+      date,
+      ticket_stats: ticketStats?.[0] || {},
+      betting_stats: {
+        ...bettingData,
+        total_bet_amount,
+        total_win_amount,
+        net_profit,
+        profit_margin
+      },
+      point_stats: pointStats?.[0] || {},
+      attendance_stats: attendanceStats?.[0] || {},
+      book_stats: bookStats?.[0] || {},
+      member_activity: memberActivity || []
+    })
+  } catch (error) {
+    console.error('일일 마감 통계 조회 오류:', error)
+    return c.json({ error: '일일 마감 통계 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 일일 마감 확정 (마감 기록 생성)
+betting.post('/daily-close', async (c) => {
+  try {
+    const { date, closed_by, notes } = await c.req.json()
+    
+    if (!date || !closed_by) {
+      return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
+    }
+
+    // 이미 마감된 날짜인지 확인
+    const { results: existing } = await c.env.DB.prepare(
+      `SELECT id FROM daily_closings WHERE closing_date = ?`
+    ).bind(date).all()
+
+    if (existing && existing.length > 0) {
+      return c.json({ error: '이미 마감된 날짜입니다.' }, 400)
+    }
+
+    // 일일 마감 통계 조회
+    const statsResponse = await fetch(`${c.req.url.split('/api')[0]}/api/betting/daily-close?date=${date}`)
+    const stats = await statsResponse.json()
+
+    // 배팅 마진 계산
+    const bet_margin = (stats.betting_stats?.total_bet_amount || 0) - (stats.betting_stats?.total_win_amount || 0)
+    
+    // 순 포인트 계산
+    const net_points = (stats.point_stats?.total_points_added || 0) - (stats.point_stats?.total_points_subtracted || 0)
+    
+    // 총 마진 = 순 포인트 + 배팅 마진
+    const total_margin = net_points + bet_margin
+
+    // 마감 기록 저장
+    const result = await c.env.DB.prepare(
+      `INSERT INTO daily_closings (
+        closing_date, closed_by, 
+        total_tickets, completed_tickets, 
+        earned_points, used_points, net_points,
+        total_bet_amount, total_win_amount, bet_margin,
+        book_orders,
+        total_revenue, total_margin,
+        notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      date,
+      closed_by,
+      stats.ticket_stats?.total_tickets || 0,
+      stats.ticket_stats?.completed_tickets || 0,
+      stats.point_stats?.total_points_added || 0,
+      stats.point_stats?.total_points_subtracted || 0,
+      net_points,
+      stats.betting_stats?.total_bet_amount || 0,
+      stats.betting_stats?.total_win_amount || 0,
+      bet_margin,
+      stats.ticket_stats?.order_tickets || 0,
+      net_points, // 총 매출 = 순 포인트
+      total_margin,
+      notes || ''
+    ).run()
+
+    return c.json({ 
+      success: true, 
+      close_id: result.meta.last_row_id 
+    })
+  } catch (error) {
+    console.error('일일 마감 확정 오류:', error)
+    return c.json({ error: '일일 마감 확정 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 마감 기록 목록 조회
+betting.get('/daily-closes', async (c) => {
+  try {
+    const start_date = c.req.query('start_date')
+    const end_date = c.req.query('end_date')
+    
+    let query = `SELECT 
+      dc.*,
+      s.name as closed_by_name
+      FROM daily_closings dc
+      LEFT JOIN staff s ON dc.closed_by = s.id
+      WHERE 1=1`
+    const params: any[] = []
+
+    if (start_date) {
+      query += ` AND dc.closing_date >= ?`
+      params.push(start_date)
+    }
+    if (end_date) {
+      query += ` AND dc.closing_date <= ?`
+      params.push(end_date)
+    }
+
+    query += ` ORDER BY dc.closing_date DESC LIMIT 30`
+
+    const { results } = await c.env.DB.prepare(query).bind(...params).all()
+
+    return c.json({ closes: results })
+  } catch (error) {
+    console.error('마감 기록 조회 오류:', error)
+    return c.json({ error: '마감 기록 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 export default betting
