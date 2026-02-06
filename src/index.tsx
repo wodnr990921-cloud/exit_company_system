@@ -914,6 +914,36 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 이미지 뷰어 모달 -->
+        <div id="image-viewer-modal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
+            <div class="relative w-full h-full flex items-center justify-center">
+                <button onclick="closeImageViewer()" class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+                
+                <!-- 이미지 컨트롤 -->
+                <div class="absolute top-4 left-4 flex gap-2">
+                    <button onclick="zoomIn()" class="bg-white text-gray-800 px-3 py-2 rounded hover:bg-gray-100">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button onclick="zoomOut()" class="bg-white text-gray-800 px-3 py-2 rounded hover:bg-gray-100">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button onclick="rotateImage()" class="bg-white text-gray-800 px-3 py-2 rounded hover:bg-gray-100">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <button onclick="resetImage()" class="bg-white text-gray-800 px-3 py-2 rounded hover:bg-gray-100">
+                        <i class="fas fa-undo"></i> 초기화
+                    </button>
+                </div>
+                
+                <!-- 이미지 -->
+                <div class="overflow-auto max-w-full max-h-full">
+                    <img id="viewer-image" src="" alt="Image" class="transition-transform duration-200" style="transform-origin: center center;">
+                </div>
+            </div>
+        </div>
+
         <!-- 우편물 검수 및 배당 모달 -->
         <div id="mail-assignment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
@@ -4383,9 +4413,48 @@ app.get('/', (c) => {
             }
         }
 
+        // 이미지 뷰어
+        let currentZoom = 1
+        let currentRotation = 0
+
         function viewFullImage(imageUrl) {
-            // 간단한 전체화면 이미지 뷰어 (나중에 고급 뷰어로 교체)
-            window.open(imageUrl, '_blank')
+            document.getElementById('viewer-image').src = imageUrl
+            document.getElementById('image-viewer-modal').classList.remove('hidden')
+            resetImage()
+        }
+
+        function closeImageViewer() {
+            document.getElementById('image-viewer-modal').classList.add('hidden')
+            resetImage()
+        }
+
+        function zoomIn() {
+            currentZoom += 0.2
+            updateImageTransform()
+        }
+
+        function zoomOut() {
+            if (currentZoom > 0.2) {
+                currentZoom -= 0.2
+                updateImageTransform()
+            }
+        }
+
+        function rotateImage() {
+            currentRotation += 90
+            if (currentRotation >= 360) currentRotation = 0
+            updateImageTransform()
+        }
+
+        function resetImage() {
+            currentZoom = 1
+            currentRotation = 0
+            updateImageTransform()
+        }
+
+        function updateImageTransform() {
+            const img = document.getElementById('viewer-image')
+            img.style.transform = \`scale(\${currentZoom}) rotate(\${currentRotation}deg)\`
         }
 
         // 도서 등록 모달
