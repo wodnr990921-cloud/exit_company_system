@@ -293,16 +293,38 @@ mailroom.post('/:id/ocr', async (c) => {
       }
     }
     
-    // OCR 결과 저장
+    // 케이스 판단: 봉투가 하나라도 감지되면 새 케이스
+    const hasAnyEnvelope = ocrResults.some(result => result.has_envelope)
+    const caseType = hasAnyEnvelope ? 'new_case' : 'continued_case'
+    
+    console.log(`Mail ${id}: Case type determined as ${caseType} (envelope detected: ${hasAnyEnvelope})`)
+    
+    // OCR 결과와 케이스 타입 저장
+    const ocrData = {
+      results: ocrResults,
+      case_type: caseType,
+      has_envelope: hasAnyEnvelope,
+      processed_at: new Date().toISOString(),
+      total_images: imageKeys.length,
+      successful_ocr: ocrResults.filter(r => !r.error).length
+    }
+    
     await c.env.DB.prepare(`
       UPDATE mailroom_items 
       SET ocr_result = ?, status = 'ocr_completed', updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).bind(JSON.stringify(ocrResults), id).run()
+    `).bind(JSON.stringify(ocrData), id).run()
     
     return c.json({
       success: true,
-      ocr_results: ocrResults
+      case_type: caseType,
+      has_envelope: hasAnyEnvelope,
+      ocr_results: ocrResults,
+      summary: {
+        total_images: imageKeys.length,
+        successful: ocrData.successful_ocr,
+        failed: imageKeys.length - ocrData.successful_ocr
+      }
     })
   } catch (error: any) {
     console.error('OCR 처리 오류:', error)
