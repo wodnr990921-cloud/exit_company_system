@@ -1714,20 +1714,23 @@ app.get('/', (c) => {
                                     
                                     <!-- 이미지 컨트롤 오버레이 -->
                                     <div class="absolute top-2 right-2 flex gap-2">
-                                        <button onclick="rotateMailImage(-90)" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="왼쪽 회전">
+                                        <button onclick="rotateMailImage(-90)" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="왼쪽 회전 (↺)">
                                             <i class="fas fa-undo"></i>
                                         </button>
-                                        <button onclick="rotateMailImage(90)" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="오른쪽 회전">
+                                        <button onclick="rotateMailImage(90)" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="오른쪽 회전 (↻)">
                                             <i class="fas fa-redo"></i>
                                         </button>
-                                        <button onclick="zoomMailImage('in')" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="확대">
+                                        <button onclick="zoomMailImage('in')" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="확대 (+)">
                                             <i class="fas fa-search-plus"></i>
                                         </button>
-                                        <button onclick="zoomMailImage('out')" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="축소">
+                                        <button onclick="zoomMailImage('out')" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="축소 (-)">
                                             <i class="fas fa-search-minus"></i>
                                         </button>
-                                        <button onclick="resetMailImage()" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="초기화">
+                                        <button onclick="resetMailImage()" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="초기화 (0)">
                                             <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                        <button onclick="toggleFullscreen()" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="전체화면 (F)">
+                                            <i class="fas fa-expand"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -3229,6 +3232,16 @@ app.get('/', (c) => {
         let currentImageIndex = 0 // 현재 보고 있는 이미지 인덱스
         let imageRotation = 0 // 현재 회전 각도
         let imageScale = 1.0 // 현재 줌 배율
+        
+        // 드래그(Pan) 관련 변수
+        let isPanning = false
+        let panStartX = 0
+        let panStartY = 0
+        let panOffsetX = 0
+        let panOffsetY = 0
+        
+        // 전체화면 모드 변수
+        let isFullscreen = false
 
         // 이미지 뷰어 초기화
         function initMailImageViewer(images) {
@@ -3236,6 +3249,8 @@ app.get('/', (c) => {
             currentImageIndex = 0
             imageRotation = 0
             imageScale = 1.0
+            panOffsetX = 0
+            panOffsetY = 0
 
             const container = document.getElementById('mail-image-container')
             const noImages = document.getElementById('no-mail-images')
@@ -3249,6 +3264,9 @@ app.get('/', (c) => {
             container.classList.remove('hidden')
             noImages.classList.add('hidden')
 
+            // 이벤트 리스너 등록
+            setupImageViewerEvents()
+            
             // 썸네일 생성
             renderThumbnails()
             // 첫 번째 이미지 표시
@@ -3282,11 +3300,14 @@ app.get('/', (c) => {
             currentImageIndex = index
             imageRotation = 0
             imageScale = 1.0
+            panOffsetX = 0
+            panOffsetY = 0
 
             const imageKey = currentMailImages[index]
             const imgElement = document.getElementById('current-mail-image')
             imgElement.src = \`\${API_BASE}/mailroom/image/\${imageKey}\`
             imgElement.style.transform = 'rotate(0deg) scale(1)'
+            imgElement.style.cursor = 'default'
 
             // 카운터 업데이트
             document.getElementById('image-counter').textContent = \`\${index + 1}/\${currentMailImages.length}\`
@@ -3326,14 +3347,16 @@ app.get('/', (c) => {
             } else if (direction === 'out') {
                 imageScale = Math.max(imageScale / 1.2, 0.5)
             }
-            updateImageTransform()
+            updateImageTransformAdvanced()
         }
 
         // 이미지 초기화
         function resetMailImage() {
             imageRotation = 0
             imageScale = 1.0
-            updateImageTransform()
+            panOffsetX = 0
+            panOffsetY = 0
+            updateImageTransformAdvanced()
         }
 
         // Transform 업데이트
@@ -3341,6 +3364,161 @@ app.get('/', (c) => {
             const imgElement = document.getElementById('current-mail-image')
             imgElement.style.transform = \`rotate(\${imageRotation}deg) scale(\${imageScale})\`
         }
+
+        // 이벤트 리스너 설정
+        function setupImageViewerEvents() {
+            const imgElement = document.getElementById('current-mail-image')
+            if (!imgElement) return
+
+            // 드래그(Pan) 이벤트
+            imgElement.addEventListener('mousedown', handlePanStart)
+            document.addEventListener('mousemove', handlePanMove)
+            document.addEventListener('mouseup', handlePanEnd)
+
+            // 마우스 휠 줌
+            imgElement.addEventListener('wheel', handleWheelZoom, { passive: false })
+
+            // 더블클릭 줌 토글
+            imgElement.addEventListener('dblclick', handleDoubleClickZoom)
+
+            // 키보드 단축키 (티켓 모달이 열려있을 때만)
+            document.addEventListener('keydown', handleImageViewerKeyboard)
+        }
+
+        // 드래그 시작
+        function handlePanStart(e) {
+            if (imageScale <= 1.0) return // 줌이 1배 이하면 드래그 불가
+            
+            isPanning = true
+            panStartX = e.clientX - panOffsetX
+            panStartY = e.clientY - panOffsetY
+            e.target.style.cursor = 'grabbing'
+        }
+
+        // 드래그 이동
+        function handlePanMove(e) {
+            if (!isPanning) return
+            
+            e.preventDefault()
+            panOffsetX = e.clientX - panStartX
+            panOffsetY = e.clientY - panStartY
+            
+            updateImageTransformAdvanced()
+        }
+
+        // 드래그 종료
+        function handlePanEnd(e) {
+            if (!isPanning) return
+            
+            isPanning = false
+            const imgElement = document.getElementById('current-mail-image')
+            if (imgElement) {
+                imgElement.style.cursor = imageScale > 1.0 ? 'grab' : 'default'
+            }
+        }
+
+        // 마우스 휠 줌
+        function handleWheelZoom(e) {
+            const modalVisible = !document.getElementById('ticket-detail-modal').classList.contains('hidden')
+            if (!modalVisible) return
+            
+            e.preventDefault()
+            
+            const delta = e.deltaY > 0 ? -1 : 1
+            const zoomFactor = 1.1
+            
+            if (delta > 0) {
+                imageScale = Math.min(imageScale * zoomFactor, 3.0)
+            } else {
+                imageScale = Math.max(imageScale / zoomFactor, 0.5)
+            }
+            
+            updateImageTransformAdvanced()
+        }
+
+        // 더블클릭 줌 토글
+        function handleDoubleClickZoom(e) {
+            e.preventDefault()
+            
+            if (imageScale === 1.0) {
+                imageScale = 2.0
+            } else {
+                imageScale = 1.0
+                panOffsetX = 0
+                panOffsetY = 0
+            }
+            
+            updateImageTransformAdvanced()
+        }
+
+        // 키보드 단축키
+        function handleImageViewerKeyboard(e) {
+            const modalVisible = !document.getElementById('ticket-detail-modal').classList.contains('hidden')
+            if (!modalVisible) return
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault()
+                    prevMailImage()
+                    break
+                case 'ArrowRight':
+                    e.preventDefault()
+                    nextMailImage()
+                    break
+                case '+':
+                case '=':
+                    e.preventDefault()
+                    zoomMailImage('in')
+                    break
+                case '-':
+                case '_':
+                    e.preventDefault()
+                    zoomMailImage('out')
+                    break
+                case '0':
+                    e.preventDefault()
+                    resetMailImage()
+                    break
+                case 'f':
+                case 'F':
+                    e.preventDefault()
+                    toggleFullscreen()
+                    break
+                case 'Escape':
+                    if (isFullscreen) {
+                        e.preventDefault()
+                        toggleFullscreen()
+                    }
+                    break
+            }
+        }
+
+        // Transform 업데이트 (Pan 포함)
+        function updateImageTransformAdvanced() {
+            const imgElement = document.getElementById('current-mail-image')
+            imgElement.style.transform = \`rotate(\${imageRotation}deg) scale(\${imageScale}) translate(\${panOffsetX / imageScale}px, \${panOffsetY / imageScale}px)\`
+            imgElement.style.cursor = imageScale > 1.0 ? 'grab' : 'default'
+        }
+
+        // 전체화면 토글
+        function toggleFullscreen() {
+            const modal = document.getElementById('ticket-detail-modal')
+            
+            if (!isFullscreen) {
+                // 전체화면 진입
+                modal.classList.remove('p-4')
+                modal.querySelector('.bg-white').classList.remove('max-w-[95vw]', 'h-[90vh]')
+                modal.querySelector('.bg-white').classList.add('w-screen', 'h-screen')
+                isFullscreen = true
+            } else {
+                // 전체화면 종료
+                modal.classList.add('p-4')
+                modal.querySelector('.bg-white').classList.add('max-w-[95vw]', 'h-[90vh]')
+                modal.querySelector('.bg-white').classList.remove('w-screen', 'h-screen')
+                isFullscreen = false
+            }
+        }
+
 
         async function showTicketDetail(ticketId) {
             currentTicketId = ticketId
