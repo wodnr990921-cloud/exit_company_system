@@ -124,27 +124,82 @@ app.get('/', (c) => {
         <header class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
                 <div class="flex items-center space-x-3">
+                    <!-- 모바일 햄버거 메뉴 버튼 -->
+                    <button onclick="toggleMobileMenu()" class="md:hidden text-gray-600 hover:text-gray-800 mr-2">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                    
                     <i class="fas fa-door-open text-3xl text-blue-500"></i>
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-800">엑시트 시스템</h1>
-                        <p class="text-sm text-gray-600">EXIT System</p>
+                        <h1 class="text-xl md:text-2xl font-bold text-gray-800">엑시트 시스템</h1>
+                        <p class="text-xs md:text-sm text-gray-600">EXIT System</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-gray-700">
+                <div class="flex items-center space-x-2 md:space-x-4">
+                    <span class="hidden md:inline text-gray-700">
                         <i class="fas fa-user-circle mr-2"></i>
                         <span id="current-user-name"></span>
                         <span id="current-user-role" class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"></span>
                     </span>
+                    <!-- 모바일: 사용자 이름만 표시 -->
+                    <span class="md:hidden text-sm text-gray-700">
+                        <i class="fas fa-user-circle mr-1"></i>
+                        <span id="current-user-name-mobile"></span>
+                    </span>
                     <button onclick="logout()" class="text-gray-600 hover:text-gray-800">
-                        <i class="fas fa-sign-out-alt"></i> 로그아웃
+                        <i class="fas fa-sign-out-alt"></i> 
+                        <span class="hidden md:inline">로그아웃</span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- 네비게이션 -->
-        <nav class="bg-white shadow-sm border-t border-gray-200">
+        <!-- 모바일 메뉴 오버레이 -->
+        <div id="mobile-menu-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden" onclick="toggleMobileMenu()"></div>
+        
+        <!-- 모바일 사이드 메뉴 -->
+        <div id="mobile-menu" class="fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform -translate-x-full transition-transform duration-300 z-50 md:hidden">
+            <div class="p-4 border-b">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-gray-800" id="mobile-menu-user-name"></p>
+                        <p class="text-sm" id="mobile-menu-user-role"></p>
+                    </div>
+                    <button onclick="toggleMobileMenu()" class="text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <nav class="p-4 space-y-2">
+                <button onclick="showView('dashboard'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50">
+                    <i class="fas fa-home mr-3 w-5"></i>대시보드
+                </button>
+                <button onclick="showView('tickets'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50">
+                    <i class="fas fa-ticket-alt mr-3 w-5"></i>티켓 관리
+                </button>
+                <button onclick="showView('members'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50">
+                    <i class="fas fa-users mr-3 w-5"></i>회원 관리
+                </button>
+                <button onclick="showView('books'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50">
+                    <i class="fas fa-book mr-3 w-5"></i>도서 관리
+                </button>
+                <button onclick="showView('mailroom'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50">
+                    <i class="fas fa-envelope-open-text mr-3 w-5"></i>우편실
+                </button>
+                <button id="betting-nav-mobile" onclick="showView('betting'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
+                    <i class="fas fa-trophy mr-3 w-5"></i>배팅 관리
+                </button>
+                <button id="staff-nav-mobile" onclick="showView('staff'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
+                    <i class="fas fa-user-tie mr-3 w-5"></i>직원 관리
+                </button>
+                <button id="closing-nav-mobile" onclick="showView('closing'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
+                    <i class="fas fa-calculator mr-3 w-5"></i>일일 마감
+                </button>
+            </nav>
+        </div>
+
+        <!-- 네비게이션 (데스크톱) -->
+        <nav class="hidden md:block bg-white shadow-sm border-t border-gray-200">
             <div class="max-w-7xl mx-auto px-4">
                 <div class="flex space-x-2 overflow-x-auto">
                     <button onclick="showView('dashboard')" class="nav-item px-4 py-3 rounded-t-lg">
@@ -324,18 +379,18 @@ app.get('/', (c) => {
 
             <!-- 티켓 관리 뷰 -->
             <div id="tickets-view" class="view-content hidden">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>티켓 관리</h2>
-                    <button id="create-ticket-btn" onclick="showNewTicketModal()" class="btn btn-primary" data-permission="staff">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
+                    <h2 class="text-xl md:text-2xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>티켓 관리</h2>
+                    <button id="create-ticket-btn" onclick="showNewTicketModal()" class="btn btn-primary w-full sm:w-auto" data-permission="staff">
                         <i class="fas fa-plus mr-2"></i>새 티켓 생성
                     </button>
                 </div>
 
                 <div class="card mb-6">
-                    <div class="flex space-x-4">
-                        <div>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex-1">
                             <label class="block text-sm font-medium mb-2">상태</label>
-                            <select id="ticket-status-filter" onchange="loadTickets()" class="px-4 py-2 border rounded-lg">
+                            <select id="ticket-status-filter" onchange="loadTickets()" class="w-full px-4 py-2 border rounded-lg">
                                 <option value="all">전체 상태</option>
                                 <option value="open">미배정</option>
                                 <option value="assigned">배정됨</option>
@@ -344,9 +399,9 @@ app.get('/', (c) => {
                                 <option value="closed">종료</option>
                             </select>
                         </div>
-                        <div>
+                        <div class="flex-1">
                             <label class="block text-sm font-medium mb-2">유형</label>
-                            <select id="ticket-type-filter" onchange="loadTickets()" class="px-4 py-2 border rounded-lg">
+                            <select id="ticket-type-filter" onchange="loadTickets()" class="w-full px-4 py-2 border rounded-lg">
                                 <option value="all">전체 유형</option>
                                 <option value="ORDER">주문</option>
                                 <option value="INQUIRY">문의</option>
@@ -364,19 +419,20 @@ app.get('/', (c) => {
 
             <!-- 회원 관리 뷰 -->
             <div id="members-view" class="view-content hidden">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold"><i class="fas fa-users mr-2"></i>회원 관리</h2>
-                    <button id="create-member-btn" onclick="showNewMemberModal()" class="btn btn-primary" data-permission="staff">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
+                    <h2 class="text-xl md:text-2xl font-bold"><i class="fas fa-users mr-2"></i>회원 관리</h2>
+                    <button id="create-member-btn" onclick="showNewMemberModal()" class="btn btn-primary w-full sm:w-auto" data-permission="staff">
                         <i class="fas fa-user-plus mr-2"></i>회원 등록
                     </button>
                 </div>
 
                 <div class="card mb-6">
-                    <div class="flex space-x-2">
+                    <div class="flex gap-2">
                         <input type="text" id="member-search" placeholder="이름, 수감번호, 교도소 검색..."
-                               class="flex-1 px-4 py-2 border rounded-lg">
-                        <button onclick="loadMembers()" class="btn btn-primary">
+                               class="flex-1 px-3 md:px-4 py-2 border rounded-lg text-sm md:text-base">
+                        <button onclick="loadMembers()" class="btn btn-primary px-3 md:px-4">
                             <i class="fas fa-search"></i>
+                            <span class="hidden sm:inline ml-2">검색</span>
                         </button>
                     </div>
                 </div>
@@ -746,7 +802,7 @@ app.get('/', (c) => {
         
         <!-- 경기 등록 모달 -->
         <div id="new-match-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] mx-4 overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold"><i class="fas fa-futbol mr-2"></i>경기 등록</h3>
@@ -1151,7 +1207,7 @@ app.get('/', (c) => {
 
         <!-- 티켓 생성 모달 -->
         <div id="new-ticket-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] mx-4 overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>새 티켓 생성</h3>
@@ -1245,7 +1301,7 @@ app.get('/', (c) => {
 
         <!-- 회원 등록 모달 -->
         <div id="new-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] mx-4 overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold"><i class="fas fa-user-plus mr-2"></i>회원 등록</h3>
@@ -1453,7 +1509,7 @@ app.get('/', (c) => {
 
         <!-- 도서 등록 모달 -->
         <div id="new-book-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] mx-4 overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold"><i class="fas fa-book mr-2"></i>도서 등록</h3>
@@ -1516,7 +1572,7 @@ app.get('/', (c) => {
 
         <!-- 도서 상세/수정 모달 -->
         <div id="book-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] mx-4 overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <div>
@@ -1605,7 +1661,7 @@ app.get('/', (c) => {
 
         <!-- 직원 등록 모달 -->
         <div id="new-staff-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] mx-4 overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold"><i class="fas fa-user-plus mr-2"></i>직원 등록</h3>
@@ -2193,11 +2249,17 @@ function initializePermissions() {
   // 역할 표시
   const roleText = getRoleText(currentStaff.role)
   document.getElementById('current-user-role').textContent = roleText
+  document.getElementById('mobile-menu-user-role').textContent = roleText
   
-  // Admin 전용 메뉴
+  // Admin 전용 메뉴 (데스크톱)
   setElementPermission('betting-nav', ROLES.ADMIN)
   setElementPermission('staff-nav', ROLES.ADMIN)
   setElementPermission('closing-nav', ROLES.ADMIN)
+  
+  // Admin 전용 메뉴 (모바일)
+  setElementPermission('betting-nav-mobile', ROLES.ADMIN)
+  setElementPermission('staff-nav-mobile', ROLES.ADMIN)
+  setElementPermission('closing-nav-mobile', ROLES.ADMIN)
   
   // Staff 이상 권한 필요한 버튼
   setButtonPermission('create-ticket-btn', ROLES.STAFF)
@@ -2211,6 +2273,24 @@ function initializePermissions() {
       btn.classList.add('opacity-50', 'cursor-not-allowed')
       btn.title = '읽기 전용 권한입니다'
     })
+  }
+}
+
+// 모바일 메뉴 토글
+function toggleMobileMenu() {
+  const menu = document.getElementById('mobile-menu')
+  const overlay = document.getElementById('mobile-menu-overlay')
+  
+  if (menu.classList.contains('-translate-x-full')) {
+    // 메뉴 열기
+    menu.classList.remove('-translate-x-full')
+    overlay.classList.remove('hidden')
+    document.body.style.overflow = 'hidden' // 스크롤 방지
+  } else {
+    // 메뉴 닫기
+    menu.classList.add('-translate-x-full')
+    overlay.classList.add('hidden')
+    document.body.style.overflow = '' // 스크롤 복구
   }
 }
 
@@ -2257,6 +2337,8 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('app-screen').classList.remove('hidden')
 
                 document.getElementById('current-user-name').textContent = currentStaff.name
+                document.getElementById('current-user-name-mobile').textContent = currentStaff.name
+                document.getElementById('mobile-menu-user-name').textContent = currentStaff.name
                 
                 // 권한에 따른 UI 초기화
                 initializePermissions()
