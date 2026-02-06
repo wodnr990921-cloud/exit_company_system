@@ -590,4 +590,90 @@ betting.post('/settlements/:id/reject', async (c) => {
   }
 })
 
+// ==========================================
+// 배팅 통계
+// ==========================================
+
+// 배팅 통계 조회
+betting.get('/statistics', async (c) => {
+  try {
+    const start_date = c.req.query('start_date')
+    const end_date = c.req.query('end_date')
+
+    if (!start_date || !end_date) {
+      return c.json({ error: '시작일과 종료일을 입력해주세요.' }, 400)
+    }
+
+    // 전체 통계
+    const totalStats = await c.env.DB.prepare(
+      `SELECT 
+        COUNT(*) as total_bet_count,
+        SUM(total_bet_amount) as total_bet_amount,
+        SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END) as total_win_amount
+       FROM bet_folders
+       WHERE DATE(created_at) BETWEEN ? AND ?`
+    ).bind(start_date, end_date).first()
+
+    const total_bet_amount = (totalStats as any)?.total_bet_amount || 0
+    const total_win_amount = (totalStats as any)?.total_win_amount || 0
+    const net_profit = total_bet_amount - total_win_amount
+
+    // 회원별 통계 (상위 10명)
+    const { results: memberStats } = await c.env.DB.prepare(
+      `SELECT 
+        m.name as member_name,
+        COUNT(bf.id) as bet_count,
+        SUM(bf.total_bet_amount) as total_bet_amount,
+        SUM(CASE WHEN bf.status = 'won' THEN 1 ELSE 0 END) * 100.0 / COUNT(bf.id) as win_rate
+       FROM bet_folders bf
+       LEFT JOIN members m ON bf.member_id = m.id
+       WHERE DATE(bf.created_at) BETWEEN ? AND ?
+       GROUP BY bf.member_id, m.name
+       ORDER BY total_bet_amount DESC
+       LIMIT 10`
+    ).bind(start_date, end_date).all()
+
+    // 경기별 통계 (상위 10개)
+    const { results: matchStats } = await c.env.DB.prepare(
+      `SELECT 
+        ma.match_name,
+        COUNT(DISTINCT bf.id) as bet_count,
+        SUM(bf.total_bet_amount) as total_bet_amount
+       FROM bets b
+       LEFT JOIN matches ma ON b.match_id = ma.id
+       LEFT JOIN bet_folders bf ON b.folder_id = bf.id
+       WHERE DATE(bf.created_at) BETWEEN ? AND ?
+       GROUP BY ma.id, ma.match_name
+       ORDER BY bet_count DESC
+       LIMIT 10`
+    ).bind(start_date, end_date).all()
+
+    // 일별 추이
+    const { results: dailyTrend } = await c.env.DB.prepare(
+      `SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as bet_count,
+        SUM(total_bet_amount) as total_bet_amount,
+        SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END) as total_win_amount
+       FROM bet_folders
+       WHERE DATE(created_at) BETWEEN ? AND ?
+       GROUP BY DATE(created_at)
+       ORDER BY date DESC`
+    ).bind(start_date, end_date).all()
+
+    return c.json({
+      total_bet_count: (totalStats as any)?.total_bet_count || 0,
+      total_bet_amount,
+      total_win_amount,
+      net_profit,
+      member_stats: memberStats || [],
+      match_stats: matchStats || [],
+      daily_trend: dailyTrend || []
+    })
+  } catch (error) {
+    console.error('통계 조회 오류:', error)
+    return c.json({ error: '통계 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 export default betting

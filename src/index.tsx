@@ -336,8 +336,22 @@ app.get('/', (c) => {
 
             <!-- 배팅 관리 뷰 (관리자 전용) -->
             <div id="betting-view" class="view-content hidden">
-                <h2 class="text-2xl font-bold mb-6"><i class="fas fa-trophy mr-2"></i>배팅 관리</h2>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold"><i class="fas fa-trophy mr-2"></i>배팅 관리</h2>
+                    
+                    <!-- 탭 네비게이션 -->
+                    <div class="flex space-x-2">
+                        <button onclick="showBettingTab('management')" id="betting-tab-management" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            <i class="fas fa-futbol mr-1"></i>경기 관리
+                        </button>
+                        <button onclick="showBettingTab('statistics')" id="betting-tab-statistics" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                            <i class="fas fa-chart-line mr-1"></i>통계
+                        </button>
+                    </div>
+                </div>
 
+                <!-- 경기 관리 탭 -->
+                <div id="betting-management-tab" class="betting-tab-content">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <!-- 경기 목록 -->
                     <div class="card">
@@ -361,6 +375,126 @@ app.get('/', (c) => {
                 <div class="card">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-folder-open mr-2"></i>배팅 폴더 목록</h3>
                     <div id="bet-folders-list" class="space-y-4"></div>
+                </div>
+                </div>
+
+                <!-- 통계 탭 -->
+                <div id="betting-statistics-tab" class="betting-tab-content hidden">
+                    <!-- 기간 선택 -->
+                    <div class="card mb-6">
+                        <div class="flex items-center gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">시작일</label>
+                                <input type="date" id="stats-start-date" class="px-3 py-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">종료일</label>
+                                <input type="date" id="stats-end-date" class="px-3 py-2 border rounded">
+                            </div>
+                            <div class="self-end">
+                                <button onclick="loadBettingStatistics()" class="btn btn-primary">
+                                    <i class="fas fa-search mr-2"></i>조회
+                                </button>
+                            </div>
+                            <div class="self-end ml-auto space-x-2">
+                                <button onclick="setStatsDateRange('today')" class="btn btn-sm">오늘</button>
+                                <button onclick="setStatsDateRange('week')" class="btn btn-sm">1주일</button>
+                                <button onclick="setStatsDateRange('month')" class="btn btn-sm">1개월</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 전체 통계 요약 -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="card bg-blue-50">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600">총 배팅 금액</p>
+                                    <p class="text-2xl font-bold text-blue-600" id="total-bet-amount">0원</p>
+                                </div>
+                                <i class="fas fa-coins text-3xl text-blue-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="card bg-green-50">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600">총 당첨 금액</p>
+                                    <p class="text-2xl font-bold text-green-600" id="total-win-amount">0원</p>
+                                </div>
+                                <i class="fas fa-trophy text-3xl text-green-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="card bg-purple-50">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600">순수익 (마진)</p>
+                                    <p class="text-2xl font-bold text-purple-600" id="net-profit">0원</p>
+                                </div>
+                                <i class="fas fa-chart-line text-3xl text-purple-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="card bg-orange-50">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600">총 배팅 건수</p>
+                                    <p class="text-2xl font-bold text-orange-600" id="total-bet-count">0건</p>
+                                </div>
+                                <i class="fas fa-folder text-3xl text-orange-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- 회원별 통계 -->
+                        <div class="card">
+                            <h3 class="text-lg font-bold mb-4"><i class="fas fa-users mr-2"></i>회원별 통계 (상위 10명)</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">회원명</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">배팅 건수</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">배팅 금액</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">당첨률</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="member-stats-table">
+                                        <tr><td colspan="4" class="text-center py-4 text-gray-500">데이터 없음</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 경기별 통계 -->
+                        <div class="card">
+                            <h3 class="text-lg font-bold mb-4"><i class="fas fa-futbol mr-2"></i>경기별 통계 (상위 10개)</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">경기명</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">배팅 건수</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">배팅 금액</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="match-stats-table">
+                                        <tr><td colspan="3" class="text-center py-4 text-gray-500">데이터 없음</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 일별 추이 -->
+                        <div class="card lg:col-span-2">
+                            <h3 class="text-lg font-bold mb-4"><i class="fas fa-calendar-alt mr-2"></i>일별 배팅 추이</h3>
+                            <div id="daily-trend-list" class="space-y-2 max-h-96 overflow-y-auto">
+                                <p class="text-gray-500 text-center py-4">데이터 없음</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1704,6 +1838,118 @@ app.get('/', (c) => {
                 console.error('배팅 관리 로드 오류:', error)
             }
         }
+
+        // 배팅 탭 전환
+        function showBettingTab(tabName) {
+            // 버튼 활성화
+            document.getElementById('betting-tab-management').classList.remove('bg-blue-500', 'text-white')
+            document.getElementById('betting-tab-management').classList.add('bg-gray-200', 'text-gray-700')
+            document.getElementById('betting-tab-statistics').classList.remove('bg-blue-500', 'text-white')
+            document.getElementById('betting-tab-statistics').classList.add('bg-gray-200', 'text-gray-700')
+            
+            document.getElementById(\`betting-tab-\${tabName}\`).classList.remove('bg-gray-200', 'text-gray-700')
+            document.getElementById(\`betting-tab-\${tabName}\`).classList.add('bg-blue-500', 'text-white')
+
+            // 탭 콘텐츠 표시
+            document.querySelectorAll('.betting-tab-content').forEach(tab => tab.classList.add('hidden'))
+            document.getElementById(\`betting-\${tabName}-tab\`).classList.remove('hidden')
+
+            // 통계 탭이면 데이터 로드
+            if (tabName === 'statistics') {
+                setStatsDateRange('month')
+                loadBettingStatistics()
+            }
+        }
+
+        // 통계 기간 설정
+        function setStatsDateRange(range) {
+            const endDate = new Date()
+            const startDate = new Date()
+
+            if (range === 'today') {
+                startDate.setHours(0, 0, 0, 0)
+            } else if (range === 'week') {
+                startDate.setDate(endDate.getDate() - 7)
+            } else if (range === 'month') {
+                startDate.setMonth(endDate.getMonth() - 1)
+            }
+
+            document.getElementById('stats-start-date').value = startDate.toISOString().split('T')[0]
+            document.getElementById('stats-end-date').value = endDate.toISOString().split('T')[0]
+        }
+
+        // 배팅 통계 로드
+        async function loadBettingStatistics() {
+            try {
+                const startDate = document.getElementById('stats-start-date').value
+                const endDate = document.getElementById('stats-end-date').value
+
+                if (!startDate || !endDate) {
+                    alert('기간을 선택해주세요.')
+                    return
+                }
+
+                const response = await axios.get(\`\${API_BASE}/betting/statistics?start_date=\${startDate}&end_date=\${endDate}\`)
+                const stats = response.data
+
+                // 전체 통계
+                document.getElementById('total-bet-amount').textContent = (stats.total_bet_amount || 0).toLocaleString() + '원'
+                document.getElementById('total-win-amount').textContent = (stats.total_win_amount || 0).toLocaleString() + '원'
+                document.getElementById('net-profit').textContent = (stats.net_profit || 0).toLocaleString() + '원'
+                document.getElementById('total-bet-count').textContent = (stats.total_bet_count || 0).toLocaleString() + '건'
+
+                // 회원별 통계
+                const memberStats = stats.member_stats || []
+                const memberHtml = memberStats.length > 0 ? memberStats.map(m => \`
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-2">\${m.member_name}</td>
+                        <td class="px-4 py-2 text-right">\${m.bet_count}건</td>
+                        <td class="px-4 py-2 text-right">\${parseInt(m.total_bet_amount || 0).toLocaleString()}원</td>
+                        <td class="px-4 py-2 text-right">
+                            <span class="\${parseFloat(m.win_rate) >= 50 ? 'text-green-600' : 'text-red-600'} font-bold">
+                                \${parseFloat(m.win_rate || 0).toFixed(1)}%
+                            </span>
+                        </td>
+                    </tr>
+                \`).join('') : '<tr><td colspan="4" class="text-center py-4 text-gray-500">데이터 없음</td></tr>'
+
+                document.getElementById('member-stats-table').innerHTML = memberHtml
+
+                // 경기별 통계
+                const matchStats = stats.match_stats || []
+                const matchHtml = matchStats.length > 0 ? matchStats.map(m => \`
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-2">\${m.match_name}</td>
+                        <td class="px-4 py-2 text-right">\${m.bet_count}건</td>
+                        <td class="px-4 py-2 text-right">\${parseInt(m.total_bet_amount || 0).toLocaleString()}원</td>
+                    </tr>
+                \`).join('') : '<tr><td colspan="3" class="text-center py-4 text-gray-500">데이터 없음</td></tr>'
+
+                document.getElementById('match-stats-table').innerHTML = matchHtml
+
+                // 일별 추이
+                const dailyTrend = stats.daily_trend || []
+                const trendHtml = dailyTrend.length > 0 ? dailyTrend.map(d => \`
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                        <div>
+                            <p class="font-bold">\${new Date(d.date).toLocaleDateString()}</p>
+                            <p class="text-sm text-gray-600">배팅 \${d.bet_count}건</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm">배팅액: <span class="font-bold text-blue-600">\${parseInt(d.total_bet_amount || 0).toLocaleString()}원</span></p>
+                            <p class="text-sm">당첨액: <span class="font-bold text-green-600">\${parseInt(d.total_win_amount || 0).toLocaleString()}원</span></p>
+                        </div>
+                    </div>
+                \`).join('') : '<p class="text-gray-500 text-center py-4">데이터 없음</p>'
+
+                document.getElementById('daily-trend-list').innerHTML = trendHtml
+
+            } catch (error) {
+                console.error('통계 로드 오류:', error)
+                alert('통계를 불러오는데 실패했습니다.')
+            }
+        }
+
 
         // 직원 목록 로드
         async function loadStaff() {
