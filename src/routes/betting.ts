@@ -27,6 +27,25 @@ betting.get('/matches', async (c) => {
 
     const { results } = await c.env.DB.prepare(query).bind(...params).all()
 
+    // 완료된 경기의 경우 배팅 통계 추가
+    if (status === 'completed') {
+      for (const match of results || []) {
+        const statsQuery = await c.env.DB.prepare(
+          `SELECT 
+            COUNT(DISTINCT bf.id) as bet_count,
+            SUM(bf.total_bet_amount) as total_bet_amount,
+            SUM(CASE WHEN bf.status = 'won' THEN bf.potential_win ELSE 0 END) as total_win_amount
+           FROM bet_folders bf
+           JOIN bets b ON bf.id = b.folder_id
+           WHERE b.match_id = ?`
+        ).bind(match.id).first()
+
+        match.total_bet_amount = Number((statsQuery as any)?.total_bet_amount || 0)
+        match.total_win_amount = Number((statsQuery as any)?.total_win_amount || 0)
+        match.bet_count = Number((statsQuery as any)?.bet_count || 0)
+      }
+    }
+
     return c.json({ matches: results })
   } catch (error) {
     console.error('경기 목록 조회 오류:', error)
@@ -72,6 +91,79 @@ betting.post('/matches', async (c) => {
   } catch (error) {
     console.error('경기 등록 오류:', error)
     return c.json({ error: '경기 등록 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 경기 일괄 저장 (등록/수정)
+betting.post('/matches/bulk', async (c) => {
+  try {
+    const { matches } = await c.req.json()
+
+    if (!matches || matches.length === 0) {
+      return c.json({ error: '저장할 경기가 없습니다.' }, 400)
+    }
+
+    for (const match of matches) {
+      const { id, match_name, match_date, home_team, away_team, home_odds, draw_odds, away_odds } = match
+
+      if (!match_name || !match_date || !home_team || !away_team) {
+        continue // 필수 필드 누락 시 스킵
+      }
+
+      if (id) {
+        // 기존 경기 수정
+        await c.env.DB.prepare(
+          `UPDATE matches 
+           SET match_name = ?, match_date = ?, home_team = ?, away_team = ?,
+               home_odds = ?, draw_odds = ?, away_odds = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`
+        ).bind(
+          match_name, match_date, home_team, away_team,
+          home_odds || 1.0, draw_odds || null, away_odds || 1.0,
+          id
+        ).run()
+      } else {
+        // 신규 경기 등록
+        const match_number = `M${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+        await c.env.DB.prepare(
+          `INSERT INTO matches (
+            match_number, match_name, match_date, home_team, away_team,
+            home_odds, away_odds, draw_odds
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          match_number, match_name, match_date, home_team, away_team,
+          home_odds || 1.0, away_odds || 1.0, draw_odds || null
+        ).run()
+      }
+    }
+
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('경기 일괄 저장 오류:', error)
+    return c.json({ error: '경기 일괄 저장 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 경기 삭제
+betting.delete('/matches/:id', async (c) => {
+  try {
+    const match_id = c.req.param('id')
+
+    // 이 경기와 관련된 배팅이 있는지 확인
+    const { results: bets } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM bets WHERE match_id = ?'
+    ).bind(match_id).all()
+
+    if (bets && bets[0] && (bets[0] as any).count > 0) {
+      return c.json({ error: '이 경기와 관련된 배팅이 있어 삭제할 수 없습니다.' }, 400)
+    }
+
+    await c.env.DB.prepare('DELETE FROM matches WHERE id = ?').bind(match_id).run()
+
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('경기 삭제 오류:', error)
+    return c.json({ error: '경기 삭제 중 오류가 발생했습니다.' }, 500)
   }
 })
 
@@ -587,6 +679,33 @@ betting.post('/settlements/:id/reject', async (c) => {
   } catch (error) {
     console.error('정산 거부 오류:', error)
     return c.json({ error: '정산 거부 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 경기 정산 통계 조회
+betting.get('/settlement-stats', async (c) => {
+  try {
+    // 완료된 경기의 정산 통계
+    const { results: statsResults } = await c.env.DB.prepare(
+      `SELECT 
+        SUM(bf.total_bet_amount) as total_bet,
+        SUM(CASE WHEN bf.status = 'won' THEN bf.potential_win ELSE 0 END) as total_win
+       FROM bet_folders bf
+       JOIN bets b ON bf.id = b.folder_id
+       JOIN matches m ON b.match_id = m.id
+       WHERE m.status = 'completed'`
+    ).all()
+
+    const stats = statsResults?.[0] as any || {}
+
+    return c.json({
+      total_bet: Number(stats.total_bet || 0),
+      total_win: Number(stats.total_win || 0),
+      net_profit: Number(stats.total_bet || 0) - Number(stats.total_win || 0)
+    })
+  } catch (error) {
+    console.error('정산 통계 조회 오류:', error)
+    return c.json({ error: '정산 통계 조회 중 오류가 발생했습니다.' }, 500)
   }
 })
 
