@@ -154,6 +154,9 @@ app.get('/', (c) => {
                     <button onclick="showView('books')" class="nav-item px-4 py-3 rounded-t-lg">
                         <i class="fas fa-book mr-2"></i>도서 관리
                     </button>
+                    <button onclick="showView('mailroom')" class="nav-item px-4 py-3 rounded-t-lg">
+                        <i class="fas fa-envelope-open-text mr-2"></i>우편실
+                    </button>
                     <button id="betting-nav" onclick="showView('betting')" class="nav-item px-4 py-3 rounded-t-lg hidden">
                         <i class="fas fa-trophy mr-2"></i>배팅 관리
                     </button>
@@ -766,6 +769,79 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 우편실 뷰 -->
+        <div id="mailroom-view" class="view-content hidden">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold"><i class="fas fa-envelope-open-text mr-2"></i>우편실 관리</h2>
+                <p class="text-gray-600 mt-2">우편 수령 → OCR 처리 → 검수 및 배당 → 티켓 생성</p>
+            </div>
+
+            <!-- 탭 네비게이션 -->
+            <div class="flex space-x-2 mb-6">
+                <button onclick="showMailroomTab('receive')" id="mailroom-tab-receive" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    <i class="fas fa-inbox mr-1"></i>우편 수령
+                </button>
+                <button onclick="showMailroomTab('inspection')" id="mailroom-tab-inspection" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                    <i class="fas fa-search mr-1"></i>검수 및 배당
+                </button>
+                <button onclick="showMailroomTab('history')" id="mailroom-tab-history" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                    <i class="fas fa-history mr-1"></i>처리 내역
+                </button>
+            </div>
+
+            <!-- 우편 수령 탭 -->
+            <div id="mailroom-receive-tab" class="mailroom-tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- 이미지 업로드 -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4"><i class="fas fa-cloud-upload-alt mr-2"></i>우편물 사진 업로드</h3>
+                        <div class="space-y-4">
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                <input type="file" id="mail-images" accept="image/*" multiple class="hidden" onchange="handleMailImages(event)">
+                                <label for="mail-images" class="cursor-pointer">
+                                    <i class="fas fa-camera text-5xl text-gray-400 mb-4"></i>
+                                    <p class="text-gray-600">클릭하여 사진 선택</p>
+                                    <p class="text-sm text-gray-400 mt-2">여러 장 선택 가능 (PNG, JPG)</p>
+                                </label>
+                            </div>
+                            <div id="uploaded-images-preview" class="grid grid-cols-3 gap-2"></div>
+                            <button onclick="processMailImages()" class="btn btn-primary w-full" id="process-mail-btn" disabled>
+                                <i class="fas fa-magic mr-2"></i>OCR 처리 시작
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 업로드된 우편물 목록 -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4"><i class="fas fa-list mr-2"></i>대기 중인 우편물</h3>
+                        <div id="pending-mail-list" class="space-y-2 max-h-96 overflow-y-auto">
+                            <p class="text-gray-500 text-center py-8">업로드된 우편물이 없습니다.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 검수 및 배당 탭 -->
+            <div id="mailroom-inspection-tab" class="mailroom-tab-content hidden">
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-search mr-2"></i>OCR 처리 완료 우편물</h3>
+                    <div id="processed-mail-list" class="space-y-4">
+                        <p class="text-gray-500 text-center py-8">처리 완료된 우편물이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 처리 내역 탭 -->
+            <div id="mailroom-history-tab" class="mailroom-tab-content hidden">
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-history mr-2"></i>우편물 처리 내역</h3>
+                    <div id="mail-history-list" class="space-y-2">
+                        <p class="text-gray-500 text-center py-8">처리 내역이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 경기 결과 입력 모달 -->
         <div id="match-result-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-md w-full p-6">
@@ -1064,6 +1140,10 @@ app.get('/', (c) => {
                         <div class="card">
                             <h4 class="font-bold mb-3"><i class="fas fa-info-circle mr-2"></i>기본 정보</h4>
                             <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">회원번호:</span>
+                                    <span id="detail-member-number" class="font-mono font-bold text-blue-600"></span>
+                                </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">수감번호:</span>
                                     <span id="detail-prisoner-number" class="font-mono"></span>
@@ -1768,6 +1848,7 @@ app.get('/', (c) => {
             else if (view === 'tickets') loadTickets()
             else if (view === 'members') loadMembers()
             else if (view === 'books') loadBooks()
+            else if (view === 'mailroom') loadMailroom()
             else if (view === 'betting') loadBetting()
             else if (view === 'staff') loadStaff()
             else if (view === 'closing') loadClosing()
@@ -3665,6 +3746,7 @@ app.get('/', (c) => {
                 // 기본 정보
                 document.getElementById('detail-member-name').textContent = member.name
                 document.getElementById('detail-member-prison').textContent = member.institution
+                document.getElementById('detail-member-number').textContent = member.member_number || '-'
                 document.getElementById('detail-prisoner-number').textContent = member.inmate_number
                 document.getElementById('detail-address').textContent = member.po_box_address || '-'
                 document.getElementById('detail-depositor').textContent = member.depositor_name || '-'
