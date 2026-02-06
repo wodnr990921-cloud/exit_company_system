@@ -2012,36 +2012,6 @@ app.get('/', (c) => {
                 \`).join('') : '<p class="text-gray-500 text-sm">정산 대기가 없습니다.</p>'
 
                 document.getElementById('pending-settlements-list').innerHTML = settlementsHtml
-
-                // 배팅 폴더 목록
-                const folders = foldersRes.data.folders || []
-                const foldersHtml = folders.length > 0 ? folders.map(f => \`
-                    <div class="card">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-bold">\${f.folder_number} [\${f.folder_type === 'single' ? '단폴더' : '다폴더'}]</h4>
-                                <p class="text-sm text-gray-600">\${f.member_name} - 티켓: \${f.ticket_number}</p>
-                                <p class="text-sm mt-2">배팅: \${f.total_bet_amount.toLocaleString()}원 | 배당: \${f.total_odds.toFixed(2)} | 예상: \${f.potential_win.toLocaleString()}원</p>
-                                <div class="mt-2">
-                                    <span class="status-badge status-\${f.status}">\${getStatusText(f.status)}</span>
-                                </div>
-                            </div>
-                            <div class="text-right text-sm text-gray-500">
-                                <p>\${new Date(f.created_at).toLocaleDateString()}</p>
-                            </div>
-                        </div>
-                        <div class="mt-3 space-y-1">
-                            \${(f.bets || []).map(b => \`
-                                <p class="text-sm text-gray-700">
-                                    <i class="fas fa-chevron-right mr-1"></i>
-                                    \${b.match_name}: \${getBetTypeText(b.bet_type)} (\${b.odds}) - \${getStatusText(b.status)}
-                                </p>
-                            \`).join('')}
-                        </div>
-                    </div>
-                \`).join('') : '<p class="text-gray-500 text-center py-4">배팅 폴더가 없습니다.</p>'
-
-                document.getElementById('bet-folders-list').innerHTML = foldersHtml
             } catch (error) {
                 console.error('배팅 관리 로드 오류:', error)
             }
