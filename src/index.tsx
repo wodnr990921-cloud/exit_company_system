@@ -1206,8 +1206,8 @@ app.get('/', (c) => {
                             <input type="text" id="member-depositor" class="w-full px-3 py-2 border rounded" placeholder="입금자 이름">
                         </div>
 
-                        <!-- 초기 포인트 -->
-                        <div class="grid grid-cols-2 gap-4">
+                        <!-- 초기 포인트 (주석처리 - 포인트는 회원 상세에서 별도 관리) -->
+                        <!-- <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">초기 일반 포인트</label>
                                 <input type="number" id="member-initial-points" class="w-full px-3 py-2 border rounded" placeholder="0" min="0" value="0">
@@ -1216,7 +1216,7 @@ app.get('/', (c) => {
                                 <label class="block text-sm font-medium mb-1">초기 배팅 포인트</label>
                                 <input type="number" id="member-initial-betting-points" class="w-full px-3 py-2 border rounded" placeholder="0" min="0" value="0">
                             </div>
-                        </div>
+                        </div> -->
 
                         <!-- 메모 -->
                         <div>
@@ -1298,6 +1298,16 @@ app.get('/', (c) => {
                                     <p class="text-xs text-gray-600 mb-1">동결 포인트</p>
                                     <p class="text-2xl font-bold text-orange-600"><span id="detail-frozen-points">0</span>원</p>
                                 </div>
+                                
+                                <!-- 포인트 관리 버튼 -->
+                                <div class="grid grid-cols-2 gap-2 pt-3 border-t">
+                                    <button onclick="showPointAdjustModal('add')" class="btn btn-sm btn-success">
+                                        <i class="fas fa-plus mr-1"></i>포인트 지급
+                                    </button>
+                                    <button onclick="showPointAdjustModal('subtract')" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-minus mr-1"></i>포인트 차감
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -1315,6 +1325,47 @@ app.get('/', (c) => {
                             <div id="member-tickets" class="space-y-2 max-h-60 overflow-y-auto">
                                 로딩중...
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 포인트 조정 모달 -->
+        <div id="point-adjust-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-coins mr-2"></i>포인트 <span id="point-adjust-title">지급</span></h3>
+                        <button onclick="closePointAdjustModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">포인트 유형 *</label>
+                            <select id="point-adjust-type" class="w-full px-3 py-2 border rounded">
+                                <option value="points">일반 포인트</option>
+                                <option value="betting_points">배팅 포인트</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1">금액 *</label>
+                            <input type="number" id="point-adjust-amount" class="w-full px-3 py-2 border rounded" placeholder="금액 입력" min="1" step="1000">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1">사유</label>
+                            <textarea id="point-adjust-reason" class="w-full px-3 py-2 border rounded" rows="3" placeholder="포인트 조정 사유를 입력하세요"></textarea>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-2 pt-4 border-t">
+                            <button onclick="closePointAdjustModal()" class="btn btn-secondary">취소</button>
+                            <button onclick="executePointAdjust()" class="btn btn-primary" id="point-adjust-submit">
+                                <i class="fas fa-check mr-2"></i>확인
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -3808,8 +3859,8 @@ app.get('/', (c) => {
             document.getElementById('member-prisoner-number').value = ''
             document.getElementById('member-address').value = ''
             document.getElementById('member-depositor').value = ''
-            document.getElementById('member-initial-points').value = '0'
-            document.getElementById('member-initial-betting-points').value = '0'
+            // document.getElementById('member-initial-points').value = '0' // 주석처리
+            // document.getElementById('member-initial-betting-points').value = '0' // 주석처리
             document.getElementById('member-notes').value = ''
         }
 
@@ -3819,8 +3870,9 @@ app.get('/', (c) => {
             const prisonerNumber = document.getElementById('member-prisoner-number').value
             const address = document.getElementById('member-address').value
             const depositor = document.getElementById('member-depositor').value
-            const initialPoints = parseFloat(document.getElementById('member-initial-points').value) || 0
-            const initialBettingPoints = parseFloat(document.getElementById('member-initial-betting-points').value) || 0
+            // 초기 포인트는 0으로 설정 (별도 포인트 관리 기능 사용)
+            // const initialPoints = parseFloat(document.getElementById('member-initial-points').value) || 0
+            // const initialBettingPoints = parseFloat(document.getElementById('member-initial-betting-points').value) || 0
             const notes = document.getElementById('member-notes').value
 
             // 필수 항목 검증
@@ -3835,8 +3887,8 @@ app.get('/', (c) => {
                 inmate_number: prisonerNumber,
                 po_box_address: address,
                 depositor_name: depositor,
-                points: initialPoints,
-                betting_points: initialBettingPoints,
+                points: 0, // 초기 포인트는 0
+                betting_points: 0, // 초기 배팅 포인트는 0
                 notes: notes
             }
 
@@ -3852,6 +3904,7 @@ app.get('/', (c) => {
 
         // 회원 상세 모달
         async function showMemberDetail(memberId) {
+            currentMemberId = memberId // 포인트 조정용 ID 저장
             try {
                 const memberRes = await axios.get(\`\${API_BASE}/members/\${memberId}\`)
                 const member = memberRes.data.member
@@ -3913,6 +3966,59 @@ app.get('/', (c) => {
 
         function closeMemberDetail() {
             document.getElementById('member-detail-modal').classList.add('hidden')
+        }
+
+        // 포인트 조정 모달
+        let currentMemberId = null
+        let currentAdjustMode = 'add' // 'add' 또는 'subtract'
+        
+        function showPointAdjustModal(mode) {
+            currentAdjustMode = mode
+            const title = mode === 'add' ? '지급' : '차감'
+            document.getElementById('point-adjust-title').textContent = title
+            document.getElementById('point-adjust-amount').value = ''
+            document.getElementById('point-adjust-reason').value = ''
+            document.getElementById('point-adjust-modal').classList.remove('hidden')
+        }
+        
+        function closePointAdjustModal() {
+            document.getElementById('point-adjust-modal').classList.add('hidden')
+        }
+        
+        async function executePointAdjust() {
+            const pointType = document.getElementById('point-adjust-type').value
+            const amount = parseInt(document.getElementById('point-adjust-amount').value)
+            const reason = document.getElementById('point-adjust-reason').value
+            
+            if (!amount || amount <= 0) {
+                alert('금액을 입력해주세요.')
+                return
+            }
+            
+            if (!currentMemberId) {
+                alert('회원 정보를 찾을 수 없습니다.')
+                return
+            }
+            
+            try {
+                // 포인트 조정 API 호출
+                await axios.post(\`\${API_BASE}/points/adjust\`, {
+                    member_id: currentMemberId,
+                    point_type: pointType,
+                    adjustment_type: currentAdjustMode, // 'add' or 'subtract'
+                    amount: amount,
+                    description: reason || \`포인트 \${currentAdjustMode === 'add' ? '지급' : '차감'}\`,
+                    created_by: currentStaff.id
+                })
+                
+                alert(\`포인트가 \${currentAdjustMode === 'add' ? '지급' : '차감'}되었습니다.\`)
+                closePointAdjustModal()
+                
+                // 회원 정보 새로고침
+                await showMemberDetail(currentMemberId)
+            } catch (error) {
+                alert('포인트 조정 실패: ' + (error.response?.data?.error || error.message))
+            }
         }
 
         // 우편실 관리
