@@ -286,7 +286,7 @@ app.get('/', (c) => {
                                 <option value="PURCHASE_ORDER">발주</option>
                                 <option value="POINT_ADJUSTMENT">포인트 조정</option>
                                 <option value="MEMBER">회원 관리</option>
-                                <option value="MAIL_INSPECTION">우편 검수</option>
+
                             </select>
                         </div>
                     </div>
@@ -347,7 +347,7 @@ app.get('/', (c) => {
                     <!-- 탭 네비게이션 -->
                     <div class="flex space-x-2">
                         <button onclick="showBettingTab('management')" id="betting-tab-management" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                            <i class="fas fa-futbol mr-1"></i>경기 관리
+                            <i class="fas fa-wallet mr-1"></i>배팅 목록
                         </button>
                         <button onclick="showBettingTab('statistics')" id="betting-tab-statistics" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
                             <i class="fas fa-chart-line mr-1"></i>통계
@@ -355,18 +355,18 @@ app.get('/', (c) => {
                     </div>
                 </div>
 
-                <!-- 경기 관리 탭 -->
+                <!-- 배팅 목록 탭 -->
                 <div id="betting-management-tab" class="betting-tab-content">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <!-- 경기 목록 -->
+                    <!-- 고객 배팅 목록 -->
                     <div class="card">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold"><i class="fas fa-futbol mr-2"></i>경기 목록</h3>
-                            <button onclick="showNewMatchModal()" class="btn btn-primary btn-sm">
-                                <i class="fas fa-plus mr-2"></i>경기 등록
+                            <h3 class="text-lg font-bold"><i class="fas fa-wallet mr-2"></i>고객 배팅 목록</h3>
+                            <button onclick="showNewBettingModal()" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus mr-2"></i>신규 배팅 등록
                             </button>
                         </div>
-                        <div id="matches-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                        <div id="betting-folders-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
                     </div>
 
                     <!-- 정산 승인 대기 -->
@@ -823,7 +823,7 @@ app.get('/', (c) => {
                                 <option value="PURCHASE_ORDER">발주</option>
                                 <option value="POINT_ADJUSTMENT">포인트 조정</option>
                                 <option value="MEMBER">회원 관리</option>
-                                <option value="MAIL_INSPECTION">우편 검수</option>
+
                             </select>
                         </div>
 
@@ -1976,28 +1976,27 @@ app.get('/', (c) => {
         // 배팅 관리 로드
         async function loadBetting() {
             try {
-                const [matchesRes, settlementsRes, foldersRes] = await Promise.all([
-                    axios.get(\`\${API_BASE}/betting/matches\`),
+                const [settlementsRes, foldersRes] = await Promise.all([
                     axios.get(\`\${API_BASE}/betting/settlements/pending\`),
                     axios.get(\`\${API_BASE}/betting/folders\`)
                 ])
 
-                // 경기 목록
-                const matches = matchesRes.data.matches
-                const matchesHtml = matches.length > 0 ? matches.map(m => \`
-                    <div class="bg-gray-50 p-3 rounded">
-                        <p class="font-bold">\${m.match_name}</p>
-                        <p class="text-sm text-gray-600">\${m.home_team} vs \${m.away_team}</p>
-                        <p class="text-xs text-gray-500">\${new Date(m.match_date).toLocaleString()}</p>
-                        \${m.status === 'scheduled' ? \`
-                            <button onclick="showMatchResultModal(\${m.id})" class="btn btn-primary btn-sm mt-2">결과 입력</button>
-                        \` : \`
-                            <span class="text-xs text-gray-500">상태: \${m.status}</span>
-                        \`}
+                // 배팅 폴더 목록 (고객 배팅)
+                const folders = foldersRes.data.folders || []
+                const bettingHtml = folders.length > 0 ? folders.map(f => \`
+                    <div class="bg-gray-50 p-3 rounded border">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-bold">\${f.folder_number} [\${f.folder_type === 'single' ? '단폴더' : '다폴더'}]</p>
+                                <p class="text-sm text-gray-600">\${f.member_name}</p>
+                                <p class="text-xs text-gray-500 mt-1">배팅: \${f.total_bet_amount.toLocaleString()}원 | 배당: \${f.total_odds.toFixed(2)}</p>
+                            </div>
+                            <span class="status-badge status-\${f.status}">\${getStatusText(f.status)}</span>
+                        </div>
                     </div>
-                \`).join('') : '<p class="text-gray-500 text-sm">경기가 없습니다.</p>'
+                \`).join('') : '<p class="text-gray-500 text-sm">배팅이 없습니다.</p>'
 
-                document.getElementById('matches-list').innerHTML = matchesHtml
+                document.getElementById('betting-folders-list').innerHTML = bettingHtml
 
                 // 정산 대기 목록은 이미 loadPendingApprovals에서 처리됨
                 const settlements = settlementsRes.data.settlements || []
@@ -2423,8 +2422,7 @@ app.get('/', (c) => {
                 'INQUIRY': '문의',
                 'PURCHASE_ORDER': '발주',
                 'POINT_ADJUSTMENT': '포인트 조정',
-                'MEMBER': '회원 관리',
-                'MAIL_INSPECTION': '우편 검수'
+                'MEMBER': '회원 관리'
             }
             return typeMap[type] || type
         }
@@ -2469,6 +2467,11 @@ app.get('/', (c) => {
         }
 
         // 경기 등록 모달
+        // 신규 배팅 등록 모달 (티켓 상세에서 배팅 등록과 동일)
+        function showNewBettingModal() {
+            alert('배팅은 티켓 상세 화면에서 등록할 수 있습니다.\\n\\n티켓 관리 → 티켓 선택 → 배팅 탭에서 등록해주세요.')
+        }
+
         function showNewMatchModal() {
             document.getElementById('new-match-modal').classList.remove('hidden')
         }
@@ -2838,8 +2841,7 @@ app.get('/', (c) => {
                 'INQUIRY': '문의',
                 'PURCHASE_ORDER': '발주',
                 'POINT_ADJUSTMENT': '포인트 조정',
-                'MEMBER': '회원 관리',
-                'MAIL_INSPECTION': '우편 검수'
+                'MEMBER': '회원 관리'
             }
             return types[type] || type
         }
