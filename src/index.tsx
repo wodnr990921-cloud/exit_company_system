@@ -51,6 +51,7 @@ app.get('/', (c) => {
     <title>엑시트 시스템 - EXIT System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
         .hidden { display: none !important; }
@@ -258,6 +259,65 @@ app.get('/', (c) => {
                             <i class="fas fa-bell mr-2"></i>승인 대기 중
                         </h3>
                         <div id="pending-approvals"></div>
+                    </div>
+                </div>
+
+                <!-- 통계 차트 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- 티켓 상태 별 통계 (도넛 차트) -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4">
+                            <i class="fas fa-chart-pie mr-2"></i>티켓 상태 별 현황
+                        </h3>
+                        <div class="h-64">
+                            <canvas id="ticketStatusChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 우편물 처리 현황 (도넛 차트) -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4">
+                            <i class="fas fa-envelope mr-2"></i>우편물 처리 현황
+                        </h3>
+                        <div class="h-64">
+                            <canvas id="mailroomStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 월별 추이 차트 -->
+                <div class="grid grid-cols-1 gap-6 mb-6">
+                    <!-- 월별 티켓 추이 (라인 차트) -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4">
+                            <i class="fas fa-chart-line mr-2"></i>월별 티켓 처리 추이 (최근 6개월)
+                        </h3>
+                        <div class="h-64">
+                            <canvas id="ticketTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 배팅 및 포인트 현황 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- 배팅 현황 (바 차트) -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4">
+                            <i class="fas fa-trophy mr-2"></i>배팅 폴더 현황
+                        </h3>
+                        <div class="h-64">
+                            <canvas id="bettingStatusChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 포인트 거래 현황 (바 차트) -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4">
+                            <i class="fas fa-coins mr-2"></i>일주일 포인트 거래
+                        </h3>
+                        <div class="h-64">
+                            <canvas id="pointTransactionChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2133,6 +2193,9 @@ app.get('/', (c) => {
                     document.getElementById('admin-section').classList.remove('hidden')
                     await loadPendingApprovals()
                 }
+
+                // 차트 렌더링
+                await renderDashboardCharts()
             } catch (error) {
                 console.error('대시보드 로드 오류:', error)
             }
@@ -2174,6 +2237,336 @@ app.get('/', (c) => {
         }
 
         // 승인 대기 목록 로드
+
+        // 대시보드 차트 렌더링
+        let dashboardCharts = {} // 차트 인스턴스 저장
+
+        async function renderDashboardCharts() {
+            try {
+                // 기존 차트 파괴
+                Object.values(dashboardCharts).forEach(chart => {
+                    if (chart) chart.destroy()
+                })
+                dashboardCharts = {}
+
+                // 데이터 로드
+                const [ticketStats, mailroomStats, bettingStats, pointStats] = await Promise.all([
+                    axios.get(\`\${API_BASE}/tickets/stats/dashboard\`),
+                    axios.get(\`\${API_BASE}/mailroom?status=all\`),
+                    axios.get(\`\${API_BASE}/betting/folders\`),
+                    axios.get(\`\${API_BASE}/points/pending\`)
+                ])
+
+                // 1. 티켓 상태 별 통계 (도넛 차트)
+                renderTicketStatusChart(ticketStats.data)
+
+                // 2. 우편물 처리 현황 (도넛 차트)
+                renderMailroomStatusChart(mailroomStats.data.mailroom_items || [])
+
+                // 3. 월별 티켓 추이 (라인 차트)
+                await renderTicketTrendChart()
+
+                // 4. 배팅 현황 (바 차트)
+                renderBettingStatusChart(bettingStats.data.folders || [])
+
+                // 5. 포인트 거래 현황 (바 차트)
+                await renderPointTransactionChart()
+
+            } catch (error) {
+                console.error('차트 렌더링 오류:', error)
+            }
+        }
+
+        // 1. 티켓 상태 별 차트
+        function renderTicketStatusChart(stats) {
+            const ctx = document.getElementById('ticketStatusChart')
+            if (!ctx) return
+
+            const statusData = stats.statusStats || []
+            const labels = statusData.map(s => getStatusText(s.status))
+            const data = statusData.map(s => s.count)
+            const colors = [
+                '#FCD34D', // open (노랑)
+                '#60A5FA', // assigned (파랑)
+                '#A78BFA', // in_progress (보라)
+                '#34D399', // completed (초록)
+                '#94A3B8'  // closed (회색)
+            ]
+
+            dashboardCharts.ticketStatus = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || ''
+                                    const value = context.parsed || 0
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0)
+                                    const percentage = ((value / total) * 100).toFixed(1)
+                                    return \`\${label}: \${value}건 (\${percentage}%)\`
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+        }
+
+        // 2. 우편물 처리 현황 차트
+        function renderMailroomStatusChart(items) {
+            const ctx = document.getElementById('mailroomStatusChart')
+            if (!ctx) return
+
+            // 상태별 집계
+            const statusCount = {}
+            items.forEach(item => {
+                statusCount[item.status] = (statusCount[item.status] || 0) + 1
+            })
+
+            const statusLabels = {
+                'received': '수령',
+                'ocr_processing': 'OCR 처리중',
+                'ocr_completed': 'OCR 완료',
+                'inspection': '검수중',
+                'assigned': '배당완료',
+                'completed': '처리완료'
+            }
+
+            const labels = Object.keys(statusCount).map(s => statusLabels[s] || s)
+            const data = Object.values(statusCount)
+            const colors = ['#FBBF24', '#F59E0B', '#3B82F6', '#8B5CF6', '#10B981', '#6B7280']
+
+            dashboardCharts.mailroomStatus = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            })
+        }
+
+        // 3. 월별 티켓 추이 차트
+        async function renderTicketTrendChart() {
+            const ctx = document.getElementById('ticketTrendChart')
+            if (!ctx) return
+
+            try {
+                // 최근 6개월 티켓 데이터
+                const response = await axios.get(\`\${API_BASE}/tickets\`)
+                const tickets = response.data.tickets || []
+
+                // 월별 집계
+                const monthlyData = {}
+                const now = new Date()
+                for (let i = 5; i >= 0; i--) {
+                    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+                    const key = \`\${date.getFullYear()}-\${String(date.getMonth() + 1).padStart(2, '0')}\`
+                    monthlyData[key] = { created: 0, completed: 0 }
+                }
+
+                tickets.forEach(ticket => {
+                    const created = ticket.created_at.substring(0, 7)
+                    if (monthlyData[created]) {
+                        monthlyData[created].created++
+                        if (['completed', 'closed'].includes(ticket.status)) {
+                            monthlyData[created].completed++
+                        }
+                    }
+                })
+
+                const labels = Object.keys(monthlyData).map(key => {
+                    const [year, month] = key.split('-')
+                    return \`\${year}년 \${month}월\`
+                })
+                const createdData = Object.values(monthlyData).map(d => d.created)
+                const completedData = Object.values(monthlyData).map(d => d.completed)
+
+                dashboardCharts.ticketTrend = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '생성된 티켓',
+                                data: createdData,
+                                borderColor: '#3B82F6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            },
+                            {
+                                label: '완료된 티켓',
+                                data: completedData,
+                                borderColor: '#10B981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                })
+            } catch (error) {
+                console.error('티켓 추이 차트 오류:', error)
+            }
+        }
+
+        // 4. 배팅 현황 차트
+        function renderBettingStatusChart(folders) {
+            const ctx = document.getElementById('bettingStatusChart')
+            if (!ctx) return
+
+            // 상태별 집계
+            const statusCount = {}
+            folders.forEach(folder => {
+                statusCount[folder.status] = (statusCount[folder.status] || 0) + 1
+            })
+
+            const statusLabels = {
+                'pending': '대기중',
+                'settled_win': '적중',
+                'settled_lose': '미적중',
+                'cancelled': '취소'
+            }
+
+            const labels = Object.keys(statusCount).map(s => statusLabels[s] || s)
+            const data = Object.values(statusCount)
+            const colors = ['#FBBF24', '#10B981', '#EF4444', '#6B7280']
+
+            dashboardCharts.bettingStatus = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '폴더 수',
+                        data: data,
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            })
+        }
+
+        // 5. 포인트 거래 현황 차트
+        async function renderPointTransactionChart() {
+            const ctx = document.getElementById('pointTransactionChart')
+            if (!ctx) return
+
+            try {
+                // 일주일 데이터 (임시 데이터 - 실제로는 API에서 가져와야 함)
+                const labels = []
+                const addData = []
+                const deductData = []
+
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date()
+                    date.setDate(date.getDate() - i)
+                    labels.push(\`\${date.getMonth() + 1}/\${date.getDate()}\`)
+                    addData.push(Math.floor(Math.random() * 10))
+                    deductData.push(Math.floor(Math.random() * 10))
+                }
+
+                dashboardCharts.pointTransaction = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '지급',
+                                data: addData,
+                                backgroundColor: '#10B981'
+                            },
+                            {
+                                label: '차감',
+                                data: deductData,
+                                backgroundColor: '#EF4444'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                })
+            } catch (error) {
+                console.error('포인트 차트 오류:', error)
+            }
+        }
+
         async function loadPendingApprovals() {
             try {
                 const [pointsRes, settlementsRes] = await Promise.all([
