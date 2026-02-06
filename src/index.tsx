@@ -1680,248 +1680,314 @@ app.get('/', (c) => {
         </div>
 
         <!-- 티켓 상세 모달 (배팅 폴더 포함) -->
+        <!-- 티켓 상세 모달 (좌우 레이아웃) -->
         <div id="ticket-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <div>
-                            <h3 class="text-xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>티켓 상세</h3>
-                            <p class="text-sm text-gray-600">
-                                <span id="modal-ticket-number" class="font-mono"></span> - 
-                                <span id="modal-ticket-title"></span>
-                            </p>
-                            <p class="text-xs text-gray-500">회원: <span id="modal-ticket-member"></span></p>
+            <div class="bg-white rounded-lg w-full max-w-[95vw] h-[90vh] flex flex-col">
+                <!-- 모달 헤더 -->
+                <div class="p-4 border-b flex justify-between items-center">
+                    <div>
+                        <h3 class="text-xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>티켓 상세</h3>
+                        <p class="text-sm text-gray-600">
+                            <span id="modal-ticket-number" class="font-mono"></span> - 
+                            <span id="modal-ticket-title"></span>
+                        </p>
+                        <p class="text-xs text-gray-500">회원: <span id="modal-ticket-member"></span></p>
+                    </div>
+                    <button onclick="closeTicketDetail()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- 좌우 레이아웃 -->
+                <div class="flex-1 flex overflow-hidden">
+                    <!-- 좌측: 우편물 이미지 뷰어 (40%) -->
+                    <div class="w-2/5 border-r bg-gray-50 flex flex-col">
+                        <div class="p-4 border-b bg-white">
+                            <h4 class="font-bold text-sm"><i class="fas fa-envelope-open-text mr-2"></i>우편물 이미지</h4>
                         </div>
-                        <button onclick="closeTicketDetail()" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
-
-                    <!-- 탭 네비게이션 -->
-                    <div class="flex border-b mb-4">
-                        <button onclick="showTicketTab('info')" id="tab-info" class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-500">
-                            <i class="fas fa-info-circle mr-1"></i>티켓 정보
-                        </button>
-                        <button onclick="showTicketTab('comments')" id="tab-comments" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
-                            <i class="fas fa-comments mr-1"></i>댓글
-                        </button>
-                        <button onclick="showTicketTab('betting')" id="tab-betting" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
-                            <i class="fas fa-trophy mr-1"></i>배팅 접수
-                        </button>
-                    </div>
-
-                    <!-- 티켓 정보 탭 -->
-                    <div id="ticket-tab-info" class="tab-content">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <!-- 기본 정보 -->
-                            <div class="card">
-                                <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
-                                <div class="space-y-2 text-sm">
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">티켓 번호:</span>
-                                        <span class="font-mono" id="detail-ticket-number"></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">제목:</span>
-                                        <span id="detail-ticket-title"></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">유형:</span>
-                                        <span id="detail-ticket-type"></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">상태:</span>
-                                        <span id="detail-ticket-status"></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">우선순위:</span>
-                                        <span id="detail-ticket-priority"></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">회원:</span>
-                                        <span id="detail-ticket-member-name"></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">담당자:</span>
-                                        <span id="detail-ticket-assigned"></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">생성일:</span>
-                                        <span id="detail-ticket-created"></span>
-                                    </div>
-                                    <div class="pt-2 border-t">
-                                        <p class="text-gray-600 mb-1">설명:</p>
-                                        <p id="detail-ticket-description" class="text-gray-800"></p>
+                        <div id="ticket-mail-images" class="flex-1 flex flex-col items-center justify-center p-4 overflow-hidden">
+                            <!-- 이미지 컨테이너 -->
+                            <div id="mail-image-container" class="hidden w-full h-full flex flex-col">
+                                <!-- 이미지 뷰어 -->
+                                <div class="flex-1 flex items-center justify-center bg-black rounded overflow-hidden relative">
+                                    <img id="current-mail-image" src="" alt="우편물" class="max-w-full max-h-full object-contain" style="transform-origin: center;">
+                                    
+                                    <!-- 이미지 컨트롤 오버레이 -->
+                                    <div class="absolute top-2 right-2 flex gap-2">
+                                        <button onclick="rotateMailImage(-90)" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="왼쪽 회전">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                        <button onclick="rotateMailImage(90)" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="오른쪽 회전">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                        <button onclick="zoomMailImage('in')" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="확대">
+                                            <i class="fas fa-search-plus"></i>
+                                        </button>
+                                        <button onclick="zoomMailImage('out')" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="축소">
+                                            <i class="fas fa-search-minus"></i>
+                                        </button>
+                                        <button onclick="resetMailImage()" class="bg-black bg-opacity-50 text-white p-2 rounded hover:bg-opacity-70" title="초기화">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
-
-                            <!-- 상태 변경 -->
-                            <div class="card">
-                                <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>상태 변경</h4>
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="block text-sm font-medium mb-1">티켓 상태</label>
-                                        <select id="update-ticket-status" class="w-full px-3 py-2 border rounded">
-                                            <option value="open">미배정</option>
-                                            <option value="assigned">배정됨</option>
-                                            <option value="in_progress">처리중</option>
-                                            <option value="completed">완료</option>
-                                            <option value="closed">종료</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium mb-1">우선순위</label>
-                                        <select id="update-ticket-priority" class="w-full px-3 py-2 border rounded">
-                                            <option value="low">낮음</option>
-                                            <option value="normal">보통</option>
-                                            <option value="high">높음</option>
-                                            <option value="urgent">긴급</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium mb-1">담당자</label>
-                                        <select id="update-ticket-assigned" class="w-full px-3 py-2 border rounded">
-                                            <option value="">미배정</option>
-                                        </select>
-                                    </div>
-                                    <button onclick="updateTicketInfo()" class="btn btn-primary w-full">
-                                        <i class="fas fa-save mr-2"></i>변경사항 저장
+                                
+                                <!-- 이미지 네비게이션 -->
+                                <div class="mt-3 flex items-center justify-center gap-3">
+                                    <button onclick="prevMailImage()" id="prev-image-btn" class="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <span id="image-counter" class="text-sm text-gray-700">-/-</span>
+                                    <button onclick="nextMailImage()" id="next-image-btn" class="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i class="fas fa-chevron-right"></i>
                                     </button>
                                 </div>
+                                
+                                <!-- 썸네일 리스트 -->
+                                <div id="mail-thumbnails" class="mt-3 flex gap-2 overflow-x-auto pb-2">
+                                    <!-- 썸네일 동적 생성 -->
+                                </div>
+                            </div>
+                            
+                            <!-- 이미지 없음 상태 -->
+                            <div id="no-mail-images" class="text-center text-gray-500">
+                                <i class="fas fa-image text-4xl mb-2 opacity-30"></i>
+                                <p class="text-sm">연결된 우편물이 없습니다</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 댓글 탭 -->
-                    <div id="ticket-tab-comments" class="tab-content hidden">
-                        <div class="card mb-4">
-                            <h4 class="font-bold mb-3"><i class="fas fa-comment mr-2"></i>댓글/답변 작성</h4>
-                            
-                            <!-- 댓글 타입 선택 -->
-                            <div class="mb-3">
-                                <label class="block text-sm font-medium mb-1">타입</label>
-                                <div class="flex gap-4">
-                                    <label class="flex items-center">
-                                        <input type="radio" name="comment-type" value="internal" checked class="mr-2">
-                                        <span>내부 메모 (직원만 보기)</span>
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="radio" name="comment-type" value="response" class="mr-2">
-                                        <span class="text-blue-600 font-bold">회원 답변 (출력용)</span>
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <!-- 답변 템플릿 선택 -->
-                            <div class="mb-3" id="template-section">
-                                <label class="block text-sm font-medium mb-1">빠른 답변 템플릿</label>
-                                <select id="comment-template" onchange="insertTemplate()" class="w-full px-3 py-2 border rounded">
-                                    <option value="">-- 템플릿 선택 또는 직접 입력 --</option>
-                                    <option value="order_received">주문 접수 완료</option>
-                                    <option value="order_processing">주문 처리 중</option>
-                                    <option value="order_shipped">발송 완료</option>
-                                    <option value="point_adjusted">포인트 조정 완료</option>
-                                    <option value="inquiry_answer">문의 답변</option>
-                                    <option value="need_more_info">추가 정보 필요</option>
-                                    <option value="completed">처리 완료</option>
-                                </select>
-                            </div>
-                            
-                            <textarea 
-                                id="comment-content" 
-                                class="w-full px-3 py-2 border rounded mb-2" 
-                                rows="5" 
-                                placeholder="내용을 입력하세요... (수기 작성 가능)"
-                            ></textarea>
-                            
-                            <div class="flex gap-2">
-                                <button onclick="addComment()" class="btn btn-primary flex-1">
-                                    <i class="fas fa-paper-plane mr-2"></i>저장
-                                </button>
-                                <button onclick="addAndNotify()" class="btn btn-success flex-1" id="notify-btn" style="display:none;">
-                                    <i class="fas fa-bell mr-2"></i>저장 + 알림 발송
-                                </button>
-                            </div>
+                    <!-- 우측: 기존 티켓 정보 (60%) -->
+                    <div class="w-3/5 flex flex-col overflow-hidden">
+                        <!-- 탭 네비게이션 -->
+                        <div class="flex border-b bg-white">
+                            <button onclick="showTicketTab('info')" id="tab-info" class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-500">
+                                <i class="fas fa-info-circle mr-1"></i>티켓 정보
+                            </button>
+                            <button onclick="showTicketTab('comments')" id="tab-comments" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
+                                <i class="fas fa-comments mr-1"></i>댓글
+                            </button>
+                            <button onclick="showTicketTab('betting')" id="tab-betting" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
+                                <i class="fas fa-trophy mr-1"></i>배팅 접수
+                            </button>
                         </div>
 
-                        <!-- 일괄 답변 출력 버튼 -->
-                        <div class="card mb-4 bg-blue-50">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <h4 class="font-bold text-blue-800"><i class="fas fa-print mr-2"></i>답변 출력</h4>
-                                    <p class="text-sm text-blue-600">회원 답변으로 저장된 댓글을 일괄 출력합니다</p>
-                                </div>
-                                <button onclick="printAllResponses()" class="btn btn-primary">
-                                    <i class="fas fa-file-alt mr-2"></i>답변 일괄 출력
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <h4 class="font-bold mb-3"><i class="fas fa-comments mr-2"></i>댓글/답변 목록</h4>
-                            <div id="comments-list" class="space-y-3 max-h-[400px] overflow-y-auto">
-                                로딩중...
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 배팅 탭 -->
-                    <div id="ticket-tab-betting" class="tab-content hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- 배팅 접수 -->
-                        <div class="card">
-                            <h4 class="font-bold mb-3">
-                                <i class="fas fa-trophy mr-2"></i>배팅 접수
-                                <span class="text-sm text-gray-600 ml-2">
-                                    (잔액: <span id="member-betting-points">0</span>원)
-                                </span>
-                            </h4>
-                            
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium mb-2">경기 선택 (<span id="folder-type-display">단폴더</span>)</label>
-                                <div id="betting-matches-list" class="space-y-2 max-h-96 overflow-y-auto border rounded p-2">
-                                    로딩중...
-                                </div>
-                            </div>
-
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">배팅 금액</label>
-                                    <input 
-                                        type="number" 
-                                        id="folder-bet-amount" 
-                                        class="w-full px-3 py-2 border rounded" 
-                                        placeholder="배팅 금액 입력"
-                                        oninput="updatePotentialWin()"
-                                    >
-                                </div>
-
-                                <div class="bg-blue-50 p-3 rounded">
-                                    <div class="flex justify-between text-sm mb-1">
-                                        <span>총 배당률:</span>
-                                        <span id="total-odds-display" class="font-bold">1.00</span>
+                        <!-- 탭 컨텐츠 영역 -->
+                        <div class="flex-1 overflow-y-auto p-6">
+                            <!-- 티켓 정보 탭 -->
+                            <div id="ticket-tab-info" class="tab-content">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <!-- 기본 정보 -->
+                                    <div class="card">
+                                        <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">티켓 번호:</span>
+                                                <span class="font-mono" id="detail-ticket-number"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">제목:</span>
+                                                <span id="detail-ticket-title"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">유형:</span>
+                                                <span id="detail-ticket-type"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">상태:</span>
+                                                <span id="detail-ticket-status"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">우선순위:</span>
+                                                <span id="detail-ticket-priority"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">회원:</span>
+                                                <span id="detail-ticket-member-name"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">담당자:</span>
+                                                <span id="detail-ticket-assigned"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">생성일:</span>
+                                                <span id="detail-ticket-created"></span>
+                                            </div>
+                                            <div class="pt-2 border-t">
+                                                <p class="text-gray-600 mb-1">설명:</p>
+                                                <p id="detail-ticket-description" class="text-gray-800"></p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="flex justify-between text-sm">
-                                        <span>예상 당첨금:</span>
-                                        <span id="potential-win-display" class="font-bold text-green-600">0원</span>
+
+                                    <!-- 상태 변경 -->
+                                    <div class="card">
+                                        <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>상태 변경</h4>
+                                        <div class="space-y-3">
+                                            <div>
+                                                <label class="block text-sm font-medium mb-1">티켓 상태</label>
+                                                <select id="update-ticket-status" class="w-full px-3 py-2 border rounded">
+                                                    <option value="open">미배정</option>
+                                                    <option value="assigned">배정됨</option>
+                                                    <option value="in_progress">처리중</option>
+                                                    <option value="completed">완료</option>
+                                                    <option value="closed">종료</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium mb-1">우선순위</label>
+                                                <select id="update-ticket-priority" class="w-full px-3 py-2 border rounded">
+                                                    <option value="low">낮음</option>
+                                                    <option value="normal">보통</option>
+                                                    <option value="high">높음</option>
+                                                    <option value="urgent">긴급</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium mb-1">담당자</label>
+                                                <select id="update-ticket-assigned" class="w-full px-3 py-2 border rounded">
+                                                    <option value="">미배정</option>
+                                                </select>
+                                            </div>
+                                            <button onclick="updateTicketInfo()" class="btn btn-primary w-full">
+                                                <i class="fas fa-save mr-2"></i>변경사항 저장
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <button onclick="submitBetFolder()" class="btn btn-primary w-full">
-                                    <i class="fas fa-check mr-2"></i>배팅 접수
-                                </button>
+                            <!-- 댓글 탭 -->
+                            <div id="ticket-tab-comments" class="tab-content hidden">
+                                <div class="card mb-4">
+                                    <h4 class="font-bold mb-3"><i class="fas fa-comment mr-2"></i>댓글/답변 작성</h4>
+                                    
+                                    <!-- 댓글 타입 선택 -->
+                                    <div class="mb-3">
+                                        <label class="block text-sm font-medium mb-1">타입</label>
+                                        <div class="flex gap-4">
+                                            <label class="flex items-center">
+                                                <input type="radio" name="comment-type" value="internal" checked class="mr-2">
+                                                <span>내부 메모 (직원만 보기)</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input type="radio" name="comment-type" value="response" class="mr-2">
+                                                <span class="text-blue-600 font-bold">회원 답변 (출력용)</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 답변 템플릿 선택 -->
+                                    <div class="mb-3" id="template-section">
+                                        <label class="block text-sm font-medium mb-1">빠른 답변 템플릿</label>
+                                        <select id="comment-template" onchange="insertTemplate()" class="w-full px-3 py-2 border rounded">
+                                            <option value="">-- 템플릿 선택 또는 직접 입력 --</option>
+                                            <option value="order_received">주문 접수 완료</option>
+                                            <option value="order_processing">주문 처리 중</option>
+                                            <option value="order_shipped">발송 완료</option>
+                                            <option value="point_adjusted">포인트 조정 완료</option>
+                                            <option value="inquiry_answer">문의 답변</option>
+                                            <option value="need_more_info">추가 정보 필요</option>
+                                            <option value="completed">처리 완료</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <textarea 
+                                        id="comment-content" 
+                                        class="w-full px-3 py-2 border rounded mb-2" 
+                                        rows="5" 
+                                        placeholder="내용을 입력하세요... (수기 작성 가능)"
+                                    ></textarea>
+                                    
+                                    <div class="flex gap-2">
+                                        <button onclick="addComment()" class="btn btn-primary flex-1">
+                                            <i class="fas fa-paper-plane mr-2"></i>저장
+                                        </button>
+                                        <button onclick="addAndNotify()" class="btn btn-success flex-1" id="notify-btn" style="display:none;">
+                                            <i class="fas fa-bell mr-2"></i>저장 + 알림 발송
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 일괄 답변 출력 버튼 -->
+                                <div class="card mb-4 bg-blue-50">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <h4 class="font-bold text-blue-800"><i class="fas fa-print mr-2"></i>답변 출력</h4>
+                                            <p class="text-sm text-blue-600">회원 답변으로 저장된 댓글을 일괄 출력합니다</p>
+                                        </div>
+                                        <button onclick="printAllResponses()" class="btn btn-primary">
+                                            <i class="fas fa-file-alt mr-2"></i>답변 일괄 출력
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="card">
+                                    <h4 class="font-bold mb-3"><i class="fas fa-comments mr-2"></i>댓글/답변 목록</h4>
+                                    <div id="comments-list" class="space-y-3 max-h-[400px] overflow-y-auto">
+                                        로딩중...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 배팅 탭 -->
+                            <div id="ticket-tab-betting" class="tab-content hidden">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- 배팅 접수 -->
+                                <div class="card">
+                                    <h4 class="font-bold mb-3">
+                                        <i class="fas fa-trophy mr-2"></i>배팅 접수
+                                        <span class="text-sm text-gray-600 ml-2">
+                                            (잔액: <span id="member-betting-points">0</span>원)
+                                        </span>
+                                    </h4>
+                                    
+                                    <div class="mb-4">
+                                        <label class="block text-sm font-medium mb-2">경기 선택 (<span id="folder-type-display">단폴더</span>)</label>
+                                        <div id="betting-matches-list" class="space-y-2 max-h-96 overflow-y-auto border rounded p-2">
+                                            로딩중...
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">배팅 금액</label>
+                                            <input 
+                                                type="number" 
+                                                id="folder-bet-amount" 
+                                                class="w-full px-3 py-2 border rounded" 
+                                                placeholder="배팅 금액 입력"
+                                                oninput="updatePotentialWin()"
+                                            >
+                                        </div>
+
+                                        <div class="bg-blue-50 p-3 rounded">
+                                            <div class="flex justify-between text-sm mb-1">
+                                                <span>총 배당률:</span>
+                                                <span id="total-odds-display" class="font-bold">1.00</span>
+                                            </div>
+                                            <div class="flex justify-between text-sm">
+                                                <span>예상 당첨금:</span>
+                                                <span id="potential-win-display" class="font-bold text-green-600">0원</span>
+                                            </div>
+                                        </div>
+
+                                        <button onclick="submitBetFolder()" class="btn btn-primary w-full">
+                                            <i class="fas fa-check mr-2"></i>배팅 접수
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 배팅 내역 -->
+                                <div class="card">
+                                    <h4 class="font-bold mb-3"><i class="fas fa-history mr-2"></i>배팅 내역</h4>
+                                    <div id="betting-history-list" class="space-y-2 max-h-[500px] overflow-y-auto">
+                                        로딩중...
+                                    </div>
+                                </div>
+                            </div>
                             </div>
                         </div>
-
-                        <!-- 배팅 내역 -->
-                        <div class="card">
-                            <h4 class="font-bold mb-3"><i class="fas fa-history mr-2"></i>배팅 내역</h4>
-                            <div id="betting-history-list" class="space-y-2 max-h-[500px] overflow-y-auto">
-                                로딩중...
-                            </div>
-                        </div>
-                    </div>
                     </div>
                 </div>
             </div>
@@ -3158,6 +3224,124 @@ app.get('/', (c) => {
         let currentTicketId = null
         let selectedMatches = [] // 다폴더용 선택된 경기들
 
+        // 티켓 이미지 뷰어 관련 변수
+        let currentMailImages = [] // 현재 티켓의 이미지 목록
+        let currentImageIndex = 0 // 현재 보고 있는 이미지 인덱스
+        let imageRotation = 0 // 현재 회전 각도
+        let imageScale = 1.0 // 현재 줌 배율
+
+        // 이미지 뷰어 초기화
+        function initMailImageViewer(images) {
+            currentMailImages = images || []
+            currentImageIndex = 0
+            imageRotation = 0
+            imageScale = 1.0
+
+            const container = document.getElementById('mail-image-container')
+            const noImages = document.getElementById('no-mail-images')
+
+            if (!currentMailImages || currentMailImages.length === 0) {
+                container.classList.add('hidden')
+                noImages.classList.remove('hidden')
+                return
+            }
+
+            container.classList.remove('hidden')
+            noImages.classList.add('hidden')
+
+            // 썸네일 생성
+            renderThumbnails()
+            // 첫 번째 이미지 표시
+            showMailImageAtIndex(0)
+        }
+
+        // 썸네일 렌더링
+        function renderThumbnails() {
+            const thumbnailsContainer = document.getElementById('mail-thumbnails')
+            thumbnailsContainer.innerHTML = ''
+
+            currentMailImages.forEach((imageKey, index) => {
+                const thumbnail = document.createElement('div')
+                thumbnail.className = \`w-16 h-16 border-2 rounded cursor-pointer overflow-hidden \${index === currentImageIndex ? 'border-blue-500' : 'border-gray-300'}\`
+                thumbnail.onclick = () => showMailImageAtIndex(index)
+
+                const img = document.createElement('img')
+                img.src = \`\${API_BASE}/mailroom/image/\${imageKey}\`
+                img.className = 'w-full h-full object-cover'
+                img.alt = \`썸네일 \${index + 1}\`
+
+                thumbnail.appendChild(img)
+                thumbnailsContainer.appendChild(thumbnail)
+            })
+        }
+
+        // 특정 인덱스의 이미지 표시
+        function showMailImageAtIndex(index) {
+            if (index < 0 || index >= currentMailImages.length) return
+
+            currentImageIndex = index
+            imageRotation = 0
+            imageScale = 1.0
+
+            const imageKey = currentMailImages[index]
+            const imgElement = document.getElementById('current-mail-image')
+            imgElement.src = \`\${API_BASE}/mailroom/image/\${imageKey}\`
+            imgElement.style.transform = 'rotate(0deg) scale(1)'
+
+            // 카운터 업데이트
+            document.getElementById('image-counter').textContent = \`\${index + 1}/\${currentMailImages.length}\`
+
+            // 버튼 상태 업데이트
+            document.getElementById('prev-image-btn').disabled = (index === 0)
+            document.getElementById('next-image-btn').disabled = (index === currentMailImages.length - 1)
+
+            // 썸네일 업데이트
+            renderThumbnails()
+        }
+
+        // 이전 이미지
+        function prevMailImage() {
+            if (currentImageIndex > 0) {
+                showMailImageAtIndex(currentImageIndex - 1)
+            }
+        }
+
+        // 다음 이미지
+        function nextMailImage() {
+            if (currentImageIndex < currentMailImages.length - 1) {
+                showMailImageAtIndex(currentImageIndex + 1)
+            }
+        }
+
+        // 이미지 회전
+        function rotateMailImage(degrees) {
+            imageRotation = (imageRotation + degrees) % 360
+            updateImageTransform()
+        }
+
+        // 이미지 줌
+        function zoomMailImage(direction) {
+            if (direction === 'in') {
+                imageScale = Math.min(imageScale * 1.2, 3.0)
+            } else if (direction === 'out') {
+                imageScale = Math.max(imageScale / 1.2, 0.5)
+            }
+            updateImageTransform()
+        }
+
+        // 이미지 초기화
+        function resetMailImage() {
+            imageRotation = 0
+            imageScale = 1.0
+            updateImageTransform()
+        }
+
+        // Transform 업데이트
+        function updateImageTransform() {
+            const imgElement = document.getElementById('current-mail-image')
+            imgElement.style.transform = \`rotate(\${imageRotation}deg) scale(\${imageScale})\`
+        }
+
         async function showTicketDetail(ticketId) {
             currentTicketId = ticketId
             selectedMatches = []
@@ -3266,6 +3450,27 @@ app.get('/', (c) => {
 
                     document.getElementById('betting-history-list').innerHTML = foldersHtml || 
                         '<p class="text-gray-500 text-sm">배팅 내역이 없습니다.</p>'
+                }
+
+                // 우편물 이미지 로드 (mailroom_id가 있는 경우)
+                if (ticket.mailroom_id) {
+                    try {
+                        const mailRes = await axios.get(\`\${API_BASE}/mailroom/\${ticket.mailroom_id}\`)
+                        const mailItem = mailRes.data.mailroom_item
+                        
+                        if (mailItem && mailItem.image_keys) {
+                            // 이미지 뷰어 초기화
+                            initMailImageViewer(mailItem.image_keys)
+                        } else {
+                            initMailImageViewer([])
+                        }
+                    } catch (error) {
+                        console.error('우편물 이미지 로드 오류:', error)
+                        initMailImageViewer([])
+                    }
+                } else {
+                    // mailroom_id가 없으면 빈 뷰어
+                    initMailImageViewer([])
                 }
 
                 document.getElementById('ticket-detail-modal').classList.remove('hidden')
