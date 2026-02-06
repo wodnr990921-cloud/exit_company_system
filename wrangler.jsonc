@@ -12,5 +12,11 @@
       "database_name": "exit-system-production",
       "database_id": ""
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "exit-system-mailroom"
+    }
   ]
 }

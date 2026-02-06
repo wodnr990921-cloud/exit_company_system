@@ -12,9 +12,11 @@ import betting from './routes/betting'
 import points from './routes/points'
 import staff_management from './routes/staff_management'
 import closing from './routes/closing'
+import mailroom from './routes/mailroom'
 
 type Bindings = {
   DB: D1Database
+  R2: R2Bucket
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -35,6 +37,7 @@ app.route('/api/betting', betting)
 app.route('/api/points', points)
 app.route('/api/staff', staff_management)
 app.route('/api/closing', closing)
+app.route('/api/mailroom', mailroom)
 
 // 메인 페이지
 app.get('/', (c) => {
