@@ -920,6 +920,161 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 직원 등록 모달 -->
+        <div id="new-staff-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-user-plus mr-2"></i>직원 등록</h3>
+                        <button onclick="closeNewStaffModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <!-- 이름 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">이름 *</label>
+                            <input type="text" id="staff-name" class="w-full px-3 py-2 border rounded" placeholder="직원 이름">
+                        </div>
+
+                        <!-- 이메일 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">이메일 *</label>
+                            <input type="email" id="staff-email" class="w-full px-3 py-2 border rounded" placeholder="email@example.com">
+                        </div>
+
+                        <!-- 비밀번호 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">비밀번호 *</label>
+                            <input type="password" id="staff-password" class="w-full px-3 py-2 border rounded" placeholder="최소 6자">
+                        </div>
+
+                        <!-- 비밀번호 확인 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">비밀번호 확인 *</label>
+                            <input type="password" id="staff-password-confirm" class="w-full px-3 py-2 border rounded" placeholder="비밀번호 재입력">
+                        </div>
+
+                        <!-- 권한 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">권한 *</label>
+                            <select id="staff-role" class="w-full px-3 py-2 border rounded">
+                                <option value="staff">일반 직원</option>
+                                <option value="admin">관리자</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">
+                                관리자는 배팅 관리, 직원 관리, 포인트 승인 등 모든 권한을 가집니다.
+                            </p>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-2 mt-6">
+                            <button onclick="closeNewStaffModal()" class="btn btn-secondary">취소</button>
+                            <button onclick="createStaff()" class="btn btn-primary">등록</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 직원 상세/수정 모달 -->
+        <div id="staff-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold"><i class="fas fa-user-tie mr-2"></i>직원 상세</h3>
+                            <p class="text-sm text-gray-600">
+                                <span id="detail-staff-name"></span>
+                            </p>
+                        </div>
+                        <button onclick="closeStaffDetail()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- 기본 정보 -->
+                        <div class="card">
+                            <h4 class="font-bold mb-3"><i class="fas fa-info-circle mr-2"></i>기본 정보</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">이름</label>
+                                    <input type="text" id="edit-staff-name" class="w-full px-3 py-2 border rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">이메일</label>
+                                    <input type="email" id="edit-staff-email" class="w-full px-3 py-2 border rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">권한</label>
+                                    <select id="edit-staff-role" class="w-full px-3 py-2 border rounded">
+                                        <option value="staff">일반 직원</option>
+                                        <option value="admin">관리자</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">가입일</label>
+                                    <input type="text" id="detail-staff-created" class="w-full px-3 py-2 border rounded bg-gray-50" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 비밀번호 변경 -->
+                        <div class="card">
+                            <h4 class="font-bold mb-3"><i class="fas fa-key mr-2"></i>비밀번호 변경</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">새 비밀번호</label>
+                                    <input type="password" id="edit-staff-new-password" class="w-full px-3 py-2 border rounded" placeholder="변경하려면 입력">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">비밀번호 확인</label>
+                                    <input type="password" id="edit-staff-password-confirm" class="w-full px-3 py-2 border rounded" placeholder="비밀번호 재입력">
+                                </div>
+                                <p class="text-xs text-gray-500">
+                                    비밀번호를 변경하지 않으려면 비워두세요.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- 업무 통계 -->
+                        <div class="card lg:col-span-2">
+                            <h4 class="font-bold mb-3"><i class="fas fa-chart-bar mr-2"></i>업무 통계</h4>
+                            <div id="staff-statistics" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="text-center p-3 bg-blue-50 rounded">
+                                    <p class="text-2xl font-bold text-blue-600" id="stat-assigned-tickets">0</p>
+                                    <p class="text-xs text-gray-600">배정된 티켓</p>
+                                </div>
+                                <div class="text-center p-3 bg-green-50 rounded">
+                                    <p class="text-2xl font-bold text-green-600" id="stat-completed-tickets">0</p>
+                                    <p class="text-xs text-gray-600">완료한 티켓</p>
+                                </div>
+                                <div class="text-center p-3 bg-purple-50 rounded">
+                                    <p class="text-2xl font-bold text-purple-600" id="stat-completion-rate">0%</p>
+                                    <p class="text-xs text-gray-600">완료율</p>
+                                </div>
+                                <div class="text-center p-3 bg-orange-50 rounded">
+                                    <p class="text-2xl font-bold text-orange-600" id="stat-attendance-days">0</p>
+                                    <p class="text-xs text-gray-600">출근일수</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between mt-6">
+                        <button onclick="deleteStaff()" class="btn btn-danger">
+                            <i class="fas fa-trash mr-2"></i>삭제
+                        </button>
+                        <div class="flex space-x-2">
+                            <button onclick="closeStaffDetail()" class="btn btn-secondary">취소</button>
+                            <button onclick="updateStaff()" class="btn btn-primary">저장</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 티켓 상세 모달 (배팅 폴더 포함) -->
         <div id="ticket-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1435,7 +1590,7 @@ app.get('/', (c) => {
                 const staff = response.data.staff
 
                 const html = staff.length > 0 ? staff.map(s => \`
-                    <div class="card">
+                    <div class="card hover:shadow-lg transition cursor-pointer" onclick="showStaffDetail(\${s.id})">
                         <div class="flex justify-between items-center">
                             <div>
                                 <h3 class="font-bold text-lg">\${s.name}</h3>
@@ -2292,8 +2447,186 @@ app.get('/', (c) => {
             }
         }
 
-        function showNewStaffModal() { alert('직원 등록 모달 (구현 예정)') }
-        function showMemberDetail(id) { alert(\`회원 상세 모달 (ID: \${id}) (구현 예정)\`) }
+        // 직원 등록 모달
+        function showNewStaffModal() {
+            document.getElementById('new-staff-modal').classList.remove('hidden')
+        }
+
+        function closeNewStaffModal() {
+            document.getElementById('new-staff-modal').classList.add('hidden')
+            // 폼 초기화
+            document.getElementById('staff-name').value = ''
+            document.getElementById('staff-email').value = ''
+            document.getElementById('staff-password').value = ''
+            document.getElementById('staff-password-confirm').value = ''
+            document.getElementById('staff-role').value = 'staff'
+        }
+
+        async function createStaff() {
+            const name = document.getElementById('staff-name').value
+            const email = document.getElementById('staff-email').value
+            const password = document.getElementById('staff-password').value
+            const passwordConfirm = document.getElementById('staff-password-confirm').value
+            const role = document.getElementById('staff-role').value
+
+            // 필수 항목 검증
+            if (!name || !email || !password) {
+                alert('이름, 이메일, 비밀번호는 필수입니다.')
+                return
+            }
+
+            // 이메일 형식 검증
+            const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/
+            if (!emailRegex.test(email)) {
+                alert('올바른 이메일 형식을 입력해주세요.')
+                return
+            }
+
+            // 비밀번호 길이 검증
+            if (password.length < 6) {
+                alert('비밀번호는 최소 6자 이상이어야 합니다.')
+                return
+            }
+
+            // 비밀번호 확인
+            if (password !== passwordConfirm) {
+                alert('비밀번호가 일치하지 않습니다.')
+                return
+            }
+
+            const data = {
+                name: name,
+                email: email,
+                password: password,
+                role: role
+            }
+
+            try {
+                await axios.post(\`\${API_BASE}/staff\`, data)
+                alert('직원이 등록되었습니다.')
+                closeNewStaffModal()
+                if (currentView === 'staff') await loadStaff()
+            } catch (error) {
+                alert('직원 등록 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 직원 상세/수정 모달
+        let currentStaffDetailId = null
+
+        async function showStaffDetail(staffId) {
+            try {
+                const response = await axios.get(\`\${API_BASE}/staff/\${staffId}\`)
+                const staff = response.data.staff
+                const stats = response.data.stats || {}
+
+                currentStaffDetailId = staffId
+
+                // 기본 정보
+                document.getElementById('detail-staff-name').textContent = staff.name
+                document.getElementById('edit-staff-name').value = staff.name
+                document.getElementById('edit-staff-email').value = staff.email
+                document.getElementById('edit-staff-role').value = staff.role
+                document.getElementById('detail-staff-created').value = new Date(staff.created_at).toLocaleDateString()
+
+                // 비밀번호 필드 초기화
+                document.getElementById('edit-staff-new-password').value = ''
+                document.getElementById('edit-staff-password-confirm').value = ''
+
+                // 업무 통계
+                document.getElementById('stat-assigned-tickets').textContent = stats.assigned_tickets || 0
+                document.getElementById('stat-completed-tickets').textContent = stats.completed_tickets || 0
+                document.getElementById('stat-completion-rate').textContent = 
+                    (stats.assigned_tickets > 0 ? Math.round((stats.completed_tickets / stats.assigned_tickets) * 100) : 0) + '%'
+                document.getElementById('stat-attendance-days').textContent = stats.attendance_days || 0
+
+                document.getElementById('staff-detail-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('직원 상세 로드 오류:', error)
+                alert('직원 정보를 불러오는데 실패했습니다.')
+            }
+        }
+
+        function closeStaffDetail() {
+            currentStaffDetailId = null
+            document.getElementById('staff-detail-modal').classList.add('hidden')
+        }
+
+        async function updateStaff() {
+            if (!currentStaffDetailId) return
+
+            const name = document.getElementById('edit-staff-name').value
+            const email = document.getElementById('edit-staff-email').value
+            const role = document.getElementById('edit-staff-role').value
+            const newPassword = document.getElementById('edit-staff-new-password').value
+            const passwordConfirm = document.getElementById('edit-staff-password-confirm').value
+
+            // 필수 항목 검증
+            if (!name || !email) {
+                alert('이름과 이메일은 필수입니다.')
+                return
+            }
+
+            // 이메일 형식 검증
+            const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/
+            if (!emailRegex.test(email)) {
+                alert('올바른 이메일 형식을 입력해주세요.')
+                return
+            }
+
+            // 비밀번호 변경 시 검증
+            if (newPassword) {
+                if (newPassword.length < 6) {
+                    alert('비밀번호는 최소 6자 이상이어야 합니다.')
+                    return
+                }
+                if (newPassword !== passwordConfirm) {
+                    alert('비밀번호가 일치하지 않습니다.')
+                    return
+                }
+            }
+
+            const data = {
+                name: name,
+                email: email,
+                role: role
+            }
+
+            // 비밀번호 변경 시에만 포함
+            if (newPassword) {
+                data.password = newPassword
+            }
+
+            try {
+                await axios.patch(\`\${API_BASE}/staff/\${currentStaffDetailId}\`, data)
+                alert('직원 정보가 수정되었습니다.')
+                closeStaffDetail()
+                if (currentView === 'staff') await loadStaff()
+            } catch (error) {
+                alert('직원 수정 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        async function deleteStaff() {
+            if (!currentStaffDetailId) return
+
+            // 자기 자신은 삭제 불가
+            if (currentStaffDetailId === currentStaff.id) {
+                alert('자기 자신은 삭제할 수 없습니다.')
+                return
+            }
+
+            if (!confirm('정말 이 직원을 삭제하시겠습니까?\\n\\n직원과 관련된 모든 데이터는 유지되지만, 로그인할 수 없게 됩니다.')) return
+
+            try {
+                await axios.delete(\`\${API_BASE}/staff/\${currentStaffDetailId}\`)
+                alert('직원이 삭제되었습니다.')
+                closeStaffDetail()
+                if (currentView === 'staff') await loadStaff()
+            } catch (error) {
+                alert('직원 삭제 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
     </script>
 </body>
 </html>
