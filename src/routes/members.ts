@@ -13,7 +13,7 @@ members.get('/', async (c) => {
     const status = c.req.query('status') || 'all'
 
     let query = `
-      SELECT id, name, institution, inmate_number, po_box_address, depositor_name,
+      SELECT id, member_number, name, institution, inmate_number, po_box_address, depositor_name,
              points, betting_points, frozen_points, status, notes, created_at
       FROM members
       WHERE 1=1
@@ -21,9 +21,9 @@ members.get('/', async (c) => {
     const params: any[] = []
 
     if (search) {
-      query += ` AND (name LIKE ? OR inmate_number LIKE ? OR institution LIKE ?)`
+      query += ` AND (name LIKE ? OR member_number LIKE ? OR inmate_number LIKE ? OR institution LIKE ?)`
       const searchPattern = `%${search}%`
-      params.push(searchPattern, searchPattern, searchPattern)
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern)
     }
 
     if (status && status !== 'all') {
@@ -104,17 +104,25 @@ members.post('/', async (c) => {
       return c.json({ error: '이미 등록된 회원입니다.' }, 400)
     }
 
+    // 고유번호 생성 (M + 5자리 숫자)
+    const countResult = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM members'
+    ).first()
+    const memberCount = (countResult as any)?.count || 0
+    const memberNumber = `M${String(memberCount + 1).padStart(5, '0')}`
+
     const result = await c.env.DB.prepare(
-      `INSERT INTO members (name, institution, inmate_number, po_box_address, depositor_name, points, betting_points, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO members (member_number, name, institution, inmate_number, po_box_address, depositor_name, points, betting_points, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
-      name, institution, inmate_number, po_box_address || '', 
+      memberNumber, name, institution, inmate_number, po_box_address || '', 
       depositor_name || '', points || 0, betting_points || 0, notes || ''
     ).run()
 
     return c.json({ 
       success: true, 
-      member_id: result.meta.last_row_id 
+      member_id: result.meta.last_row_id,
+      member_number: memberNumber
     })
   } catch (error) {
     console.error('회원 등록 오류:', error)
