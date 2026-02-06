@@ -1,6 +1,6 @@
-# 엑시트 시스템 (EXIT System) v8.7 ✅ 완성
+# EXIT System v8.7 ✅ 우편실 시스템 완성
 
-**통합 관리 시스템 - 티켓, 회원, 배팅, 우편실, OCR, 통계, 일일 마감 완비**
+**통합 교도소 도서 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
 ## 🌐 접속 정보
 
@@ -10,87 +10,105 @@
 
 ## 📋 프로젝트 개요
 
-엑시트 시스템은 티켓 기반 업무 처리, 회원 관리, 도서 재고 관리, 포인트 시스템, **폴더 배팅 시스템** (단폴더/다폴더), 그리고 **AI 기반 우편실 시스템**을 지원하는 통합 관리 플랫폼입니다.
+EXIT 시스템은 교도소 수감자를 위한 도서 관리 및 우편물 처리를 위한 통합 플랫폼입니다. 티켓 기반 업무 처리, 회원 관리, 도서 재고, 포인트 시스템, 폴더 배팅 시스템 (단폴더/다폴더), AI 기반 우편실 시스템을 제공합니다.
 
-## ✨ 주요 기능
+---
 
-### 🆕 0️⃣ 우편실 시스템 (v8.7) 🎉 **NEW**
+## ✨ 주요 기능 (v8.7)
 
-**우편물 수령 및 업로드**:
+### 🆕 1️⃣ 우편실 시스템 🎉 **NEW**
+
+**3개 탭 구조**:
+- **우편 수령**: 다중 이미지 업로드 및 OCR 처리
+- **검수 및 배당**: OCR 결과 확인 및 일괄 배당
+- **처리 내역**: 전체 우편물 이력 조회
+
+**우편물 업로드**:
 - 다중 이미지 업로드 (JPG, PNG, GIF, WEBP)
-- 이미지 미리보기 및 삭제
-- 실시간 R2 스토리지 업로드
-- 파일 크기 제한: 10MB
+- 실시간 Cloudflare R2 스토리지 업로드
+- 파일 크기 제한: 10MB per 파일
+- 드래그 앤 드롭 미리보기
 
-**AI 기반 OCR 처리**:
-- Cloudflare AI Workers 통합 (@cf/unum/uform-gen2-qwen-500m)
-- 한글/영어 자동 텍스트 추출
-- 편지 봉투 자동 감지 (키워드 기반)
-- 케이스 타입 자동 판단:
-  - 📧 **새 케이스**: 봉투 감지됨 (신규 회원 또는 새 문의)
-  - 📄 **연속 케이스**: 봉투 없음 (기존 티켓 추가 자료)
+**OCR 처리** (Cloudflare AI 준비 완료):
+- API 엔드포인트: `/api/mailroom/:id/ocr`
+- 편지 봉투 자동 감지 (placeholder)
+- 신규 케이스 vs 연속 페이지 판단
+- 한글/영어 텍스트 추출 (AI Workers 연동 시)
 
-**검수 및 배당 워크플로우**:
-- OCR 결과 검토 화면
-- 실시간 티켓 검색 (번호/회원명)
-- **다중 티켓 배당**: 여러 티켓에 동시 배당 가능
-- 티켓 선택/제거 UI
-- 이미지 및 OCR 결과 통합 표시
+**검수 및 배당**:
+- OCR 결과 확인 화면
+- 다중 우편물 선택 (체크박스)
+- 일괄 배당 기능 (회원 검색)
+- 자동 티켓 생성 및 연결
 
-**이미지 뷰어**:
-- 전체화면 모달 뷰어
-- 확대/축소 (±20%)
-- 90도 회전
-- 초기화 기능
-
-**우편물 상태 관리**:
-- received → ocr_processing → ocr_completed → inspection → assigned → completed
+**우편물 상태 워크플로우**:
+```
+received (수령) 
+  → ocr_processing (OCR 처리중)
+  → ocr_completed (OCR 완료)
+  → inspection (검수중)
+  → assigned (배당완료)
+  → completed (처리완료)
+```
 
 **기술 스택**:
-- Cloudflare R2: 이미지 스토리지
-- Cloudflare AI Workers: OCR 처리
-- Cloudflare D1: 우편물 메타데이터
+- **R2 Storage**: 이미지 파일 저장
+- **AI Workers**: OCR 처리 (준비 완료)
+- **D1 Database**: 우편물 메타데이터
+- **Hono API**: RESTful 엔드포인트
 
-### 1️⃣ 인증 및 직원 관리
-**직원 로그인**:
-- 이메일/비밀번호 인증
-- 관리자/일반 직원 구분
-- 세션 관리
+---
 
-**직원 등록** (완성):
-- 이름, 이메일, 비밀번호 (필수)
-- 권한 설정 (관리자/일반 직원)
-- 이메일 형식 검증
-- 비밀번호 6자 이상 + 확인
+### 2️⃣ 배팅 관리 시스템 (v8.6)
 
-**직원 수정/삭제** (완성):
-- 직원 카드 클릭으로 상세 모달 오픈
-- 이름, 이메일, 권한 수정
-- 비밀번호 변경 (선택)
-- 업무 통계 확인 (배정/완료/완료율/출근일수)
-- 직원 삭제 (자기 자신 제외)
+**경기 관리**:
+- 경기 일정 등록/수정/삭제
+- 배당률 입력 (홈승/무승부/원정승/오버/언더/핸디캡)
+- '+' 버튼으로 경기 추가
+- 일괄 저장 기능
 
-**출근/퇴근 관리**:
-- 출근 기록 (시간 표시)
-- 우표 사용량 및 업무 보고
-- 퇴근 시간 자동 기록
+**폴더 배팅 시스템**:
+- 단폴더 배팅: 1개 경기
+- 다폴더 배팅: 2개 이상 경기 (복합 배당)
+- 자동 배당률 계산
+- 예상 적중금 자동 계산
 
-### 2️⃣ 티켓 관리
-**티켓 생성** ✨ NEW:
-- 티켓 유형 선택 (5가지) - 우편 검수 제거 ✅ v8.6
-- 제목 및 설명 입력
-- 회원 선택 (ORDER, POINT_ADJUSTMENT, MEMBER 유형)
-- 우선순위 설정 (일반/긴급)
-- 담당자 배정
-- 포인트 조정 시 상세 설정 (유형, 조정타입, 금액)
+**고객 배팅 목록**:
+- 폴더 번호, 회원 정보
+- 배팅 금액 (원 단위 포맷)
+- 총 배당률 (소수점 2자리)
+- 상태별 색상 코딩
 
-**티켓 상세 모달** ✨ NEW (v8.1):
-- **티켓 정보 탭**: 기본 정보, 상태 변경, 우선순위, 담당자 재배정
-- **댓글 탭**: 
-  - 댓글 작성 및 목록 조회
-  - **답변 템플릿 시스템** (v8.3): 주문 접수, 처리 중, 발송 완료, 포인트 조정 등 7가지 빠른 답변
-  - 실시간 댓글 업데이트
-- **배팅 탭**: 경기 선택, 배팅 접수, 배팅 내역
+**경기 정산**:
+- 완료된 경기만 필터링
+- 배팅금액 vs 당첨금액 비교
+- 정산 대시보드
+- 순수익 계산
+
+---
+
+### 3️⃣ 회원 관리
+
+**회원 고유번호 시스템** (v8.6.1):
+- 자동 생성: M00001, M00002, M00003...
+- 회원 목록 카드에 배지 표시
+- 회원 상세 모달에 표시
+- 검색 가능
+
+**회원 정보**:
+- 이름, 기관(교도소), 수감번호
+- 사서함 주소, 입금자명
+- 일반 포인트 / 배팅 포인트
+- 동결 포인트
+
+**포인트 관리**:
+- 적립, 사용, 조정
+- 동결/해제 기능
+- 거래 내역 추적
+
+---
+
+### 4️⃣ 티켓 시스템
 
 **티켓 유형**:
 - 주문 (ORDER)
@@ -99,474 +117,338 @@
 - 포인트 조정 (POINT_ADJUSTMENT)
 - 회원 관리 (MEMBER)
 
-**티켓 라이프사이클**:
-- 미배정 (open) → 배정됨 (assigned) → 처리중 (in_progress) → 완료 (completed) → 종료 (closed)
+**티켓 워크플로우**:
+```
+open (미배정)
+  → assigned (배정됨)
+  → in_progress (처리중)
+  → completed (완료)
+  → closed (종료)
+```
 
-**우선순위**: 긴급 / 높음 / 보통 / 낮음
+**댓글 시스템**:
+- 내부 메모 (직원만)
+- 회원 답변 (출력용)
+- 빠른 답변 템플릿 7종
 
-### 3️⃣ 회원 관리 ✨ NEW
-**회원 등록** (완성):
-- 이름, 교도소, 수감번호 (필수)
-- 사서함 주소, 입금자명
-- 초기 포인트 설정 (일반/배팅)
-- 메모 입력
+---
 
-**회원 상세** (완성):
-- 기본 정보 조회 (수감번호, 사서함, 입금자명, 가입일, 상태)
-- 포인트 현황 (일반/배팅/동결)
-- 포인트 거래 내역 (최근 50건)
-- 티켓 이력 (최근 20건)
-- 회원 카드 클릭으로 상세 모달 오픈
+### 5️⃣ 도서 관리
 
-**이중 포인트 시스템**:
-- **일반 포인트**: 도서 주문용
-- **배팅 포인트**: 배팅 전용
-- **동결 포인트**: 관리자 승인 대기
-
-### 4️⃣ 도서 관리 ✨ NEW
-**도서 등록** (완성):
-- 제목, 가격 (필수)
-- 저자, 출판사, ISBN (선택)
-- 초기 재고 설정
-- 도서 설명/메모
-
-**도서 수정/삭제** (완성):
-- 도서 카드 클릭으로 상세 모달 오픈
-- 전체 정보 수정 가능
-- 재고 빠른 조정 (+10/+1/-1/-10)
-- 상태 변경 (판매가능/품절/단종)
-- 도서 삭제 기능
-
-**재고 관리**:
-- 실시간 재고 표시
-- 재고 0일 때 자동 품절 처리
-- 재고 복구 시 판매가능 자동 전환
+- 도서 등록/수정
+- 재고 관리
+- 가격 정보
+- ISBN 관리
 - 상태 배지 (판매중/품절)
 
-### 5️⃣ 포인트 관리
-**포인트 종류**:
-- 일반 포인트 (regular): 도서 구매 및 일반 거래
-- 배팅 포인트 (betting): 배팅 전용
+---
 
-**거래 유형**:
-- 적립 (earn): 입금, 환불 등
-- 사용 (use): 도서 구매, 배팅
-- 조정 (adjust): 관리자 직접 조정
-- 동결 (freeze): 차감 전 승인 요청
-- 동결 해제 (unfreeze): 승인 후 차감
+### 6️⃣ 일일 마감 시스템 (v8.5)
 
-**승인 프로세스**:
-1. 직원이 포인트 동결 요청
-2. 관리자 승인/거부
-3. 승인 시 실제 포인트 차감 및 동결 해제
-
-### 6️⃣ 배팅 관리 시스템 (관리자 전용) 🎲 ✨ v8.6 완전 개편
-
-#### 경기 관리 모달 ✨ NEW
-**경기 관리 버튼** (기존 '신규 배팅 등록' 버튼 대체):
-- 경기 일정 등록/수정/삭제
-- 경기별 배당률 입력 (홈승/무승부/원정승)
-- '+' 버튼으로 경기 추가
-- 한 번에 모든 경기 일괄 저장
-
-**경기 등록 정보**:
-- 경기명, 홈팀, 원정팀
-- 경기 일시
-- 홈 승 배당, 무승부 배당, 원정 승 배당
-- 실시간 수정 및 삭제
-
-#### 고객 배팅 목록 ✨ NEW
-**상세 정보 표시**:
-- 폴더 번호 및 회원 정보
-- 폴더 유형 (단폴더/다폴더)
-- 배팅 금액 및 총 배당률
-- **예상 적중금** 자동 계산 (배팅금액 × 배당률)
-- 상태 배지 (대기/당첨/낙첨)
-- 경기별 상세 내역
-
-#### 경기 정산 시스템 ✨ NEW
-**정산 대시보드**:
-- **완료된 경기만 표시** (미완료 경기 자동 제외)
-- 경기별 배팅 통계:
-  - 총 배팅 금액
-  - 총 당첨 금액
-  - 순수익 (배팅금액 - 당첨금액)
-- 날짜별 그룹핑
-- 경기 결과 및 상태
-
-**정산 승인 기능**:
-- '경기 정산' 버튼으로 모달 오픈
-- 완료된 경기 목록 조회
-- 배팅 금액 vs 당첨 금액 한눈에 비교
-- 정산 요약 (총 배팅/당첨/수익)
-
-#### 폴더 배팅 시스템
-**단폴더 (Single Folder)**:
-- 1개의 경기 선택
-- 배당률: 개별 경기 배당률
-- 적중 조건: 선택한 1경기 적중
-
-**다폴더 (Multi Folder)**:
-- 2개 이상의 경기 선택
-- 배당률: 모든 경기 배당률 곱셈 (예: 2.0 × 1.5 × 1.8 = 5.4)
-- 적중 조건: **모든 경기 적중** (하나라도 실패 시 낙첨)
-
-**배팅 유형**:
-- **승무패**: home_win / away_win / draw
-- **언오버**: over / under (기준점 대비)
-- **핸디캡**: handicap_home / handicap_away (핸디캡 라인 적용)
-
-#### 자동 정산 시스템
-1. 관리자가 경기 결과 입력 (홈 스코어, 원정 스코어, 결과)
-2. 시스템이 모든 관련 배팅 자동 판정:
-   - 승무패: 경기 결과와 비교
-   - 언오버: 총점과 기준점 비교
-   - 핸디캡: 핸디캡 적용 후 비교
-3. 폴더 상태 자동 업데이트:
-   - 단폴더: 1경기 적중 → 당첨
-   - 다폴더: 모든 경기 적중 → 당첨 / 하나라도 실패 → 낙첨
-4. 당첨 시 정산 승인 대기 목록 생성
-5. 관리자 2차 승인 → 배팅 포인트 지급
-
-#### 경기 취소 처리
-- 경기가 취소되면 배팅 금액 자동 환불
-- 다폴더에서 하나라도 취소 → 전체 폴더 취소 및 환불
-
-#### 배팅 통계 대시보드 ✨ NEW
-**전체 통계 요약**:
-- 총 배팅 금액
-- 총 당첨 금액
-- 순수익 (마진)
-- 총 배팅 건수
-
-**회원별 통계 (상위 10명)**:
-- 배팅 건수
-- 배팅 금액
-- 당첨률
-
-**경기별 통계 (상위 10개)**:
-- 배팅 건수
-- 배팅 금액
-
-**일별 추이**:
-- 일별 배팅액
-- 일별 당첨액
-- 추세 분석
-
-**기간 필터**:
-- 오늘, 1주일, 1개월
-- 커스텀 기간 설정
-
-### 7️⃣ 대시보드
-**일반 직원**:
-- 내 배정 티켓 수
-- 미배정 티켓 수
-- 긴급 티켓 수
-- 오늘 완료 티켓 수
-- 출근/퇴근 관리
-
-**관리자 추가**:
-- 포인트 동결 승인 대기
-- 배팅 정산 승인 대기
-- 배팅 관리 메뉴
-- 직원 관리 메뉴
-
-### 8️⃣ 일일 마감 시스템 ✨ NEW (v8.5)
-**마감 데이터 조회**:
-- 날짜별 조회
-- 티켓 처리 현황 (총/완료/미처리)
-- 포인트 현황 (적립/사용/순포인트)
-- 배팅 현황 (배팅금액/당첨금액/마진)
-- 도서 판매 현황 (주문/판매액/발송)
-- 종합 요약 (총 매출/총 마진)
+**데이터 조회**:
+- 티켓 통계
+- 배팅 통계
+- 포인트 거래
+- 출근 기록
+- 도서 주문
+- 회원 활동
 
 **마감 실행**:
-- 마감 확정 (수정 불가)
-- 마감 상태 표시
-- 마감 담당자 기록
-- 마감 일시 기록
+- 일일 마감 생성
+- 마감 상태 확인
+- 인쇄 기능
+- 월간 리포트
 
-**인쇄 기능**:
-- 일일 마감 리포트 출력
-- 모든 통계 포함
-- 인쇄 최적화 레이아웃
-- 생성 일시 및 담당자 표시
+---
 
-**월간 리포트**:
-- 월별 마감 기록 조회
-- 월간 합계 (매출/마진/티켓)
-- 일별 상세 기록
+### 7️⃣ 직원 관리 및 출근 시스템
 
-## 🗄️ 데이터베이스 구조
+**직원 관리**:
+- 관리자 / 일반 직원 구분
+- 직원 등록/수정/삭제
+- 권한 관리
+
+**출근 관리**:
+- 출근/퇴근 기록
+- 실시간 근무 현황
+- 출근 이력 조회
+
+---
+
+### 8️⃣ 통계 및 대시보드
+
+**관리자 대시보드**:
+- 오늘의 티켓 현황
+- 미배정/처리중/완료 건수
+- 긴급 티켓 알림
+- 최근 생성 티켓
+
+**일반 직원 대시보드**:
+- 나의 배정 티켓
+- 처리 현황
+- 출근 정보
+
+---
+
+## 🗂 데이터베이스 구조
 
 ### 주요 테이블
-- `staff`: 직원 정보 (email, password, role)
-- `attendance`: 출근 기록
-- `members`: 회원 정보 (points, betting_points, frozen_points)
-- `tickets`: 티켓 정보
-- `ticket_comments`: 티켓 댓글/답변
-- `books`: 도서 정보
-- `orders`: 주문 내역
-- `order_items`: 주문 상세
-- `point_transactions`: 포인트 거래 내역
-- `matches`: 경기 정보 (승무패/언오버/핸디캡 배당률)
-- `bet_folders`: 배팅 폴더 (단폴더/다폴더)
-- `bets`: 배팅 상세 (폴더 내 개별 경기 배팅)
-- `bet_settlements`: 배팅 정산 내역
-- `response_templates`: 답변 템플릿
-- `daily_closings`: 일일 마감 기록
 
-### 포인트 시스템 구조
-```
-member
-  ├─ points (일반 포인트)
-  ├─ betting_points (배팅 포인트)
-  └─ frozen_points (동결 포인트)
+**회원 (members)**:
+- member_number (고유번호)
+- name, institution, inmate_number
+- points, betting_points, frozen_points
 
-point_transactions
-  ├─ point_type: 'regular' | 'betting'
-  ├─ transaction_type: 'earn' | 'use' | 'adjust' | 'freeze' | 'unfreeze'
-  ├─ status: 'pending' | 'completed' | 'rejected'
-  └─ amount, balance_after, description
-```
+**티켓 (tickets)**:
+- ticket_number, type, status, priority
+- member_id, assigned_to, created_by
 
-### 배팅 시스템 구조
-```
-match (경기)
-  ├─ 승무패: home_odds, away_odds, draw_odds
-  ├─ 언오버: over_line, over_odds, under_odds
-  ├─ 핸디캡: handicap_line, handicap_home_odds, handicap_away_odds
-  └─ result, home_score, away_score, total_score
+**우편실 (mailroom_items)** 🆕:
+- mail_number (우편물 번호)
+- member_id, ticket_id
+- image_keys (JSON - R2 키 배열)
+- ocr_result (JSON - OCR 결과)
+- status (워크플로우 상태)
 
-bet_folder (배팅 폴더)
-  ├─ folder_type: 'single' (단폴더) | 'multi' (다폴더)
-  ├─ total_bet_amount (배팅 금액)
-  ├─ total_odds (총 배당률)
-  ├─ potential_win (예상 당첨금)
-  ├─ status: 'pending' | 'win' | 'lose' | 'cancelled'
-  └─ result_status: 'all_win' | 'partial_win' | 'all_lose'
+**경기 (matches)**:
+- match_number, match_name, match_date
+- home_team, away_team
+- 배당률 (home_odds, draw_odds, away_odds, over/under, handicap)
 
-bet (개별 배팅)
-  ├─ folder_id
-  ├─ match_id
-  ├─ bet_type: 'home_win' | 'away_win' | 'draw' | 'over' | 'under' | 'handicap_home' | 'handicap_away'
-  ├─ odds (배당률)
-  └─ status: 'pending' | 'win' | 'lose' | 'cancelled'
+**배팅 폴더 (bet_folders)**:
+- folder_number, folder_type (single/multi)
+- member_id, ticket_id
+- total_bet_amount, total_odds, potential_win
+- status (pending/won/lost/cancelled/settled)
 
-bet_settlement (정산)
-  ├─ folder_id
-  ├─ settlement_amount (정산금액)
-  ├─ status: 'pending' | 'approved' | 'rejected'
-  └─ approved_by, approved_at
-```
+**배팅 (bets)**:
+- folder_id, match_id
+- bet_type, odds
+- result (win/lose/cancelled)
 
-## 🛠️ 기술 스택
+**포인트 거래 (point_transactions)**:
+- member_id, transaction_type
+- point_type (points/betting_points)
+- amount, balance
+- description
 
-- **백엔드**: Hono + Cloudflare Workers
-- **데이터베이스**: Cloudflare D1 (SQLite)
-- **프론트엔드**: Vanilla JavaScript + Tailwind CSS + Font Awesome
-- **배포**: Cloudflare Pages
+**직원 (staff)**:
+- name, email, password_hash
+- role (admin/staff)
+- status (active/inactive)
 
-## 📦 설치 및 실행
+**출근 (attendance)**:
+- staff_id
+- checkin_time, checkout_time
 
-### 로컬 개발 환경
+**일일 마감 (daily_closings)**:
+- date, closed_by
+- 통계 데이터 (ticket/betting/point/attendance 등)
+- total_margin, net_points
+
+---
+
+## 🛠 기술 스택
+
+### 백엔드
+- **Hono**: 경량 웹 프레임워크
+- **Cloudflare Workers**: 서버리스 엣지 컴퓨팅
+- **TypeScript**: 타입 안전 개발
+
+### 데이터베이스
+- **Cloudflare D1**: SQLite 기반 분산 데이터베이스
+- **마이그레이션**: 11개 파일 (0001 ~ 0011)
+
+### 스토리지
+- **Cloudflare R2**: S3 호환 객체 스토리지 (이미지)
+
+### AI & OCR
+- **Cloudflare AI Workers**: OCR 처리 (준비 완료)
+
+### 프론트엔드
+- **Vanilla JavaScript**: 의존성 없는 순수 JS
+- **Tailwind CSS**: 유틸리티 CSS (CDN)
+- **Font Awesome**: 아이콘 라이브러리 (CDN)
+- **Axios**: HTTP 클라이언트 (CDN)
+
+### 배포
+- **Cloudflare Pages**: 정적 사이트 호스팅
+- **Wrangler**: Cloudflare CLI 도구
+
+---
+
+## 🚀 설치 및 실행
+
+### 1. 로컬 개발
 
 ```bash
 # 의존성 설치
 npm install
 
-# 데이터베이스 마이그레이션
+# D1 마이그레이션 적용
 npm run db:migrate:local
 
 # 빌드
 npm run build
 
-# 개발 서버 시작 (PM2)
+# PM2로 서버 시작
 pm2 start ecosystem.config.cjs
 
-# 서버 상태 확인
+# PM2 프로세스 확인
 pm2 list
 
 # 로그 확인
 pm2 logs exit-system --nostream
 ```
 
-### 배포 (Cloudflare Pages)
+### 2. 배포
 
 ```bash
-# 빌드
+# 빌드 및 배포
 npm run build
-
-# 배포
 npm run deploy
+
+# 프로덕션 배포
+npm run deploy:prod
 ```
 
-## 📝 API 엔드포인트
+---
+
+## 📚 API 엔드포인트
 
 ### 인증
 - `POST /api/auth/login` - 로그인
-- `POST /api/auth/change-password` - 비밀번호 변경
+- `POST /api/auth/register` - 회원가입
 
-### 출근 관리
-- `POST /api/attendance/checkin` - 출근
-- `POST /api/attendance/checkout` - 퇴근
-- `GET /api/attendance/status/:staff_id` - 출근 상태
-- `GET /api/attendance/history/:staff_id` - 출근 기록
+### 회원
+- `GET /api/members` - 목록 조회
+- `GET /api/members/:id` - 상세 조회
+- `POST /api/members` - 등록
+- `PATCH /api/members/:id` - 수정
 
-### 회원 관리
-- `GET /api/members` - 회원 목록
-- `GET /api/members/:id` - 회원 상세
-- `POST /api/members` - 회원 등록
-- `PATCH /api/members/:id` - 회원 수정
-- `DELETE /api/members/:id` - 회원 삭제
+### 티켓
+- `GET /api/tickets` - 목록 조회
+- `GET /api/tickets/:id` - 상세 조회
+- `POST /api/tickets` - 생성
+- `PATCH /api/tickets/:id` - 수정
+- `POST /api/tickets/:id/comments` - 댓글 작성
 
-### 티켓 관리
-- `GET /api/tickets` - 티켓 목록
-- `GET /api/tickets/:id` - 티켓 상세
-- `POST /api/tickets` - 티켓 생성
-- `PATCH /api/tickets/:id` - 티켓 수정
-- `POST /api/tickets/:id/comments` - 댓글 추가
-- `GET /api/tickets/stats/dashboard` - 대시보드 통계
+### 우편실 🆕
+- `GET /api/mailroom` - 우편물 목록 조회
+- `GET /api/mailroom/:id` - 상세 조회
+- `POST /api/mailroom/upload` - 이미지 업로드 (R2)
+- `GET /api/mailroom/image/:key` - 이미지 조회 (R2)
+- `POST /api/mailroom` - 우편물 등록
+- `PATCH /api/mailroom/:id/status` - 상태 업데이트
+- `POST /api/mailroom/:id/ocr` - OCR 처리
+- `DELETE /api/mailroom/:id` - 삭제
 
-### 도서 관리
-- `GET /api/books` - 도서 목록
-- `POST /api/books` - 도서 등록
-- `PATCH /api/books/:id` - 도서 수정
-- `DELETE /api/books/:id` - 도서 삭제
-
-### 포인트 관리
-- `POST /api/points/freeze` - 포인트 동결 요청
-- `GET /api/points/pending` - 승인 대기 목록
-- `POST /api/points/approve/:id` - 포인트 승인/거부
-- `POST /api/points/adjust` - 포인트 직접 조정
-
-### 배팅 관리 ✨ v8.6 업데이트
-**경기**:
-- `GET /api/betting/matches` - 경기 목록 (status 필터 지원)
-- `POST /api/betting/matches` - 경기 등록
-- `POST /api/betting/matches/bulk` - 경기 일괄 저장 ✨ NEW
-- `DELETE /api/betting/matches/:id` - 경기 삭제 ✨ NEW
+### 배팅
+- `GET /api/betting/matches` - 경기 목록
+- `POST /api/betting/matches` - 경기 생성
+- `POST /api/betting/matches/bulk` - 경기 일괄 저장
 - `POST /api/betting/matches/:id/result` - 경기 결과 입력
-
-**배팅 폴더**:
-- `POST /api/betting/folders` - 배팅 폴더 생성 (단폴더/다폴더)
+- `DELETE /api/betting/matches/:id` - 경기 삭제
 - `GET /api/betting/folders` - 배팅 폴더 목록
-
-**정산**:
-- `GET /api/betting/settlements/pending` - 정산 승인 대기
-- `GET /api/betting/settlement-stats` - 정산 통계 ✨ NEW
+- `POST /api/betting/folders` - 배팅 폴더 생성
+- `GET /api/betting/settlements/pending` - 정산 대기 목록
 - `POST /api/betting/settlements/:id/approve` - 정산 승인
-- `POST /api/betting/settlements/:id/reject` - 정산 거부
+- `GET /api/betting/settlement-stats` - 정산 통계
 
-### 직원 관리
-- `GET /api/staff` - 직원 목록
-- `GET /api/staff/:id` - 직원 상세
-- `POST /api/staff` - 직원 등록
-- `PATCH /api/staff/:id` - 직원 수정
-- `DELETE /api/staff/:id` - 직원 삭제
-- `GET /api/staff/:id/stats` - 직원 업무 통계
+### 포인트
+- `POST /api/points/adjust` - 포인트 조정
+- `POST /api/points/freeze` - 포인트 동결
+- `POST /api/points/unfreeze` - 포인트 해제
 
-## 🎯 배팅 시스템 예시
+### 일일 마감
+- `GET /api/closing/daily-close` - 일일 데이터 조회
+- `POST /api/closing/daily-close` - 마감 실행
+- `GET /api/closing/daily-closes` - 마감 이력
 
-### 단폴더 배팅
-```
-경기: 맨체스터 vs 리버풀
-배팅: 홈 승 (배당률 2.0)
-배팅 금액: 10,000원
-예상 당첨금: 20,000원
+---
 
-결과: 맨체스터 승리
-→ 당첨! 20,000원 지급
-```
+## 🎯 사용 예시
 
-### 다폴더 배팅
-```
-경기 1: 맨체스터 vs 리버풀 - 홈 승 (배당률 2.0)
-경기 2: 첼시 vs 아스널 - 원정 승 (배당률 1.5)
-경기 3: 토트넘 vs 뉴캐슬 - 오버 2.5 (배당률 1.8)
+### 배팅 시스템
 
-배팅 금액: 10,000원
-총 배당률: 2.0 × 1.5 × 1.8 = 5.4
-예상 당첨금: 54,000원
-
-결과: 
-- 경기 1: 맨체스터 승리 ✅
-- 경기 2: 아스널 승리 ❌
-- 경기 3: 총점 3 (오버) ✅
-
-→ 낙첨! (1경기 실패)
+**단폴더 배팅**:
+```javascript
+{
+  "folder_type": "single",
+  "total_bet_amount": 10000,
+  "bets": [
+    {
+      "match_id": 1,
+      "bet_type": "home_win",
+      "odds": 1.85
+    }
+  ]
+}
 ```
 
-## 📊 시스템 특징
+**다폴더 배팅**:
+```javascript
+{
+  "folder_type": "multi",
+  "total_bet_amount": 10000,
+  "bets": [
+    { "match_id": 1, "bet_type": "home_win", "odds": 1.85 },
+    { "match_id": 2, "bet_type": "over", "odds": 1.92 }
+  ]
+}
+// 총 배당: 1.85 × 1.92 = 3.55
+// 예상 적중금: 10000 × 3.55 = 35500원
+```
+
+---
+
+## 🔐 시스템 특징
 
 ### 보안
-- 직원 인증 시스템
-- 권한 기반 접근 제어 (관리자/일반 직원)
-- 포인트 거래 승인 프로세스
+- 비밀번호 해시화 (Argon2)
+- 세션 기반 인증
+- 역할 기반 권한 관리 (admin/staff)
 
 ### 자동화
-- 배팅 자동 판정 및 정산
-- 재고 자동 업데이트
-- 포인트 거래 내역 자동 기록
-- 일일 마감 통계 자동 집계
+- 배팅 자동 정산
+- 경기 취소 시 자동 환불
+- 포인트 자동 계산
+- 회원 번호 자동 생성
 
 ### 감사 추적
 - 모든 포인트 거래 기록
-- 티켓 처리 이력
-- 배팅 및 정산 내역
-- 일일 마감 기록 및 담당자
+- 티켓 댓글 이력
+- 직원 출근 기록
+- 일일 마감 이력
 
-## 🆕 v8.6 업데이트 내역 (2026-02-06)
+---
 
-### 배팅 관리 시스템 완전 개편
-1. **경기 관리 모달**:
-   - '신규 배팅 등록' 버튼 제거
-   - '경기 관리' 버튼 추가
-   - 경기 등록/수정/삭제 통합 관리
-   - 배당률 실시간 입력
-   - '+' 버튼으로 경기 추가
-   - 한 번에 모든 경기 저장
+## 📝 향후 개선 계획
 
-2. **고객 배팅 목록 개선**:
-   - 상세 정보 표시 (금액, 배당률, 예상 적중금)
-   - 상태별 색상 구분
-   - 경기별 상세 내역
-   - 폴더 유형 명확히 표시
+### 완료 ✅
+- ✅ 회원 고유번호 시스템 (v8.6.1)
+- ✅ 우편실 기본 시스템 (v8.7)
+- ✅ R2 이미지 스토리지 연동 (v8.7)
+- ✅ OCR API 엔드포인트 준비 (v8.7)
+- ✅ 검수 및 배당 워크플로우 (v8.7)
 
-3. **경기 정산 시스템**:
-   - 완료된 경기만 필터링
-   - 배팅금액 vs 당첨금액 비교
-   - 순수익 자동 계산
-   - 경기별 통계 제공
-   - 정산 요약 대시보드
+### 진행중 🔄
+- 🔄 Cloudflare AI Workers OCR 실제 연동 (placeholder 완료)
+- 🔄 티켓 상세 모달 이미지 뷰어 강화
 
-4. **백엔드 API 추가**:
-   - `POST /api/betting/matches/bulk` - 경기 일괄 저장
-   - `DELETE /api/betting/matches/:id` - 경기 삭제
-   - `GET /api/betting/settlement-stats` - 정산 통계
-   - `GET /api/betting/matches?status=completed` - 완료 경기 통계
+### 예정 📅
+- 📅 이미지 확대/축소/회전 고급 기능
+- 📅 프로덕션 Cloudflare Pages 배포
+- 📅 Favicon 추가
+- 📅 Tailwind CSS 프로덕션 최적화
 
-5. **UI/UX 개선**:
-   - 티켓 유형에서 '우편 검수' 제거
-   - 배팅 목록 레이아웃 개선
-   - 경기 정산 모달 추가
-   - 색상 코딩으로 가독성 향상
+---
 
-## 🔜 향후 개선 계획
+## 📄 라이선스
 
-- [x] ~~일일 마감 기능~~ ✅ v8.5 완료
-- [x] ~~배팅 관리 시스템 개편~~ ✅ v8.6 완료
-- [ ] 엑셀 내보내기 (회원, 티켓, 통계)
-- [ ] Cloudflare Pages 프로덕션 배포
-- [ ] 실시간 알림 시스템 (SSE 또는 Polling)
-- [ ] 고급 검색 및 필터링
-- [ ] 모바일 반응형 최적화
-- [ ] Cloudflare AI OCR 통합 (우편 자동 인식)
-- [ ] R2 Storage 연동 (파일 관리)
+MIT
 
-## 📄 라이센스
-
-MIT License
+---
 
 ## 👥 개발자
 
@@ -574,13 +456,18 @@ EXIT 시스템 개발팀
 
 ---
 
-**버전**: 8.7 (Mailroom System)  
-**최종 업데이트**: 2026-02-06  
-**상태**: ✅ 정상 작동 중  
-**최신 백업**: https://www.genspark.ai/api/files/s/vdEUbw7r (1.35 MB - Phase 1-7 완료)  
-**주요 변경사항**:
-- ✅ Cloudflare R2 Storage 통합
-- ✅ Cloudflare AI Workers OCR (Multilingual)
-- ✅ 케이스 타입 자동 판단 (새 케이스/연속 케이스)
-- ✅ 다중 티켓 배당 시스템
-- ✅ 고급 이미지 뷰어 (확대/축소/회전)
+## 📌 버전 정보
+
+- **버전**: v8.7
+- **최종 업데이트**: 2026-02-06
+- **상태**: ✅ 정상 작동 중 (우편실 시스템 완성)
+
+---
+
+## 🆘 문의
+
+문제가 발생하거나 질문이 있으시면 GitHub Issues를 통해 문의해주세요.
+
+---
+
+**EXIT System - 교도소 도서 관리를 위한 통합 솔루션** 📚✨
