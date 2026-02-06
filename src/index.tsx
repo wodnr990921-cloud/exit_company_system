@@ -11,6 +11,7 @@ import books from './routes/books'
 import betting from './routes/betting'
 import points from './routes/points'
 import staff_management from './routes/staff_management'
+import closing from './routes/closing'
 
 type Bindings = {
   DB: D1Database
@@ -33,6 +34,7 @@ app.route('/api/books', books)
 app.route('/api/betting', betting)
 app.route('/api/points', points)
 app.route('/api/staff', staff_management)
+app.route('/api/closing', closing)
 
 // 메인 페이지
 app.get('/', (c) => {
@@ -157,6 +159,9 @@ app.get('/', (c) => {
                     </button>
                     <button id="staff-nav" onclick="showView('staff')" class="nav-item px-4 py-3 rounded-t-lg hidden">
                         <i class="fas fa-user-tie mr-2"></i>직원 관리
+                    </button>
+                    <button id="closing-nav" onclick="showView('closing')" class="nav-item px-4 py-3 rounded-t-lg hidden">
+                        <i class="fas fa-calculator mr-2"></i>일일 마감
                     </button>
                 </div>
             </div>
@@ -508,6 +513,141 @@ app.get('/', (c) => {
                 </div>
 
                 <div id="staff-list" class="space-y-4"></div>
+            </div>
+
+            <!-- 일일 마감 뷰 (관리자 전용) -->
+            <div id="closing-view" class="view-content hidden">
+                <h2 class="text-2xl font-bold mb-6"><i class="fas fa-calculator mr-2"></i>일일 마감</h2>
+
+                <!-- 날짜 선택 -->
+                <div class="card mb-6">
+                    <div class="flex items-center gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">마감 날짜</label>
+                            <input type="date" id="closing-date" class="px-3 py-2 border rounded">
+                        </div>
+                        <div class="self-end">
+                            <button onclick="loadClosingData()" class="btn btn-primary">
+                                <i class="fas fa-search mr-2"></i>조회
+                            </button>
+                        </div>
+                        <div class="self-end ml-auto">
+                            <button onclick="executeClosing()" class="btn btn-success">
+                                <i class="fas fa-check-circle mr-2"></i>마감 실행
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 마감 통계 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- 티켓 통계 -->
+                    <div class="card bg-blue-50">
+                        <h3 class="font-bold mb-3 text-blue-800"><i class="fas fa-ticket-alt mr-2"></i>티켓 처리</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">총 티켓 수</span>
+                                <span class="font-bold" id="closing-total-tickets">0건</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">처리 완료</span>
+                                <span class="font-bold text-green-600" id="closing-completed-tickets">0건</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">미처리</span>
+                                <span class="font-bold text-red-600" id="closing-pending-tickets">0건</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 포인트 통계 -->
+                    <div class="card bg-green-50">
+                        <h3 class="font-bold mb-3 text-green-800"><i class="fas fa-coins mr-2"></i>포인트 거래</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">적립</span>
+                                <span class="font-bold text-green-600" id="closing-earned-points">0원</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">사용</span>
+                                <span class="font-bold text-red-600" id="closing-used-points">0원</span>
+                            </div>
+                            <div class="flex justify-between border-t pt-2">
+                                <span class="text-gray-600 font-bold">순 입금</span>
+                                <span class="font-bold text-blue-600" id="closing-net-points">0원</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 배팅 통계 -->
+                    <div class="card bg-purple-50">
+                        <h3 class="font-bold mb-3 text-purple-800"><i class="fas fa-trophy mr-2"></i>배팅 수익</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">총 배팅액</span>
+                                <span class="font-bold" id="closing-bet-amount">0원</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">당첨금</span>
+                                <span class="font-bold text-red-600" id="closing-win-amount">0원</span>
+                            </div>
+                            <div class="flex justify-between border-t pt-2">
+                                <span class="text-gray-600 font-bold">배팅 마진</span>
+                                <span class="font-bold text-purple-600" id="closing-bet-margin">0원</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 도서 판매 통계 -->
+                <div class="card mb-6">
+                    <h3 class="font-bold mb-4"><i class="fas fa-book mr-2"></i>도서 판매</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-gray-50 p-4 rounded">
+                            <p class="text-sm text-gray-600">주문 건수</p>
+                            <p class="text-2xl font-bold text-blue-600" id="closing-book-orders">0건</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded">
+                            <p class="text-sm text-gray-600">판매 금액</p>
+                            <p class="text-2xl font-bold text-green-600" id="closing-book-sales">0원</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded">
+                            <p class="text-sm text-gray-600">발송 완료</p>
+                            <p class="text-2xl font-bold text-purple-600" id="closing-book-shipped">0건</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded">
+                            <p class="text-sm text-gray-600">처리 대기</p>
+                            <p class="text-2xl font-bold text-orange-600" id="closing-book-pending">0건</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 총 마감 요약 -->
+                <div class="card bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                    <h3 class="font-bold mb-4 text-xl"><i class="fas fa-chart-line mr-2"></i>일일 종합 요약</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <p class="text-blue-100 mb-1">총 매출</p>
+                            <p class="text-3xl font-bold" id="closing-total-revenue">0원</p>
+                        </div>
+                        <div>
+                            <p class="text-blue-100 mb-1">총 마진</p>
+                            <p class="text-3xl font-bold" id="closing-total-margin">0원</p>
+                        </div>
+                        <div>
+                            <p class="text-blue-100 mb-1">마감 일시</p>
+                            <p class="text-xl font-bold" id="closing-timestamp">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 마감 이력 -->
+                <div class="card mt-6">
+                    <h3 class="font-bold mb-4"><i class="fas fa-history mr-2"></i>최근 마감 이력</h3>
+                    <div id="closing-history-list" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-center py-4">마감 이력이 없습니다.</p>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -1512,6 +1652,7 @@ app.get('/', (c) => {
                 if (currentStaff.role === 'admin') {
                     document.getElementById('betting-nav').classList.remove('hidden')
                     document.getElementById('staff-nav').classList.remove('hidden')
+                    document.getElementById('closing-nav').classList.remove('hidden')
                 }
 
                 await loadDashboard()
@@ -1545,6 +1686,7 @@ app.get('/', (c) => {
             else if (view === 'books') loadBooks()
             else if (view === 'betting') loadBetting()
             else if (view === 'staff') loadStaff()
+            else if (view === 'closing') loadClosing()
         }
 
         // 대시보드 로드
@@ -2038,6 +2180,95 @@ app.get('/', (c) => {
                 document.getElementById('staff-list').innerHTML = html
             } catch (error) {
                 console.error('직원 목록 로드 오류:', error)
+            }
+        }
+
+        // 일일 마감 뷰 로드
+        async function loadClosing() {
+            // 오늘 날짜를 기본값으로 설정
+            const today = new Date().toISOString().split('T')[0]
+            document.getElementById('closing-date').value = today
+            
+            // 오늘 데이터 자동 로드
+            await loadClosingData()
+        }
+
+        // 일일 마감 데이터 조회
+        async function loadClosingData() {
+            try {
+                const date = document.getElementById('closing-date').value
+                if (!date) {
+                    alert('날짜를 선택해주세요.')
+                    return
+                }
+
+                const response = await axios.get(\`\${API_BASE}/closing?date=\${date}\`)
+                const data = response.data
+
+                // 티켓 통계
+                document.getElementById('closing-total-tickets').textContent = \`\${data.ticket_stats.total_tickets}건\`
+                document.getElementById('closing-completed-tickets').textContent = \`\${data.ticket_stats.completed_tickets}건\`
+                document.getElementById('closing-pending-tickets').textContent = \`\${data.ticket_stats.pending_tickets}건\`
+
+                // 포인트 통계
+                document.getElementById('closing-earned-points').textContent = \`\${data.point_stats.earned_points.toLocaleString()}원\`
+                document.getElementById('closing-used-points').textContent = \`\${data.point_stats.used_points.toLocaleString()}원\`
+                document.getElementById('closing-net-points').textContent = \`\${data.point_stats.net_points.toLocaleString()}원\`
+
+                // 배팅 통계
+                document.getElementById('closing-bet-amount').textContent = \`\${data.betting_stats.total_bet_amount.toLocaleString()}원\`
+                document.getElementById('closing-win-amount').textContent = \`\${data.betting_stats.total_win_amount.toLocaleString()}원\`
+                document.getElementById('closing-bet-margin').textContent = \`\${data.betting_stats.bet_margin.toLocaleString()}원\`
+
+                // 도서 판매 통계
+                document.getElementById('closing-book-orders').textContent = \`\${data.book_stats.book_orders}건\`
+                document.getElementById('closing-book-sales').textContent = \`\${data.book_stats.total_sales.toLocaleString()}원\`
+                document.getElementById('closing-book-shipped').textContent = \`\${data.book_stats.shipped_orders}건\`
+                document.getElementById('closing-book-pending').textContent = \`\${data.book_stats.pending_orders}건\`
+
+                // 종합 요약
+                document.getElementById('closing-total-revenue').textContent = \`\${data.summary.total_revenue.toLocaleString()}원\`
+                document.getElementById('closing-total-margin').textContent = \`\${data.summary.total_margin.toLocaleString()}원\`
+
+                // 마감 상태
+                if (data.is_closed) {
+                    document.getElementById('closing-timestamp').textContent = new Date(data.closed_at).toLocaleString()
+                    alert('이미 마감된 날짜입니다.')
+                } else {
+                    document.getElementById('closing-timestamp').textContent = '-'
+                }
+
+            } catch (error) {
+                console.error('마감 데이터 조회 오류:', error)
+                alert('마감 데이터를 불러올 수 없습니다.')
+            }
+        }
+
+        // 일일 마감 실행
+        async function executeClosing() {
+            try {
+                const date = document.getElementById('closing-date').value
+                if (!date) {
+                    alert('날짜를 선택해주세요.')
+                    return
+                }
+
+                if (!confirm(\`\${date} 일일 마감을 실행하시겠습니까?\\n\\n마감 후에는 수정할 수 없습니다.\`)) {
+                    return
+                }
+
+                const response = await axios.post(\`\${API_BASE}/closing\`, {
+                    date: date,
+                    closed_by: currentStaff.id
+                })
+
+                alert('일일 마감이 완료되었습니다.')
+                await loadClosingData()
+
+            } catch (error) {
+                console.error('마감 실행 오류:', error)
+                const errorMsg = error.response?.data?.error || '마감 실행 중 오류가 발생했습니다.'
+                alert(errorMsg)
             }
         }
 
