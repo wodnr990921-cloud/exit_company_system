@@ -3569,7 +3569,7 @@ app.get('/', (c) => {
                 const members = membersRes.data.members || []
                 
                 const memberOptions = members.map(m => 
-                    \`<option value="\${m.id}">\${m.name} (\${m.prison_name})</option>\`
+                    \`<option value="\${m.id}">\${m.name} (\${m.institution})</option>\`
                 ).join('')
                 document.getElementById('ticket-member').innerHTML = '<option value="">선택하세요</option>' + memberOptions
 
