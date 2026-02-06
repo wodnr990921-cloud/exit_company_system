@@ -2810,18 +2810,6 @@ app.get('/', (c) => {
             // TODO: 알림 발송 기능 (향후 구현)
             alert('답변이 저장되었습니다. 알림 발송 기능은 향후 추가 예정입니다.')
         }
-                        <p class="text-gray-800">\${c.content}</p>
-                    </div>
-                \`).join('')
-
-                document.getElementById('comments-list').innerHTML = commentsHtml || 
-                    '<p class="text-gray-500 text-center py-4">댓글이 없습니다.</p>'
-            } catch (error) {
-                console.error('댓글 로드 오류:', error)
-                document.getElementById('comments-list').innerHTML = 
-                    '<p class="text-red-500 text-center py-4">댓글을 불러올 수 없습니다.</p>'
-            }
-        }
 
         // 답변 템플릿 삽입
         function insertTemplate() {
@@ -2833,23 +2821,14 @@ app.get('/', (c) => {
                 'order_processing': '주문하신 도서를 현재 처리 중입니다. 조금만 기다려주시기 바랍니다.',
                 'order_shipped': '주문하신 도서가 발송되었습니다. 영업일 기준 3-5일 내 도착 예정입니다.',
                 'point_adjusted': '포인트 조정이 완료되었습니다. 현재 잔액을 확인해주세요.',
-                'inquiry_answer': '문의하신 내용에 대해 답변드립니다.\n\n',
-                'need_more_info': '정확한 처리를 위해 추가 정보가 필요합니다. 다음 내용을 확인해주세요:\n\n',
+                'inquiry_answer': '문의하신 내용에 대해 답변드립니다.\\\\n\\\\n',
+                'need_more_info': '정확한 처리를 위해 추가 정보가 필요합니다. 다음 내용을 확인해주세요:\\\\n\\\\n',
                 'completed': '요청하신 사항이 모두 처리 완료되었습니다. 감사합니다.'
             }
 
             if (template && templates[template]) {
                 textarea.value = templates[template]
                 textarea.focus()
-            }
-        }
-                    content,
-                    created_by: currentStaff.id
-                })
-                document.getElementById('comment-content').value = ''
-                await loadTicketComments(currentTicketId)
-            } catch (error) {
-                alert('댓글 등록 실패: ' + (error.response?.data?.error || error.message))
             }
         }
 
@@ -3017,11 +2996,6 @@ app.get('/', (c) => {
             } catch (error) {
                 console.error('답변 출력 오류:', error)
                 alert('답변 출력에 실패했습니다.')
-            }
-        }
-            } catch (error) {
-                console.error('티켓 상세 로드 오류:', error)
-                alert('티켓 정보를 불러오는데 실패했습니다.')
             }
         }
 
