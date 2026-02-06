@@ -165,16 +165,16 @@ tickets.patch('/:id', async (c) => {
 tickets.post('/:id/comments', async (c) => {
   try {
     const ticket_id = c.req.param('id')
-    const { staff_id, comment, comment_type } = await c.req.json()
+    const { content, created_by } = await c.req.json()
 
-    if (!staff_id || !comment) {
+    if (!created_by || !content) {
       return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
     }
 
     const result = await c.env.DB.prepare(
-      `INSERT INTO ticket_comments (ticket_id, staff_id, comment, comment_type)
-       VALUES (?, ?, ?, ?)`
-    ).bind(ticket_id, staff_id, comment, comment_type || 'internal').run()
+      `INSERT INTO ticket_comments (ticket_id, staff_id, comment)
+       VALUES (?, ?, ?)`
+    ).bind(ticket_id, created_by, content).run()
 
     // 티켓 업데이트 시간 갱신
     await c.env.DB.prepare(
@@ -188,6 +188,26 @@ tickets.post('/:id/comments', async (c) => {
   } catch (error) {
     console.error('댓글 추가 오류:', error)
     return c.json({ error: '댓글 추가 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 댓글 목록 조회
+tickets.get('/:id/comments', async (c) => {
+  try {
+    const ticket_id = c.req.param('id')
+
+    const { results } = await c.env.DB.prepare(
+      `SELECT tc.*, s.name as created_by_name
+       FROM ticket_comments tc
+       LEFT JOIN staff s ON tc.staff_id = s.id
+       WHERE tc.ticket_id = ?
+       ORDER BY tc.created_at DESC`
+    ).bind(ticket_id).all()
+
+    return c.json({ comments: results || [] })
+  } catch (error) {
+    console.error('댓글 조회 오류:', error)
+    return c.json({ error: '댓글 조회 중 오류가 발생했습니다.' }, 500)
   }
 })
 

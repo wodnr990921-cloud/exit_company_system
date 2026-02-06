@@ -1077,7 +1077,7 @@ app.get('/', (c) => {
 
         <!-- 티켓 상세 모달 (배팅 폴더 포함) -->
         <div id="ticket-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <div>
@@ -1093,6 +1093,127 @@ app.get('/', (c) => {
                         </button>
                     </div>
 
+                    <!-- 탭 네비게이션 -->
+                    <div class="flex border-b mb-4">
+                        <button onclick="showTicketTab('info')" id="tab-info" class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-500">
+                            <i class="fas fa-info-circle mr-1"></i>티켓 정보
+                        </button>
+                        <button onclick="showTicketTab('comments')" id="tab-comments" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
+                            <i class="fas fa-comments mr-1"></i>댓글
+                        </button>
+                        <button onclick="showTicketTab('betting')" id="tab-betting" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
+                            <i class="fas fa-trophy mr-1"></i>배팅 접수
+                        </button>
+                    </div>
+
+                    <!-- 티켓 정보 탭 -->
+                    <div id="ticket-tab-info" class="tab-content">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- 기본 정보 -->
+                            <div class="card">
+                                <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">티켓 번호:</span>
+                                        <span class="font-mono" id="detail-ticket-number"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">제목:</span>
+                                        <span id="detail-ticket-title"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">유형:</span>
+                                        <span id="detail-ticket-type"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">상태:</span>
+                                        <span id="detail-ticket-status"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">우선순위:</span>
+                                        <span id="detail-ticket-priority"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">회원:</span>
+                                        <span id="detail-ticket-member-name"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">담당자:</span>
+                                        <span id="detail-ticket-assigned"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">생성일:</span>
+                                        <span id="detail-ticket-created"></span>
+                                    </div>
+                                    <div class="pt-2 border-t">
+                                        <p class="text-gray-600 mb-1">설명:</p>
+                                        <p id="detail-ticket-description" class="text-gray-800"></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 상태 변경 -->
+                            <div class="card">
+                                <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>상태 변경</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">티켓 상태</label>
+                                        <select id="update-ticket-status" class="w-full px-3 py-2 border rounded">
+                                            <option value="open">미배정</option>
+                                            <option value="assigned">배정됨</option>
+                                            <option value="in_progress">처리중</option>
+                                            <option value="completed">완료</option>
+                                            <option value="closed">종료</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">우선순위</label>
+                                        <select id="update-ticket-priority" class="w-full px-3 py-2 border rounded">
+                                            <option value="low">낮음</option>
+                                            <option value="normal">보통</option>
+                                            <option value="high">높음</option>
+                                            <option value="urgent">긴급</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">담당자</label>
+                                        <select id="update-ticket-assigned" class="w-full px-3 py-2 border rounded">
+                                            <option value="">미배정</option>
+                                        </select>
+                                    </div>
+                                    <button onclick="updateTicketInfo()" class="btn btn-primary w-full">
+                                        <i class="fas fa-save mr-2"></i>변경사항 저장
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 댓글 탭 -->
+                    <div id="ticket-tab-comments" class="tab-content hidden">
+                        <div class="card mb-4">
+                            <h4 class="font-bold mb-3"><i class="fas fa-comment mr-2"></i>댓글 작성</h4>
+                            <textarea 
+                                id="comment-content" 
+                                class="w-full px-3 py-2 border rounded mb-2" 
+                                rows="3" 
+                                placeholder="댓글을 입력하세요..."
+                            ></textarea>
+                            <button onclick="addComment()" class="btn btn-primary">
+                                <i class="fas fa-paper-plane mr-2"></i>댓글 등록
+                            </button>
+                        </div>
+
+                        <div class="card">
+                            <h4 class="font-bold mb-3"><i class="fas fa-comments mr-2"></i>댓글 목록</h4>
+                            <div id="comments-list" class="space-y-3 max-h-[400px] overflow-y-auto">
+                                로딩중...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 배팅 탭 -->
+                    <div id="ticket-tab-betting" class="tab-content hidden">
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <!-- 배팅 접수 -->
                         <div class="card">
@@ -1146,6 +1267,7 @@ app.get('/', (c) => {
                                 로딩중...
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -1816,18 +1938,42 @@ app.get('/', (c) => {
             selectedMatches = []
             
             try {
-                const [ticketRes, matchesRes] = await Promise.all([
+                const [ticketRes, matchesRes, staffRes] = await Promise.all([
                     axios.get(\`\${API_BASE}/tickets/\${ticketId}\`),
-                    axios.get(\`\${API_BASE}/betting/matches?status=scheduled\`)
+                    axios.get(\`\${API_BASE}/betting/matches?status=scheduled\`),
+                    axios.get(\`\${API_BASE}/staff\`)
                 ])
 
                 const ticket = ticketRes.data.ticket
                 const matches = matchesRes.data.matches || []
+                const staffList = staffRes.data.staff || []
 
-                // 티켓 기본 정보
+                // 티켓 기본 정보 (헤더)
                 document.getElementById('modal-ticket-number').textContent = ticket.ticket_number
                 document.getElementById('modal-ticket-title').textContent = ticket.title
                 document.getElementById('modal-ticket-member').textContent = ticket.member_name || '-'
+
+                // 티켓 정보 탭 상세
+                document.getElementById('detail-ticket-number').textContent = ticket.ticket_number
+                document.getElementById('detail-ticket-title').textContent = ticket.title
+                document.getElementById('detail-ticket-type').textContent = getTicketTypeText(ticket.ticket_type)
+                document.getElementById('detail-ticket-status').innerHTML = \`<span class="status-badge status-\${ticket.status}">\${getStatusText(ticket.status)}</span>\`
+                document.getElementById('detail-ticket-priority').innerHTML = getPriorityBadge(ticket.priority)
+                document.getElementById('detail-ticket-member-name').textContent = ticket.member_name || '-'
+                document.getElementById('detail-ticket-assigned').textContent = ticket.assigned_to_name || '미배정'
+                document.getElementById('detail-ticket-created').textContent = new Date(ticket.created_at).toLocaleString()
+                document.getElementById('detail-ticket-description').textContent = ticket.description || '설명 없음'
+
+                // 상태 변경 폼
+                document.getElementById('update-ticket-status').value = ticket.status
+                document.getElementById('update-ticket-priority').value = ticket.priority
+                
+                const assignedSelect = document.getElementById('update-ticket-assigned')
+                assignedSelect.innerHTML = '<option value="">미배정</option>' + 
+                    staffList.map(s => \`<option value="\${s.id}" \${ticket.assigned_to === s.id ? 'selected' : ''}>\${s.name} (\${s.role === 'admin' ? '관리자' : '직원'})</option>\`).join('')
+
+                // 댓글 로드
+                await loadTicketComments(ticketId)
 
                 // 회원 배팅 포인트 로드
                 if (ticket.member_id) {
@@ -1898,6 +2044,118 @@ app.get('/', (c) => {
                 }
 
                 document.getElementById('ticket-detail-modal').classList.remove('hidden')
+                showTicketTab('info') // 기본 탭: 티켓 정보
+            } catch (error) {
+                console.error('티켓 상세 로드 오류:', error)
+                alert('티켓 정보를 불러오는데 실패했습니다.')
+            }
+        }
+
+        function showTicketTab(tabName) {
+            // 탭 버튼 활성화
+            document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-blue-500')
+                btn.classList.add('text-gray-500')
+            })
+            document.getElementById(\`tab-\${tabName}\`).classList.add('border-blue-500', 'text-blue-500')
+            document.getElementById(\`tab-\${tabName}\`).classList.remove('text-gray-500')
+
+            // 탭 콘텐츠 표시
+            document.querySelectorAll('[id^="ticket-tab-"]').forEach(tab => {
+                tab.classList.add('hidden')
+            })
+            document.getElementById(\`ticket-tab-\${tabName}\`).classList.remove('hidden')
+        }
+
+        async function updateTicketInfo() {
+            if (!currentTicketId) return
+
+            const status = document.getElementById('update-ticket-status').value
+            const priority = document.getElementById('update-ticket-priority').value
+            const assigned_to = document.getElementById('update-ticket-assigned').value || null
+
+            try {
+                await axios.patch(\`\${API_BASE}/tickets/\${currentTicketId}\`, {
+                    status,
+                    priority,
+                    assigned_to
+                })
+                alert('티켓 정보가 업데이트되었습니다.')
+                await showTicketDetail(currentTicketId)
+                if (currentView === 'tickets') await loadTickets()
+            } catch (error) {
+                alert('업데이트 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        async function loadTicketComments(ticketId) {
+            try {
+                const response = await axios.get(\`\${API_BASE}/tickets/\${ticketId}/comments\`)
+                const comments = response.data.comments || []
+
+                const commentsHtml = comments.map(c => \`
+                    <div class="bg-gray-50 p-3 rounded">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="font-bold">\${c.created_by_name}</span>
+                                <span class="text-xs text-gray-500 ml-2">\${new Date(c.created_at).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <p class="text-gray-800">\${c.content}</p>
+                    </div>
+                \`).join('')
+
+                document.getElementById('comments-list').innerHTML = commentsHtml || 
+                    '<p class="text-gray-500 text-center py-4">댓글이 없습니다.</p>'
+            } catch (error) {
+                console.error('댓글 로드 오류:', error)
+                document.getElementById('comments-list').innerHTML = 
+                    '<p class="text-red-500 text-center py-4">댓글을 불러올 수 없습니다.</p>'
+            }
+        }
+
+        async function addComment() {
+            if (!currentTicketId) return
+
+            const content = document.getElementById('comment-content').value.trim()
+            if (!content) {
+                alert('댓글 내용을 입력해주세요.')
+                return
+            }
+
+            try {
+                await axios.post(\`\${API_BASE}/tickets/\${currentTicketId}/comments\`, {
+                    content,
+                    created_by: currentStaff.id
+                })
+                document.getElementById('comment-content').value = ''
+                await loadTicketComments(currentTicketId)
+            } catch (error) {
+                alert('댓글 등록 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        function getTicketTypeText(type) {
+            const types = {
+                'ORDER': '주문',
+                'INQUIRY': '문의',
+                'PURCHASE_ORDER': '발주',
+                'POINT_ADJUSTMENT': '포인트 조정',
+                'MEMBER': '회원 관리',
+                'MAIL_INSPECTION': '우편 검수'
+            }
+            return types[type] || type
+        }
+
+        function getPriorityBadge(priority) {
+            const badges = {
+                'urgent': '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">긴급</span>',
+                'high': '<span class="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">높음</span>',
+                'normal': '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">보통</span>',
+                'low': '<span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">낮음</span>'
+            }
+            return badges[priority] || priority
+        }
             } catch (error) {
                 console.error('티켓 상세 로드 오류:', error)
                 alert('티켓 정보를 불러오는데 실패했습니다.')
