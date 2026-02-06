@@ -326,7 +326,7 @@ app.get('/', (c) => {
             <div id="tickets-view" class="view-content hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>티켓 관리</h2>
-                    <button onclick="showNewTicketModal()" class="btn btn-primary">
+                    <button id="create-ticket-btn" onclick="showNewTicketModal()" class="btn btn-primary" data-permission="staff">
                         <i class="fas fa-plus mr-2"></i>새 티켓 생성
                     </button>
                 </div>
@@ -366,7 +366,7 @@ app.get('/', (c) => {
             <div id="members-view" class="view-content hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold"><i class="fas fa-users mr-2"></i>회원 관리</h2>
-                    <button onclick="showNewMemberModal()" class="btn btn-primary">
+                    <button id="create-member-btn" onclick="showNewMemberModal()" class="btn btn-primary" data-permission="staff">
                         <i class="fas fa-user-plus mr-2"></i>회원 등록
                     </button>
                 </div>
@@ -2063,6 +2063,122 @@ app.get('/', (c) => {
     <script>
         // 전역 변수
         const API_BASE = '/api'
+// ==========================================
+// 권한 관리 함수
+// ==========================================
+
+// 권한 레벨 정의
+const ROLES = {
+  ADMIN: 'admin',
+  STAFF: 'staff',
+  VIEWER: 'viewer'
+}
+
+// 권한 레벨 순서 (높을수록 강력)
+const ROLE_HIERARCHY = {
+  admin: 3,
+  staff: 2,
+  viewer: 1
+}
+
+// 권한 체크 함수
+function hasPermission(requiredRole) {
+  if (!currentStaff) return false
+  
+  const userLevel = ROLE_HIERARCHY[currentStaff.role] || 0
+  const requiredLevel = ROLE_HIERARCHY[requiredRole]
+  
+  return userLevel >= requiredLevel
+}
+
+// Admin 권한 체크
+function isAdmin() {
+  return currentStaff?.role === ROLES.ADMIN
+}
+
+// Staff 이상 권한 체크
+function isStaffOrAbove() {
+  return hasPermission(ROLES.STAFF)
+}
+
+// Viewer 권한 체크 (읽기 전용)
+function isViewer() {
+  return currentStaff?.role === ROLES.VIEWER
+}
+
+// 역할 텍스트 변환
+function getRoleText(role) {
+  const roleNames = {
+    'admin': '관리자',
+    'staff': '직원',
+    'viewer': '뷰어'
+  }
+  return roleNames[role] || role
+}
+
+// API 요청 헤더에 Staff ID 추가
+axios.interceptors.request.use(config => {
+  if (currentStaff && currentStaff.id) {
+    config.headers['X-Staff-ID'] = currentStaff.id
+  }
+  return config
+})
+
+// UI 요소 권한 제어 헬퍼
+function setElementPermission(elementId, requiredRole) {
+  const element = document.getElementById(elementId)
+  if (!element) return
+  
+  if (hasPermission(requiredRole)) {
+    element.classList.remove('hidden')
+  } else {
+    element.classList.add('hidden')
+  }
+}
+
+// 버튼 활성화/비활성화
+function setButtonPermission(elementId, requiredRole) {
+  const button = document.getElementById(elementId)
+  if (!button) return
+  
+  if (hasPermission(requiredRole)) {
+    button.disabled = false
+    button.classList.remove('opacity-50', 'cursor-not-allowed')
+  } else {
+    button.disabled = true
+    button.classList.add('opacity-50', 'cursor-not-allowed')
+  }
+}
+
+// 권한에 따른 UI 초기화
+function initializePermissions() {
+  if (!currentStaff) return
+  
+  // 역할 표시
+  const roleText = getRoleText(currentStaff.role)
+  document.getElementById('current-user-role').textContent = roleText
+  
+  // Admin 전용 메뉴
+  setElementPermission('betting-nav', ROLES.ADMIN)
+  setElementPermission('staff-nav', ROLES.ADMIN)
+  setElementPermission('closing-nav', ROLES.ADMIN)
+  
+  // Staff 이상 권한 필요한 버튼
+  setButtonPermission('create-ticket-btn', ROLES.STAFF)
+  setButtonPermission('create-member-btn', ROLES.STAFF)
+  
+  // Viewer는 읽기 전용 모드 활성화
+  if (isViewer()) {
+    // 모든 생성/수정/삭제 버튼 비활성화
+    document.querySelectorAll('[data-permission="staff"]').forEach(btn => {
+      btn.disabled = true
+      btn.classList.add('opacity-50', 'cursor-not-allowed')
+      btn.title = '읽기 전용 권한입니다'
+    })
+  }
+}
+
+console.log('권한 관리 함수 로드 완료')
         let currentStaff = null
         let currentView = 'dashboard'
         let currentAttendanceId = null
@@ -2105,14 +2221,9 @@ app.get('/', (c) => {
                 document.getElementById('app-screen').classList.remove('hidden')
 
                 document.getElementById('current-user-name').textContent = currentStaff.name
-                document.getElementById('current-user-role').textContent = currentStaff.role === 'admin' ? '관리자' : '직원'
-
-                // 관리자 전용 메뉴 표시
-                if (currentStaff.role === 'admin') {
-                    document.getElementById('betting-nav').classList.remove('hidden')
-                    document.getElementById('staff-nav').classList.remove('hidden')
-                    document.getElementById('closing-nav').classList.remove('hidden')
-                }
+                
+                // 권한에 따른 UI 초기화
+                initializePermissions()
 
                 await loadDashboard()
             } catch (error) {

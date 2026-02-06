@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { requireRole, ROLES } from '../middleware/auth'
 
 type Bindings = {
   DB: D1Database
@@ -6,8 +7,8 @@ type Bindings = {
 
 const members = new Hono<{ Bindings: Bindings }>()
 
-// 회원 목록 조회
-members.get('/', async (c) => {
+// 회원 목록 조회 (모든 직원 접근 가능 - viewer 포함)
+members.get('/', requireRole(ROLES.VIEWER), async (c) => {
   try {
     const search = c.req.query('search') || ''
     const status = c.req.query('status') || 'all'
@@ -42,8 +43,8 @@ members.get('/', async (c) => {
   }
 })
 
-// 회원 상세 조회
-members.get('/:id', async (c) => {
+// 회원 상세 조회 (모든 직원 접근 가능 - viewer 포함)
+members.get('/:id', requireRole(ROLES.VIEWER), async (c) => {
   try {
     const id = c.req.param('id')
 
@@ -83,8 +84,8 @@ members.get('/:id', async (c) => {
   }
 })
 
-// 회원 등록
-members.post('/', async (c) => {
+// 회원 등록 (staff 이상 권한 필요)
+members.post('/', requireRole(ROLES.STAFF), async (c) => {
   try {
     const { 
       name, institution, inmate_number, po_box_address, 
@@ -130,8 +131,8 @@ members.post('/', async (c) => {
   }
 })
 
-// 회원 수정
-members.patch('/:id', async (c) => {
+// 회원 수정 (staff 이상 권한 필요)
+members.patch('/:id', requireRole(ROLES.STAFF), async (c) => {
   try {
     const id = c.req.param('id')
     const updates = await c.req.json()
@@ -164,8 +165,8 @@ members.patch('/:id', async (c) => {
   }
 })
 
-// 회원 삭제
-members.delete('/:id', async (c) => {
+// 회원 삭제 (admin 권한 필요)
+members.delete('/:id', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const id = c.req.param('id')
 

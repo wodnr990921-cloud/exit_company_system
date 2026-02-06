@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { requireRole, ROLES } from '../middleware/auth'
 
 type Bindings = {
   DB: D1Database
@@ -6,8 +7,8 @@ type Bindings = {
 
 const points = new Hono<{ Bindings: Bindings }>()
 
-// 포인트 조정 요청 (동결 요청)
-points.post('/freeze', async (c) => {
+// 포인트 조정 요청 (동결 요청) - staff 이상 권한 필요
+points.post('/freeze', requireRole(ROLES.STAFF), async (c) => {
   try {
     const { 
       member_id, ticket_id, point_type, amount, description, created_by 
@@ -62,7 +63,8 @@ points.post('/freeze', async (c) => {
 })
 
 // 동결 승인 대기 목록
-points.get('/pending', async (c) => {
+// 승인 대기 목록 조회 - admin 권한 필요
+points.get('/pending', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const { results } = await c.env.DB.prepare(
       `SELECT pt.*, m.name as member_name, t.ticket_number, s.name as created_by_name
@@ -81,8 +83,8 @@ points.get('/pending', async (c) => {
   }
 })
 
-// 포인트 동결 승인
-points.post('/approve/:id', async (c) => {
+// 포인트 동결 승인 - admin 권한 필요
+points.post('/approve/:id', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const transaction_id = c.req.param('id')
     const { approved_by, action } = await c.req.json()
@@ -158,7 +160,8 @@ points.post('/approve/:id', async (c) => {
 })
 
 // 포인트 직접 조정 (관리자 전용)
-points.post('/adjust', async (c) => {
+// 포인트 직접 조정 - staff 이상 권한 필요
+points.post('/adjust', requireRole(ROLES.STAFF), async (c) => {
   try {
     const { 
       member_id, point_type, transaction_type, amount, description, created_by 
