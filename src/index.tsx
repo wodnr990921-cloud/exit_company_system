@@ -5225,8 +5225,8 @@ app.get('/', (c) => {
                 return
             }
             
-            // 회원 선택 모달 표시 (간단 구현)
-            const memberName = prompt('회원 이름을 입력하세요:')
+            // 회원 선택 모달 표시
+            const memberName = prompt(\`회원 이름 또는 회원번호를 입력하세요:\n\n\${selectedMailItems.length}개 우편물을 일괄 배당하고 티켓을 자동 생성합니다.\`)
             if (!memberName) return
             
             try {
@@ -5240,32 +5240,36 @@ app.get('/', (c) => {
                 }
                 
                 const member = members[0]
+                const confirmMsg = \`\${selectedMailItems.length}개 우편물을 다음 회원에게 배당하시겠습니까?\n\n` +
+                    `회원: \${member.name} (\${member.member_number})\n` +
+                    `기관: \${member.institution}\n` +
+                    `수감번호: \${member.inmate_number || '-'}\n\n` +
+                    `✅ 자동으로 티켓이 생성됩니다.\`
                 
-                // 각 우편물에 대해 티켓 생성
-                for (const mailId of selectedMailItems) {
-                    // 티켓 생성
-                    const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
-                        type: 'ORDER',
-                        title: \`우편물 처리 - \${member.name}\`,
-                        description: '우편실에서 배당된 우편물',
-                        member_id: member.id,
-                        priority: 'normal',
-                        created_by: currentStaff.id
-                    })
-                    
-                    // 우편물 상태 업데이트
-                    await axios.patch(\`\${API_BASE}/mailroom/\${mailId}/status\`, {
-                        status: 'assigned',
-                        ticket_id: ticketRes.data.ticket_id
-                    })
-                }
+                if (!confirm(confirmMsg)) return
                 
-                alert(\`\${selectedMailItems.length}개 우편물이 \${member.name}님에게 배당되었습니다.\`)
+                // 일괄 배당 및 티켓 생성 API 호출
+                const response = await axios.post(\`\${API_BASE}/mailroom/batch-assign\`, {
+                    mailroom_ids: selectedMailItems,
+                    member_id: member.id,
+                    staff_id: currentStaff.id
+                })
+                
+                const { tickets, count } = response.data
+                
+                alert(\`✅ 배당 완료!\n\n` +
+                    `- 우편물: \${count}개\n` +
+                    `- 회원: \${member.name}\n` +
+                    `- 생성된 티켓: \${count}개\n\n` +
+                    `티켓 번호: \${tickets.map(t => t.ticket_number).join(', ')}\`)
+                
                 selectedMailItems = []
+                await loadPendingMail()
                 await loadProcessedMail()
                 await loadMailHistory()
                 
             } catch (error) {
+                console.error('일괄 배당 오류:', error)
                 alert('배당 실패: ' + (error.response?.data?.error || error.message))
             }
         }

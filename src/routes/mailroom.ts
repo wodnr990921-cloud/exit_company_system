@@ -387,4 +387,98 @@ mailroom.delete('/:id', async (c) => {
   }
 })
 
+// 일괄 배당 및 티켓 생성
+mailroom.post('/batch-assign', async (c) => {
+  try {
+    const { mailroom_ids, member_id, staff_id } = await c.req.json()
+    
+    if (!mailroom_ids || !Array.isArray(mailroom_ids) || mailroom_ids.length === 0) {
+      return c.json({ error: '우편물 ID가 필요합니다.' }, 400)
+    }
+    
+    if (!member_id) {
+      return c.json({ error: '회원 ID가 필요합니다.' }, 400)
+    }
+    
+    if (!staff_id) {
+      return c.json({ error: '직원 ID가 필요합니다.' }, 400)
+    }
+    
+    const createdTickets = []
+    
+    // 각 우편물에 대해 티켓 생성
+    for (const mailroom_id of mailroom_ids) {
+      // 우편물 정보 조회
+      const { results: mailResults } = await c.env.DB.prepare(
+        `SELECT * FROM mailroom_items WHERE id = ?`
+      ).bind(mailroom_id).all()
+      
+      if (!mailResults || mailResults.length === 0) continue
+      
+      const mailItem = mailResults[0] as any
+      
+      // 티켓 번호 생성 (T + timestamp + random)
+      const ticketNumber = `T${Date.now()}${Math.floor(Math.random() * 1000)}`
+      
+      // OCR 결과에서 제목 추출 (없으면 기본값)
+      let title = '우편물 접수'
+      if (mailItem.ocr_result) {
+        try {
+          const ocrData = JSON.parse(mailItem.ocr_result)
+          if (ocrData.case_type === 'new_case') {
+            title = '신규 우편물 접수'
+          } else if (ocrData.case_type === 'continued_case') {
+            title = '연속 우편물 접수'
+          }
+        } catch (e) {
+          // OCR 결과 파싱 실패 시 기본값 사용
+        }
+      }
+      
+      // 티켓 생성
+      const insertResult = await c.env.DB.prepare(`
+        INSERT INTO tickets (
+          ticket_number, title, description, ticket_type, status, priority,
+          member_id, assigned_to, mailroom_id, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      `).bind(
+        ticketNumber,
+        title,
+        `우편물 ID: ${mailroom_id}`,
+        'ORDER', // 주문 유형
+        'assigned', // 배정됨 상태
+        'normal', // 보통 우선순위
+        member_id,
+        staff_id,
+        mailroom_id,
+        staff_id
+      ).run()
+      
+      const ticketId = insertResult.meta.last_row_id
+      
+      // 우편물 상태 업데이트 (assigned로 변경)
+      await c.env.DB.prepare(`
+        UPDATE mailroom_items 
+        SET member_id = ?, ticket_id = ?, status = 'assigned', updated_at = datetime('now')
+        WHERE id = ?
+      `).bind(member_id, ticketId, mailroom_id).run()
+      
+      createdTickets.push({
+        ticket_id: ticketId,
+        ticket_number: ticketNumber,
+        mailroom_id: mailroom_id
+      })
+    }
+    
+    return c.json({ 
+      success: true, 
+      tickets: createdTickets,
+      count: createdTickets.length
+    })
+  } catch (error: any) {
+    console.error('일괄 배당 오류:', error)
+    return c.json({ error: '일괄 배당 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 export default mailroom
