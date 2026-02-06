@@ -615,6 +615,159 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 회원 등록 모달 -->
+        <div id="new-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-user-plus mr-2"></i>회원 등록</h3>
+                        <button onclick="closeNewMemberModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <!-- 이름 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">이름 *</label>
+                            <input type="text" id="member-name" class="w-full px-3 py-2 border rounded" placeholder="회원 이름">
+                        </div>
+
+                        <!-- 교도소명 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">교도소 *</label>
+                            <input type="text" id="member-prison" class="w-full px-3 py-2 border rounded" placeholder="예: 서울구치소">
+                        </div>
+
+                        <!-- 수감번호 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">수감번호 *</label>
+                            <input type="text" id="member-prisoner-number" class="w-full px-3 py-2 border rounded" placeholder="수감번호 입력">
+                        </div>
+
+                        <!-- 사서함 주소 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">사서함 주소</label>
+                            <textarea id="member-address" class="w-full px-3 py-2 border rounded" rows="2" placeholder="우편물 수신 주소"></textarea>
+                        </div>
+
+                        <!-- 입금자명 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">입금자명</label>
+                            <input type="text" id="member-depositor" class="w-full px-3 py-2 border rounded" placeholder="입금자 이름">
+                        </div>
+
+                        <!-- 초기 포인트 -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">초기 일반 포인트</label>
+                                <input type="number" id="member-initial-points" class="w-full px-3 py-2 border rounded" placeholder="0" min="0" value="0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">초기 배팅 포인트</label>
+                                <input type="number" id="member-initial-betting-points" class="w-full px-3 py-2 border rounded" placeholder="0" min="0" value="0">
+                            </div>
+                        </div>
+
+                        <!-- 메모 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">메모</label>
+                            <textarea id="member-notes" class="w-full px-3 py-2 border rounded" rows="3" placeholder="회원 관련 메모"></textarea>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-2 mt-6">
+                            <button onclick="closeNewMemberModal()" class="btn btn-secondary">취소</button>
+                            <button onclick="createMember()" class="btn btn-primary">등록</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 회원 상세 모달 -->
+        <div id="member-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold"><i class="fas fa-user mr-2"></i>회원 상세</h3>
+                            <p class="text-sm text-gray-600">
+                                <span id="detail-member-name"></span> - 
+                                <span id="detail-member-prison"></span>
+                            </p>
+                        </div>
+                        <button onclick="closeMemberDetail()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- 기본 정보 -->
+                        <div class="card">
+                            <h4 class="font-bold mb-3"><i class="fas fa-info-circle mr-2"></i>기본 정보</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">수감번호:</span>
+                                    <span id="detail-prisoner-number" class="font-mono"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">사서함:</span>
+                                    <span id="detail-address" class="text-right"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">입금자명:</span>
+                                    <span id="detail-depositor"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">가입일:</span>
+                                    <span id="detail-created-at"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">상태:</span>
+                                    <span id="detail-status"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 포인트 정보 -->
+                        <div class="card">
+                            <h4 class="font-bold mb-3"><i class="fas fa-coins mr-2"></i>포인트 현황</h4>
+                            <div class="space-y-3">
+                                <div class="bg-blue-50 p-3 rounded">
+                                    <p class="text-xs text-gray-600 mb-1">일반 포인트</p>
+                                    <p class="text-2xl font-bold text-blue-600"><span id="detail-points">0</span>원</p>
+                                </div>
+                                <div class="bg-green-50 p-3 rounded">
+                                    <p class="text-xs text-gray-600 mb-1">배팅 포인트</p>
+                                    <p class="text-2xl font-bold text-green-600"><span id="detail-betting-points">0</span>원</p>
+                                </div>
+                                <div class="bg-orange-50 p-3 rounded">
+                                    <p class="text-xs text-gray-600 mb-1">동결 포인트</p>
+                                    <p class="text-2xl font-bold text-orange-600"><span id="detail-frozen-points">0</span>원</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 포인트 거래 내역 -->
+                        <div class="card lg:col-span-2">
+                            <h4 class="font-bold mb-3"><i class="fas fa-history mr-2"></i>포인트 거래 내역</h4>
+                            <div id="member-point-transactions" class="space-y-2 max-h-60 overflow-y-auto">
+                                로딩중...
+                            </div>
+                        </div>
+
+                        <!-- 티켓 이력 -->
+                        <div class="card lg:col-span-2">
+                            <h4 class="font-bold mb-3"><i class="fas fa-ticket-alt mr-2"></i>티켓 이력</h4>
+                            <div id="member-tickets" class="space-y-2 max-h-60 overflow-y-auto">
+                                로딩중...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 티켓 상세 모달 (배팅 폴더 포함) -->
         <div id="ticket-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1003,6 +1156,7 @@ app.get('/', (c) => {
                             <p class="text-sm"><span class="font-bold">배팅 포인트:</span> \${m.betting_points.toLocaleString()}원</p>
                             \${m.frozen_points > 0 ? \`<p class="text-sm text-yellow-600"><span class="font-bold">동결:</span> \${m.frozen_points.toLocaleString()}원</p>\` : ''}
                         </div>
+                        <p class="text-xs text-gray-400 mt-2">가입일: \${new Date(m.created_at).toLocaleDateString()}</p>
                     </div>
                 \`).join('') : '<p class="text-gray-500 text-center py-8">회원이 없습니다.</p>'
 
@@ -1718,7 +1872,125 @@ app.get('/', (c) => {
             }
         }
 
-        function showNewMemberModal() { alert('회원 등록 모달 (구현 예정)') }
+        // 회원 등록 모달
+        function showNewMemberModal() {
+            document.getElementById('new-member-modal').classList.remove('hidden')
+        }
+
+        function closeNewMemberModal() {
+            document.getElementById('new-member-modal').classList.add('hidden')
+            // 폼 초기화
+            document.getElementById('member-name').value = ''
+            document.getElementById('member-prison').value = ''
+            document.getElementById('member-prisoner-number').value = ''
+            document.getElementById('member-address').value = ''
+            document.getElementById('member-depositor').value = ''
+            document.getElementById('member-initial-points').value = '0'
+            document.getElementById('member-initial-betting-points').value = '0'
+            document.getElementById('member-notes').value = ''
+        }
+
+        async function createMember() {
+            const name = document.getElementById('member-name').value
+            const prisonName = document.getElementById('member-prison').value
+            const prisonerNumber = document.getElementById('member-prisoner-number').value
+            const address = document.getElementById('member-address').value
+            const depositor = document.getElementById('member-depositor').value
+            const initialPoints = parseFloat(document.getElementById('member-initial-points').value) || 0
+            const initialBettingPoints = parseFloat(document.getElementById('member-initial-betting-points').value) || 0
+            const notes = document.getElementById('member-notes').value
+
+            // 필수 항목 검증
+            if (!name || !prisonName || !prisonerNumber) {
+                alert('이름, 교도소, 수감번호는 필수입니다.')
+                return
+            }
+
+            const data = {
+                name: name,
+                institution: prisonName,
+                inmate_number: prisonerNumber,
+                po_box_address: address,
+                depositor_name: depositor,
+                points: initialPoints,
+                betting_points: initialBettingPoints,
+                notes: notes
+            }
+
+            try {
+                await axios.post(\`\${API_BASE}/members\`, data)
+                alert('회원이 등록되었습니다.')
+                closeNewMemberModal()
+                if (currentView === 'members') await loadMembers()
+            } catch (error) {
+                alert('회원 등록 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 회원 상세 모달
+        async function showMemberDetail(memberId) {
+            try {
+                const memberRes = await axios.get(\`\${API_BASE}/members/\${memberId}\`)
+                const member = memberRes.data.member
+                const transactions = memberRes.data.transactions || []
+                const tickets = memberRes.data.tickets || []
+
+                // 기본 정보
+                document.getElementById('detail-member-name').textContent = member.name
+                document.getElementById('detail-member-prison').textContent = member.institution
+                document.getElementById('detail-prisoner-number').textContent = member.inmate_number
+                document.getElementById('detail-address').textContent = member.po_box_address || '-'
+                document.getElementById('detail-depositor').textContent = member.depositor_name || '-'
+                document.getElementById('detail-created-at').textContent = new Date(member.created_at).toLocaleDateString()
+                document.getElementById('detail-status').textContent = member.status === 'active' ? '활성' : '비활성'
+
+                // 포인트 정보
+                document.getElementById('detail-points').textContent = member.points.toLocaleString()
+                document.getElementById('detail-betting-points').textContent = member.betting_points.toLocaleString()
+                document.getElementById('detail-frozen-points').textContent = member.frozen_points.toLocaleString()
+
+                // 포인트 거래 내역
+                const transactionsHtml = transactions.length > 0 ? transactions.map(t => \`
+                    <div class="flex justify-between items-center py-2 border-b">
+                        <div>
+                            <p class="text-sm font-medium">\${t.description}</p>
+                            <p class="text-xs text-gray-500">\${new Date(t.created_at).toLocaleString()}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold \${t.transaction_type === 'earn' ? 'text-green-600' : 'text-red-600'}">
+                                \${t.transaction_type === 'earn' ? '+' : '-'}\${t.amount.toLocaleString()}원
+                            </p>
+                            <p class="text-xs text-gray-500">\${t.point_type === 'betting' ? '배팅' : '일반'}</p>
+                        </div>
+                    </div>
+                \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">거래 내역이 없습니다.</p>'
+
+                document.getElementById('member-point-transactions').innerHTML = transactionsHtml
+
+                // 티켓 이력
+                const ticketsHtml = tickets.length > 0 ? tickets.map(t => \`
+                    <div class="flex justify-between items-center py-2 border-b">
+                        <div>
+                            <p class="text-sm font-medium">\${t.title}</p>
+                            <p class="text-xs text-gray-500">\${t.ticket_number} - \${new Date(t.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <span class="status-badge status-\${t.status}">\${t.status}</span>
+                    </div>
+                \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">티켓 이력이 없습니다.</p>'
+
+                document.getElementById('member-tickets').innerHTML = ticketsHtml
+
+                document.getElementById('member-detail-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('회원 상세 로드 오류:', error)
+                alert('회원 정보를 불러오는데 실패했습니다.')
+            }
+        }
+
+        function closeMemberDetail() {
+            document.getElementById('member-detail-modal').classList.add('hidden')
+        }
+
         function showNewBookModal() { alert('도서 등록 모달 (구현 예정)') }
         function showNewStaffModal() { alert('직원 등록 모달 (구현 예정)') }
         function showMemberDetail(id) { alert(\`회원 상세 모달 (ID: \${id}) (구현 예정)\`) }
