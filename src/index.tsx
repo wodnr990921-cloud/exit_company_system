@@ -531,12 +531,18 @@ app.get('/', (c) => {
                                 <i class="fas fa-search mr-2"></i>조회
                             </button>
                         </div>
-                        <div class="self-end ml-auto">
-                            <button onclick="executeClosing()" class="btn btn-success">
+                        <div class="self-end ml-auto flex gap-2">
+                            <button onclick="printClosingReport()" class="btn btn-secondary">
+                                <i class="fas fa-print mr-2"></i>인쇄
+                            </button>
+                            <button id="execute-closing-btn" onclick="executeClosing()" class="btn btn-success">
                                 <i class="fas fa-check-circle mr-2"></i>마감 실행
                             </button>
                         </div>
                     </div>
+                    
+                    <!-- 마감 상태 표시 -->
+                    <div id="closing-status" class="mt-4"></div>
                 </div>
 
                 <!-- 마감 통계 -->
@@ -2202,7 +2208,7 @@ app.get('/', (c) => {
                     return
                 }
 
-                const response = await axios.get(\`\${API_BASE}/betting/daily-close?date=\${date}\`)
+                const response = await axios.get(\`\${API_BASE}/closing?date=\${date}\`)
                 const data = response.data
 
                 // 티켓 통계
@@ -2212,29 +2218,46 @@ app.get('/', (c) => {
                 document.getElementById('closing-pending-tickets').textContent = \`\${pendingTickets}건\`
 
                 // 포인트 통계
-                document.getElementById('closing-earned-points').textContent = \`\${Number(data.point_stats.total_points_added || 0).toLocaleString()}원\`
-                document.getElementById('closing-used-points').textContent = \`\${Number(data.point_stats.total_points_subtracted || 0).toLocaleString()}원\`
-                const netPoints = Number(data.point_stats.total_points_added || 0) - Number(data.point_stats.total_points_subtracted || 0)
-                document.getElementById('closing-net-points').textContent = \`\${netPoints.toLocaleString()}원\`
+                document.getElementById('closing-earned-points').textContent = \`\${Number(data.point_stats.earned_points || 0).toLocaleString()}원\`
+                document.getElementById('closing-used-points').textContent = \`\${Number(data.point_stats.used_points || 0).toLocaleString()}원\`
+                document.getElementById('closing-net-points').textContent = \`\${Number(data.point_stats.net_points || 0).toLocaleString()}원\`
 
                 // 배팅 통계
                 document.getElementById('closing-bet-amount').textContent = \`\${Number(data.betting_stats.total_bet_amount || 0).toLocaleString()}원\`
                 document.getElementById('closing-win-amount').textContent = \`\${Number(data.betting_stats.total_win_amount || 0).toLocaleString()}원\`
-                const betMargin = Number(data.betting_stats.total_bet_amount || 0) - Number(data.betting_stats.total_win_amount || 0)
-                document.getElementById('closing-bet-margin').textContent = \`\${betMargin.toLocaleString()}원\`
+                document.getElementById('closing-bet-margin').textContent = \`\${Number(data.betting_stats.bet_margin || 0).toLocaleString()}원\`
 
                 // 도서 판매 통계
-                document.getElementById('closing-book-orders').textContent = \`\${data.ticket_stats.order_tickets || 0}건\`
-                document.getElementById('closing-book-sales').textContent = \`0원\` // TODO: 도서 판매 금액 연동 필요
-                document.getElementById('closing-book-shipped').textContent = \`\${data.ticket_stats.completed_tickets || 0}건\`
-                const bookPending = (data.ticket_stats.order_tickets || 0) - (data.ticket_stats.completed_tickets || 0)
-                document.getElementById('closing-book-pending').textContent = \`\${bookPending}건\`
+                document.getElementById('closing-book-orders').textContent = \`\${data.book_stats.book_orders || 0}건\`
+                document.getElementById('closing-book-sales').textContent = \`\${Number(data.book_stats.total_sales || 0).toLocaleString()}원\`
+                document.getElementById('closing-book-shipped').textContent = \`\${data.book_stats.shipped_orders || 0}건\`
+                document.getElementById('closing-book-pending').textContent = \`\${data.book_stats.pending_orders || 0}건\`
 
                 // 종합 요약
-                const totalRevenue = netPoints
-                const totalMargin = netPoints + betMargin
-                document.getElementById('closing-total-revenue').textContent = \`\${totalRevenue.toLocaleString()}원\`
-                document.getElementById('closing-total-margin').textContent = \`\${totalMargin.toLocaleString()}원\`
+                document.getElementById('closing-total-revenue').textContent = \`\${Number(data.summary.total_revenue || 0).toLocaleString()}원\`
+                document.getElementById('closing-total-margin').textContent = \`\${Number(data.summary.total_margin || 0).toLocaleString()}원\`
+                
+                // 마감 상태 표시
+                if (data.is_closed) {
+                    document.getElementById('closing-status').innerHTML = \`
+                        <div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            \${data.closed_at ? new Date(data.closed_at).toLocaleString() : ''} 마감 완료
+                            \${data.closed_by ? \` (담당: \${data.closed_by})\` : ''}
+                        </div>
+                    \`
+                    document.getElementById('execute-closing-btn').disabled = true
+                    document.getElementById('execute-closing-btn').classList.add('opacity-50', 'cursor-not-allowed')
+                } else {
+                    document.getElementById('closing-status').innerHTML = \`
+                        <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            아직 마감되지 않았습니다.
+                        </div>
+                    \`
+                    document.getElementById('execute-closing-btn').disabled = false
+                    document.getElementById('execute-closing-btn').classList.remove('opacity-50', 'cursor-not-allowed')
+                }
 
             } catch (error) {
                 console.error('마감 데이터 조회 오류:', error)
@@ -2257,7 +2280,7 @@ app.get('/', (c) => {
 
                 const notes = prompt('마감 메모를 입력하세요 (선택사항):')
 
-                const response = await axios.post(\`\${API_BASE}/betting/daily-close\`, {
+                const response = await axios.post(\`\${API_BASE}/closing\`, {
                     date: date,
                     closed_by: currentStaff.id,
                     notes: notes || ''
@@ -2271,6 +2294,99 @@ app.get('/', (c) => {
                 const errorMsg = error.response?.data?.error || '마감 실행 중 오류가 발생했습니다.'
                 alert(errorMsg)
             }
+        }
+
+        // 일일 마감 리포트 인쇄
+        function printClosingReport() {
+            const date = document.getElementById('closing-date').value
+            if (!date) {
+                alert('날짜를 선택해주세요.')
+                return
+            }
+            
+            const printWindow = window.open('', '', 'width=800,height=600')
+            const content = \`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>일일 마감 리포트 - \${date}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        h1 { text-align: center; color: #333; }
+                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                        th { background-color: #f4f4f4; font-weight: bold; }
+                        .summary { background-color: #e8f4f8; }
+                        .total { background-color: #4299e1; color: white; font-weight: bold; }
+                        @media print {
+                            button { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>📊 일일 마감 리포트</h1>
+                    <p style="text-align: center; color: #666;">마감 일자: \${date}</p>
+                    
+                    <h2>티켓 처리 현황</h2>
+                    <table>
+                        <tr><th>항목</th><th>수량</th></tr>
+                        <tr><td>총 티켓 수</td><td>\${document.getElementById('closing-total-tickets').textContent}</td></tr>
+                        <tr><td>처리 완료</td><td>\${document.getElementById('closing-completed-tickets').textContent}</td></tr>
+                        <tr><td>미처리</td><td>\${document.getElementById('closing-pending-tickets').textContent}</td></tr>
+                    </table>
+                    
+                    <h2>포인트 현황</h2>
+                    <table>
+                        <tr><th>항목</th><th>금액</th></tr>
+                        <tr><td>포인트 적립</td><td>\${document.getElementById('closing-earned-points').textContent}</td></tr>
+                        <tr><td>포인트 사용</td><td>\${document.getElementById('closing-used-points').textContent}</td></tr>
+                        <tr class="summary"><td>순 포인트</td><td>\${document.getElementById('closing-net-points').textContent}</td></tr>
+                    </table>
+                    
+                    <h2>배팅 현황</h2>
+                    <table>
+                        <tr><th>항목</th><th>금액</th></tr>
+                        <tr><td>배팅 금액</td><td>\${document.getElementById('closing-bet-amount').textContent}</td></tr>
+                        <tr><td>당첨 금액</td><td>\${document.getElementById('closing-win-amount').textContent}</td></tr>
+                        <tr class="summary"><td>배팅 마진</td><td>\${document.getElementById('closing-bet-margin').textContent}</td></tr>
+                    </table>
+                    
+                    <h2>도서 판매 현황</h2>
+                    <table>
+                        <tr><th>항목</th><th>수량/금액</th></tr>
+                        <tr><td>주문 건수</td><td>\${document.getElementById('closing-book-orders').textContent}</td></tr>
+                        <tr><td>판매 금액</td><td>\${document.getElementById('closing-book-sales').textContent}</td></tr>
+                        <tr><td>발송 완료</td><td>\${document.getElementById('closing-book-shipped').textContent}</td></tr>
+                        <tr><td>미발송</td><td>\${document.getElementById('closing-book-pending').textContent}</td></tr>
+                    </table>
+                    
+                    <h2>종합 요약</h2>
+                    <table>
+                        <tr class="total"><th>항목</th><th>금액</th></tr>
+                        <tr><td><strong>총 매출</strong></td><td><strong>\${document.getElementById('closing-total-revenue').textContent}</strong></td></tr>
+                        <tr><td><strong>총 마진</strong></td><td><strong>\${document.getElementById('closing-total-margin').textContent}</strong></td></tr>
+                    </table>
+                    
+                    <p style="text-align: center; margin-top: 40px; color: #999;">
+                        생성 일시: \${new Date().toLocaleString()}<br>
+                        EXIT System - 엑시트 관리 시스템
+                    </p>
+                    
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="window.print()" style="padding: 10px 20px; background: #4299e1; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            인쇄하기
+                        </button>
+                        <button onclick="window.close()" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">
+                            닫기
+                        </button>
+                    </div>
+                </body>
+                </html>
+            \`
+            
+            printWindow.document.write(content)
+            printWindow.document.close()
         }
 
         // 헬퍼 함수들
