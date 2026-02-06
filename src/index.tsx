@@ -3803,6 +3803,291 @@ app.get('/', (c) => {
             document.getElementById('member-detail-modal').classList.add('hidden')
         }
 
+        // 우편실 관리
+        let uploadedMailImages = [] // 업로드된 이미지 정보 저장
+
+        async function loadMailroom() {
+            try {
+                await loadPendingMail()
+                await loadProcessedMail()
+                await loadMailHistory()
+            } catch (error) {
+                console.error('우편실 로드 오류:', error)
+            }
+        }
+
+        function showMailroomTab(tab) {
+            // 모든 탭 버튼 비활성화
+            document.querySelectorAll('[id^="mailroom-tab-"]').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white')
+                btn.classList.add('bg-gray-200', 'text-gray-700')
+            })
+
+            // 모든 탭 콘텐츠 숨기기
+            document.querySelectorAll('.mailroom-tab-content').forEach(content => {
+                content.classList.add('hidden')
+            })
+
+            // 선택된 탭 활성화
+            document.getElementById(\`mailroom-tab-\${tab}\`).classList.remove('bg-gray-200', 'text-gray-700')
+            document.getElementById(\`mailroom-tab-\${tab}\`).classList.add('bg-blue-500', 'text-white')
+            document.getElementById(\`mailroom-\${tab}-tab\`).classList.remove('hidden')
+
+            // 탭별 데이터 로드
+            if (tab === 'receive') loadPendingMail()
+            if (tab === 'inspection') loadProcessedMail()
+            if (tab === 'history') loadMailHistory()
+        }
+
+        async function handleMailImages(event) {
+            const files = Array.from(event.target.files)
+            if (files.length === 0) return
+
+            const processBtn = document.getElementById('process-mail-btn')
+            processBtn.disabled = true
+            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>업로드 중...'
+
+            try {
+                for (const file of files) {
+                    const formData = new FormData()
+                    formData.append('file', file)
+
+                    const res = await axios.post(\`\${API_BASE}/mailroom/upload\`, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    })
+
+                    uploadedMailImages.push({
+                        key: res.data.key,
+                        url: res.data.url,
+                        name: file.name
+                    })
+                }
+
+                // 미리보기 표시
+                displayImagePreviews()
+                processBtn.disabled = false
+                processBtn.innerHTML = '<i class="fas fa-magic mr-2"></i>OCR 처리 시작'
+            } catch (error) {
+                console.error('이미지 업로드 오류:', error)
+                alert('이미지 업로드 실패: ' + (error.response?.data?.error || error.message))
+                processBtn.disabled = false
+                processBtn.innerHTML = '<i class="fas fa-magic mr-2"></i>OCR 처리 시작'
+            }
+        }
+
+        function displayImagePreviews() {
+            const previewContainer = document.getElementById('uploaded-images-preview')
+            previewContainer.innerHTML = uploadedMailImages.map((img, index) => \`
+                <div class="relative border rounded overflow-hidden">
+                    <img src="\${img.url}" alt="\${img.name}" class="w-full h-24 object-cover">
+                    <button onclick="removeImage(\${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            \`).join('')
+        }
+
+        function removeImage(index) {
+            uploadedMailImages.splice(index, 1)
+            displayImagePreviews()
+            
+            if (uploadedMailImages.length === 0) {
+                document.getElementById('process-mail-btn').disabled = true
+            }
+        }
+
+        async function processMailImages() {
+            if (uploadedMailImages.length === 0) {
+                alert('업로드된 이미지가 없습니다.')
+                return
+            }
+
+            // 회원 선택 모달 표시 (간단한 prompt로 대체)
+            const memberId = prompt('회원 ID를 입력하세요 (선택사항, 입력하지 않으면 나중에 배당 가능):')
+
+            try {
+                const imageKeys = uploadedMailImages.map(img => img.key)
+                
+                // 우편물 등록
+                const res = await axios.post(\`\${API_BASE}/mailroom\`, {
+                    member_id: memberId || null,
+                    image_keys: imageKeys,
+                    notes: '',
+                    created_by: currentStaff.id
+                })
+
+                const mailroomId = res.data.mailroom_id
+
+                // OCR 처리 시작
+                await axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
+
+                alert('우편물이 등록되고 OCR 처리가 시작되었습니다.')
+                
+                // 초기화
+                uploadedMailImages = []
+                displayImagePreviews()
+                document.getElementById('mail-images').value = ''
+                document.getElementById('process-mail-btn').disabled = true
+                
+                // 목록 새로고침
+                await loadPendingMail()
+                await loadProcessedMail()
+            } catch (error) {
+                console.error('우편물 처리 오류:', error)
+                alert('우편물 처리 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        async function loadPendingMail() {
+            try {
+                const res = await axios.get(\`\${API_BASE}/mailroom?status=received\`)
+                const items = res.data.mailroom_items || []
+
+                const container = document.getElementById('pending-mail-list')
+                if (items.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">업로드된 우편물이 없습니다.</p>'
+                    return
+                }
+
+                container.innerHTML = items.map(item => \`
+                    <div class="border rounded p-3 hover:bg-gray-50">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-medium">\${item.mail_number}</p>
+                                <p class="text-sm text-gray-600">\${item.member_name || '미배정'}</p>
+                                <p class="text-xs text-gray-500">\${new Date(item.created_at).toLocaleString()}</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="viewMailImages(\${item.id})" class="text-blue-500 hover:text-blue-700">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button onclick="deleteMailItem(\${item.id})" class="text-red-500 hover:text-red-700">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                \`).join('')
+            } catch (error) {
+                console.error('대기 우편물 로드 오류:', error)
+            }
+        }
+
+        async function loadProcessedMail() {
+            try {
+                const res = await axios.get(\`\${API_BASE}/mailroom?status=ocr_completed\`)
+                const items = res.data.mailroom_items || []
+
+                const container = document.getElementById('processed-mail-list')
+                if (items.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">처리 완료된 우편물이 없습니다.</p>'
+                    return
+                }
+
+                container.innerHTML = items.map(item => {
+                    const ocrResult = item.ocr_result ? JSON.parse(item.ocr_result) : []
+                    return \`
+                        <div class="border rounded p-4">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <p class="font-medium">\${item.mail_number}</p>
+                                    <p class="text-sm text-gray-600">\${item.member_name || '미배정'}</p>
+                                </div>
+                                <button onclick="assignToTicket(\${item.id})" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-share mr-1"></i>티켓 배당
+                                </button>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded text-sm">
+                                <p class="font-medium mb-2">OCR 결과:</p>
+                                \${ocrResult.map(r => \`<p class="text-gray-700">\${r.text}</p>\`).join('') || '<p class="text-gray-500">OCR 결과 없음</p>'}
+                            </div>
+                        </div>
+                    \`
+                }).join('')
+            } catch (error) {
+                console.error('처리 완료 우편물 로드 오류:', error)
+            }
+        }
+
+        async function loadMailHistory() {
+            try {
+                const res = await axios.get(\`\${API_BASE}/mailroom?status=assigned\`)
+                const items = res.data.mailroom_items || []
+
+                const container = document.getElementById('mail-history-list')
+                if (items.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">처리 내역이 없습니다.</p>'
+                    return
+                }
+
+                container.innerHTML = items.map(item => \`
+                    <div class="border rounded p-3 hover:bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-medium">\${item.mail_number}</p>
+                                <p class="text-sm text-gray-600">\${item.member_name || '미배정'}</p>
+                                <p class="text-xs text-gray-500">티켓: \${item.ticket_number || '-'}</p>
+                            </div>
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">완료</span>
+                        </div>
+                    </div>
+                \`).join('')
+            } catch (error) {
+                console.error('우편물 내역 로드 오류:', error)
+            }
+        }
+
+        async function viewMailImages(mailId) {
+            try {
+                const res = await axios.get(\`\${API_BASE}/mailroom/\${mailId}\`)
+                const item = res.data.mailroom_item
+                const imageKeys = JSON.parse(item.image_keys)
+
+                // 간단한 이미지 뷰어 (나중에 고급 뷰어로 교체 예정)
+                const imageHtml = imageKeys.map(key => 
+                    \`<img src="\${API_BASE}/mailroom/image/\${key}" class="w-full mb-2 border rounded">\`
+                ).join('')
+
+                alert('이미지 뷰어 (개선 예정)\\n\\n우편물 번호: ' + item.mail_number)
+                // TODO: 모달로 이미지 표시
+            } catch (error) {
+                console.error('이미지 조회 오류:', error)
+                alert('이미지 조회 실패')
+            }
+        }
+
+        async function deleteMailItem(mailId) {
+            if (!confirm('이 우편물을 삭제하시겠습니까?')) return
+
+            try {
+                await axios.delete(\`\${API_BASE}/mailroom/\${mailId}\`)
+                alert('우편물이 삭제되었습니다.')
+                await loadPendingMail()
+            } catch (error) {
+                console.error('우편물 삭제 오류:', error)
+                alert('삭제 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        async function assignToTicket(mailId) {
+            const ticketId = prompt('티켓 ID를 입력하세요:')
+            if (!ticketId) return
+
+            try {
+                await axios.patch(\`\${API_BASE}/mailroom/\${mailId}/status\`, {
+                    status: 'assigned',
+                    ticket_id: ticketId
+                })
+
+                alert('티켓에 배당되었습니다.')
+                await loadProcessedMail()
+                await loadMailHistory()
+            } catch (error) {
+                console.error('티켓 배당 오류:', error)
+                alert('배당 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
         // 도서 등록 모달
         function showNewBookModal() {
             document.getElementById('new-book-modal').classList.remove('hidden')
