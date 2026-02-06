@@ -914,6 +914,87 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 우편물 검수 및 배당 모달 -->
+        <div id="mail-assignment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-clipboard-check mr-2"></i>우편물 검수 및 배당</h3>
+                        <button onclick="closeMailAssignmentModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- 좌측: 우편물 정보 -->
+                        <div class="space-y-4">
+                            <div class="card">
+                                <h4 class="font-bold mb-3"><i class="fas fa-info-circle mr-2"></i>우편물 정보</h4>
+                                <div id="mail-assignment-info" class="space-y-2 text-sm">
+                                    <!-- JavaScript로 채워짐 -->
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <h4 class="font-bold mb-3"><i class="fas fa-image mr-2"></i>우편물 이미지</h4>
+                                <div id="mail-assignment-images" class="grid grid-cols-2 gap-2">
+                                    <!-- JavaScript로 채워짐 -->
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>OCR 결과</h4>
+                                <div id="mail-assignment-ocr" class="bg-gray-50 p-3 rounded text-sm max-h-60 overflow-y-auto">
+                                    <!-- JavaScript로 채워짐 -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 우측: 티켓 선택 및 배당 -->
+                        <div class="space-y-4">
+                            <div class="card">
+                                <h4 class="font-bold mb-3"><i class="fas fa-search mr-2"></i>티켓 검색</h4>
+                                <div class="space-y-3">
+                                    <input type="text" id="ticket-search" class="w-full px-3 py-2 border rounded" placeholder="티켓 번호 또는 회원명 검색" onkeyup="searchTicketsForAssignment(event)">
+                                    <div id="ticket-search-results" class="space-y-2 max-h-60 overflow-y-auto">
+                                        <p class="text-gray-500 text-sm text-center py-4">티켓을 검색하세요</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <h4 class="font-bold mb-3"><i class="fas fa-list-check mr-2"></i>배당할 티켓</h4>
+                                <div id="selected-tickets-for-assignment" class="space-y-2 max-h-60 overflow-y-auto">
+                                    <p class="text-gray-500 text-sm text-center py-4">티켓을 선택하세요</p>
+                                </div>
+                            </div>
+                            
+                            <div class="card bg-yellow-50">
+                                <div class="flex items-start">
+                                    <i class="fas fa-info-circle text-yellow-600 mt-1 mr-2"></i>
+                                    <div class="text-sm">
+                                        <p class="font-medium text-yellow-800 mb-1">배당 안내</p>
+                                        <ul class="text-yellow-700 space-y-1">
+                                            <li>• 새 케이스: 신규 회원 또는 새로운 문의</li>
+                                            <li>• 연속 케이스: 기존 티켓에 추가 자료</li>
+                                            <li>• 여러 티켓에 동시 배당 가능</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-2 mt-6">
+                        <button onclick="closeMailAssignmentModal()" class="btn btn-secondary">취소</button>
+                        <button onclick="executeMailAssignment()" class="btn btn-primary" id="execute-assignment-btn">
+                            <i class="fas fa-check mr-2"></i>배당 실행
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 경기 정산 모달 -->
         <div id="match-settlement-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -4098,23 +4179,213 @@ app.get('/', (c) => {
             }
         }
 
+        // 우편물 배당 시스템
+        let currentAssignmentMailId = null
+        let selectedTicketsForAssignment = []
+
         async function assignToTicket(mailId) {
-            const ticketId = prompt('티켓 ID를 입력하세요:')
-            if (!ticketId) return
-
+            currentAssignmentMailId = mailId
+            selectedTicketsForAssignment = []
+            
             try {
-                await axios.patch(\`\${API_BASE}/mailroom/\${mailId}/status\`, {
-                    status: 'assigned',
-                    ticket_id: ticketId
-                })
+                // 우편물 정보 로드
+                const res = await axios.get(\`\${API_BASE}/mailroom/\${mailId}\`)
+                const mail = res.data.mailroom_item
+                
+                // 모달에 정보 표시
+                const ocrData = mail.ocr_result ? JSON.parse(mail.ocr_result) : {}
+                const imageKeys = JSON.parse(mail.image_keys)
+                
+                // 우편물 정보
+                const caseType = ocrData.case_type || 'unknown'
+                const caseTypeLabel = caseType === 'new_case' ? '새 케이스 📧' : '연속 케이스 📄'
+                const caseTypeColor = caseType === 'new_case' ? 'text-blue-600' : 'text-purple-600'
+                
+                document.getElementById('mail-assignment-info').innerHTML = \`
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">우편물 번호:</span>
+                        <span class="font-mono font-medium">\${mail.mail_number}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">케이스 유형:</span>
+                        <span class="font-medium \${caseTypeColor}">\${caseTypeLabel}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">회원:</span>
+                        <span class="font-medium">\${mail.member_name || '미배정'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">이미지 수:</span>
+                        <span class="font-medium">\${imageKeys.length}장</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">등록 일시:</span>
+                        <span class="text-gray-500">\${new Date(mail.created_at).toLocaleString()}</span>
+                    </div>
+                \`
+                
+                // 이미지 미리보기
+                document.getElementById('mail-assignment-images').innerHTML = imageKeys.map(key => \`
+                    <img src="\${API_BASE}/mailroom/image/\${key}" 
+                         class="w-full h-32 object-cover border rounded cursor-pointer hover:opacity-75" 
+                         onclick="viewFullImage('\${API_BASE}/mailroom/image/\${key}')"
+                         title="클릭하여 확대">
+                \`).join('')
+                
+                // OCR 결과
+                const ocrResults = ocrData.results || []
+                document.getElementById('mail-assignment-ocr').innerHTML = ocrResults.length > 0 
+                    ? ocrResults.map((r, idx) => \`
+                        <div class="border-b pb-2 mb-2 last:border-0 last:mb-0">
+                            <p class="text-xs text-gray-500 mb-1">
+                                이미지 \${idx + 1} \${r.has_envelope ? '📧' : '📄'}
+                            </p>
+                            <p class="text-gray-700">\${r.text || '[텍스트 없음]'}</p>
+                        </div>
+                    \`).join('')
+                    : '<p class="text-gray-500">OCR 결과 없음</p>'
+                
+                // 티켓 검색 결과 초기화
+                document.getElementById('ticket-search-results').innerHTML = '<p class="text-gray-500 text-sm text-center py-4">티켓을 검색하세요</p>'
+                document.getElementById('selected-tickets-for-assignment').innerHTML = '<p class="text-gray-500 text-sm text-center py-4">티켓을 선택하세요</p>'
+                document.getElementById('ticket-search').value = ''
+                
+                // 모달 열기
+                document.getElementById('mail-assignment-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('배당 모달 로드 오류:', error)
+                alert('우편물 정보 로드 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
 
-                alert('티켓에 배당되었습니다.')
+        function closeMailAssignmentModal() {
+            document.getElementById('mail-assignment-modal').classList.add('hidden')
+            currentAssignmentMailId = null
+            selectedTicketsForAssignment = []
+        }
+
+        async function searchTicketsForAssignment(event) {
+            const query = event.target.value.trim()
+            
+            if (query.length < 2) {
+                document.getElementById('ticket-search-results').innerHTML = '<p class="text-gray-500 text-sm text-center py-4">최소 2자 이상 입력하세요</p>'
+                return
+            }
+            
+            try {
+                const res = await axios.get(\`\${API_BASE}/tickets?search=\${query}\`)
+                const tickets = res.data.tickets || []
+                
+                const container = document.getElementById('ticket-search-results')
+                if (tickets.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">검색 결과가 없습니다</p>'
+                    return
+                }
+                
+                container.innerHTML = tickets.filter(t => 
+                    !selectedTicketsForAssignment.find(st => st.id === t.id)
+                ).map(ticket => \`
+                    <div class="border rounded p-2 hover:bg-gray-50 cursor-pointer" onclick="selectTicketForAssignment(\${ticket.id}, '\${ticket.ticket_number}', '\${ticket.title.replace(/'/g, "\\\\'")}', '\${ticket.member_name || ""}')">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <p class="font-medium text-sm">\${ticket.ticket_number}</p>
+                                <p class="text-xs text-gray-600">\${ticket.title}</p>
+                                <p class="text-xs text-gray-500">\${ticket.member_name || '회원 없음'}</p>
+                            </div>
+                            <span class="status-badge status-\${ticket.status} text-xs">\${ticket.status}</span>
+                        </div>
+                    </div>
+                \`).join('')
+            } catch (error) {
+                console.error('티켓 검색 오류:', error)
+            }
+        }
+
+        function selectTicketForAssignment(ticketId, ticketNumber, ticketTitle, memberName) {
+            // 이미 선택되었는지 확인
+            if (selectedTicketsForAssignment.find(t => t.id === ticketId)) {
+                return
+            }
+            
+            selectedTicketsForAssignment.push({
+                id: ticketId,
+                ticket_number: ticketNumber,
+                title: ticketTitle,
+                member_name: memberName
+            })
+            
+            updateSelectedTicketsDisplay()
+        }
+
+        function removeTicketFromAssignment(ticketId) {
+            selectedTicketsForAssignment = selectedTicketsForAssignment.filter(t => t.id !== ticketId)
+            updateSelectedTicketsDisplay()
+        }
+
+        function updateSelectedTicketsDisplay() {
+            const container = document.getElementById('selected-tickets-for-assignment')
+            
+            if (selectedTicketsForAssignment.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">티켓을 선택하세요</p>'
+                return
+            }
+            
+            container.innerHTML = selectedTicketsForAssignment.map(ticket => \`
+                <div class="border rounded p-2 bg-blue-50">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <p class="font-medium text-sm">\${ticket.ticket_number}</p>
+                            <p class="text-xs text-gray-600">\${ticket.title}</p>
+                            <p class="text-xs text-gray-500">\${ticket.member_name || '회원 없음'}</p>
+                        </div>
+                        <button onclick="removeTicketFromAssignment(\${ticket.id})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            \`).join('')
+        }
+
+        async function executeMailAssignment() {
+            if (!currentAssignmentMailId) {
+                alert('우편물 정보를 찾을 수 없습니다.')
+                return
+            }
+            
+            if (selectedTicketsForAssignment.length === 0) {
+                alert('배당할 티켓을 선택하세요.')
+                return
+            }
+            
+            const btn = document.getElementById('execute-assignment-btn')
+            btn.disabled = true
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>배당 중...'
+            
+            try {
+                // 각 티켓에 대해 배당 실행
+                for (const ticket of selectedTicketsForAssignment) {
+                    await axios.patch(\`\${API_BASE}/mailroom/\${currentAssignmentMailId}/status\`, {
+                        status: 'assigned',
+                        ticket_id: ticket.id
+                    })
+                }
+                
+                alert(\`\${selectedTicketsForAssignment.length}개 티켓에 배당이 완료되었습니다.\`)
+                closeMailAssignmentModal()
                 await loadProcessedMail()
                 await loadMailHistory()
             } catch (error) {
-                console.error('티켓 배당 오류:', error)
+                console.error('배당 실행 오류:', error)
                 alert('배당 실패: ' + (error.response?.data?.error || error.message))
+            } finally {
+                btn.disabled = false
+                btn.innerHTML = '<i class="fas fa-check mr-2"></i>배당 실행'
             }
+        }
+
+        function viewFullImage(imageUrl) {
+            // 간단한 전체화면 이미지 뷰어 (나중에 고급 뷰어로 교체)
+            window.open(imageUrl, '_blank')
         }
 
         // 도서 등록 모달
