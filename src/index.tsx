@@ -1327,10 +1327,26 @@ app.get('/', (c) => {
                     <div id="ticket-tab-comments" class="tab-content hidden">
                         <div class="card mb-4">
                             <h4 class="font-bold mb-3"><i class="fas fa-comment mr-2"></i>댓글 작성</h4>
+                            
+                            <!-- 답변 템플릿 선택 -->
+                            <div class="mb-3">
+                                <label class="block text-sm font-medium mb-1">빠른 답변 템플릿</label>
+                                <select id="comment-template" onchange="insertTemplate()" class="w-full px-3 py-2 border rounded">
+                                    <option value="">-- 템플릿 선택 --</option>
+                                    <option value="order_received">주문 접수 완료</option>
+                                    <option value="order_processing">주문 처리 중</option>
+                                    <option value="order_shipped">발송 완료</option>
+                                    <option value="point_adjusted">포인트 조정 완료</option>
+                                    <option value="inquiry_answer">문의 답변</option>
+                                    <option value="need_more_info">추가 정보 필요</option>
+                                    <option value="completed">처리 완료</option>
+                                </select>
+                            </div>
+                            
                             <textarea 
                                 id="comment-content" 
                                 class="w-full px-3 py-2 border rounded mb-2" 
-                                rows="3" 
+                                rows="4" 
                                 placeholder="댓글을 입력하세요..."
                             ></textarea>
                             <button onclick="addComment()" class="btn btn-primary">
@@ -2371,6 +2387,37 @@ app.get('/', (c) => {
 
             try {
                 await axios.post(\`\${API_BASE}/tickets/\${currentTicketId}/comments\`, {
+                    content,
+                    created_by: currentStaff.id
+                })
+                document.getElementById('comment-content').value = ''
+                document.getElementById('comment-template').value = ''
+                await loadTicketComments(currentTicketId)
+            } catch (error) {
+                alert('댓글 등록 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 답변 템플릿 삽입
+        function insertTemplate() {
+            const template = document.getElementById('comment-template').value
+            const textarea = document.getElementById('comment-content')
+
+            const templates = {
+                'order_received': '주문이 정상적으로 접수되었습니다. 빠른 시일 내에 처리하여 발송해드리겠습니다.',
+                'order_processing': '주문하신 도서를 현재 처리 중입니다. 조금만 기다려주시기 바랍니다.',
+                'order_shipped': '주문하신 도서가 발송되었습니다. 영업일 기준 3-5일 내 도착 예정입니다.',
+                'point_adjusted': '포인트 조정이 완료되었습니다. 현재 잔액을 확인해주세요.',
+                'inquiry_answer': '문의하신 내용에 대해 답변드립니다.\n\n',
+                'need_more_info': '정확한 처리를 위해 추가 정보가 필요합니다. 다음 내용을 확인해주세요:\n\n',
+                'completed': '요청하신 사항이 모두 처리 완료되었습니다. 감사합니다.'
+            }
+
+            if (template && templates[template]) {
+                textarea.value = templates[template]
+                textarea.focus()
+            }
+        }
                     content,
                     created_by: currentStaff.id
                 })
