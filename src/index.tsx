@@ -2202,41 +2202,39 @@ app.get('/', (c) => {
                     return
                 }
 
-                const response = await axios.get(\`\${API_BASE}/closing?date=\${date}\`)
+                const response = await axios.get(\`\${API_BASE}/betting/daily-close?date=\${date}\`)
                 const data = response.data
 
                 // 티켓 통계
-                document.getElementById('closing-total-tickets').textContent = \`\${data.ticket_stats.total_tickets}건\`
-                document.getElementById('closing-completed-tickets').textContent = \`\${data.ticket_stats.completed_tickets}건\`
-                document.getElementById('closing-pending-tickets').textContent = \`\${data.ticket_stats.pending_tickets}건\`
+                document.getElementById('closing-total-tickets').textContent = \`\${data.ticket_stats.total_tickets || 0}건\`
+                document.getElementById('closing-completed-tickets').textContent = \`\${data.ticket_stats.completed_tickets || 0}건\`
+                const pendingTickets = (data.ticket_stats.total_tickets || 0) - (data.ticket_stats.completed_tickets || 0)
+                document.getElementById('closing-pending-tickets').textContent = \`\${pendingTickets}건\`
 
                 // 포인트 통계
-                document.getElementById('closing-earned-points').textContent = \`\${data.point_stats.earned_points.toLocaleString()}원\`
-                document.getElementById('closing-used-points').textContent = \`\${data.point_stats.used_points.toLocaleString()}원\`
-                document.getElementById('closing-net-points').textContent = \`\${data.point_stats.net_points.toLocaleString()}원\`
+                document.getElementById('closing-earned-points').textContent = \`\${Number(data.point_stats.total_points_added || 0).toLocaleString()}원\`
+                document.getElementById('closing-used-points').textContent = \`\${Number(data.point_stats.total_points_subtracted || 0).toLocaleString()}원\`
+                const netPoints = Number(data.point_stats.total_points_added || 0) - Number(data.point_stats.total_points_subtracted || 0)
+                document.getElementById('closing-net-points').textContent = \`\${netPoints.toLocaleString()}원\`
 
                 // 배팅 통계
-                document.getElementById('closing-bet-amount').textContent = \`\${data.betting_stats.total_bet_amount.toLocaleString()}원\`
-                document.getElementById('closing-win-amount').textContent = \`\${data.betting_stats.total_win_amount.toLocaleString()}원\`
-                document.getElementById('closing-bet-margin').textContent = \`\${data.betting_stats.bet_margin.toLocaleString()}원\`
+                document.getElementById('closing-bet-amount').textContent = \`\${Number(data.betting_stats.total_bet_amount || 0).toLocaleString()}원\`
+                document.getElementById('closing-win-amount').textContent = \`\${Number(data.betting_stats.total_win_amount || 0).toLocaleString()}원\`
+                const betMargin = Number(data.betting_stats.total_bet_amount || 0) - Number(data.betting_stats.total_win_amount || 0)
+                document.getElementById('closing-bet-margin').textContent = \`\${betMargin.toLocaleString()}원\`
 
                 // 도서 판매 통계
-                document.getElementById('closing-book-orders').textContent = \`\${data.book_stats.book_orders}건\`
-                document.getElementById('closing-book-sales').textContent = \`\${data.book_stats.total_sales.toLocaleString()}원\`
-                document.getElementById('closing-book-shipped').textContent = \`\${data.book_stats.shipped_orders}건\`
-                document.getElementById('closing-book-pending').textContent = \`\${data.book_stats.pending_orders}건\`
+                document.getElementById('closing-book-orders').textContent = \`\${data.ticket_stats.order_tickets || 0}건\`
+                document.getElementById('closing-book-sales').textContent = \`0원\` // TODO: 도서 판매 금액 연동 필요
+                document.getElementById('closing-book-shipped').textContent = \`\${data.ticket_stats.completed_tickets || 0}건\`
+                const bookPending = (data.ticket_stats.order_tickets || 0) - (data.ticket_stats.completed_tickets || 0)
+                document.getElementById('closing-book-pending').textContent = \`\${bookPending}건\`
 
                 // 종합 요약
-                document.getElementById('closing-total-revenue').textContent = \`\${data.summary.total_revenue.toLocaleString()}원\`
-                document.getElementById('closing-total-margin').textContent = \`\${data.summary.total_margin.toLocaleString()}원\`
-
-                // 마감 상태
-                if (data.is_closed) {
-                    document.getElementById('closing-timestamp').textContent = new Date(data.closed_at).toLocaleString()
-                    alert('이미 마감된 날짜입니다.')
-                } else {
-                    document.getElementById('closing-timestamp').textContent = '-'
-                }
+                const totalRevenue = netPoints
+                const totalMargin = netPoints + betMargin
+                document.getElementById('closing-total-revenue').textContent = \`\${totalRevenue.toLocaleString()}원\`
+                document.getElementById('closing-total-margin').textContent = \`\${totalMargin.toLocaleString()}원\`
 
             } catch (error) {
                 console.error('마감 데이터 조회 오류:', error)
@@ -2257,9 +2255,12 @@ app.get('/', (c) => {
                     return
                 }
 
-                const response = await axios.post(\`\${API_BASE}/closing\`, {
+                const notes = prompt('마감 메모를 입력하세요 (선택사항):')
+
+                const response = await axios.post(\`\${API_BASE}/betting/daily-close\`, {
                     date: date,
-                    closed_by: currentStaff.id
+                    closed_by: currentStaff.id,
+                    notes: notes || ''
                 })
 
                 alert('일일 마감이 완료되었습니다.')
