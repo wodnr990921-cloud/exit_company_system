@@ -521,6 +521,100 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 티켓 생성 모달 -->
+        <div id="new-ticket-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>새 티켓 생성</h3>
+                        <button onclick="closeNewTicketModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <!-- 티켓 유형 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">티켓 유형 *</label>
+                            <select id="ticket-type" class="w-full px-3 py-2 border rounded" onchange="toggleTicketFields()">
+                                <option value="">선택하세요</option>
+                                <option value="ORDER">주문</option>
+                                <option value="INQUIRY">문의</option>
+                                <option value="PURCHASE_ORDER">발주</option>
+                                <option value="POINT_ADJUSTMENT">포인트 조정</option>
+                                <option value="MEMBER">회원 관리</option>
+                                <option value="MAIL_INSPECTION">우편 검수</option>
+                            </select>
+                        </div>
+
+                        <!-- 제목 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">제목 *</label>
+                            <input type="text" id="ticket-title" class="w-full px-3 py-2 border rounded" placeholder="티켓 제목을 입력하세요">
+                        </div>
+
+                        <!-- 설명 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">설명</label>
+                            <textarea id="ticket-description" class="w-full px-3 py-2 border rounded" rows="4" placeholder="티켓 내용을 입력하세요"></textarea>
+                        </div>
+
+                        <!-- 회원 선택 (주문, 포인트 조정, 회원 관리 유형일 때) -->
+                        <div id="ticket-member-field" class="hidden">
+                            <label class="block text-sm font-medium mb-1">회원 선택 *</label>
+                            <select id="ticket-member" class="w-full px-3 py-2 border rounded">
+                                <option value="">선택하세요</option>
+                            </select>
+                        </div>
+
+                        <!-- 우선순위 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">우선순위</label>
+                            <select id="ticket-priority" class="w-full px-3 py-2 border rounded">
+                                <option value="normal">일반</option>
+                                <option value="urgent">긴급</option>
+                            </select>
+                        </div>
+
+                        <!-- 담당자 배정 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">담당자 배정</label>
+                            <select id="ticket-assigned-to" class="w-full px-3 py-2 border rounded">
+                                <option value="">미배정</option>
+                            </select>
+                        </div>
+
+                        <!-- 포인트 조정 전용 필드 -->
+                        <div id="point-adjustment-fields" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">포인트 유형 *</label>
+                                <select id="point-type" class="w-full px-3 py-2 border rounded">
+                                    <option value="points">일반 포인트</option>
+                                    <option value="betting_points">배팅 포인트</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">조정 유형 *</label>
+                                <select id="adjustment-type" class="w-full px-3 py-2 border rounded">
+                                    <option value="add">적립</option>
+                                    <option value="subtract">차감</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">금액 *</label>
+                                <input type="number" id="point-amount" class="w-full px-3 py-2 border rounded" placeholder="금액 입력" min="0">
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-2 mt-6">
+                            <button onclick="closeNewTicketModal()" class="btn btn-secondary">취소</button>
+                            <button onclick="createTicket()" class="btn btn-primary">생성</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 티켓 상세 모달 (배팅 폴더 포함) -->
         <div id="ticket-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1505,7 +1599,125 @@ app.get('/', (c) => {
             }
         }
 
-        function showNewTicketModal() { alert('티켓 생성 모달 (구현 예정)') }
+        // 티켓 생성 모달
+        async function showNewTicketModal() {
+            try {
+                // 회원 목록 로드
+                const membersRes = await axios.get(\`\${API_BASE}/members\`)
+                const members = membersRes.data.members || []
+                
+                const memberOptions = members.map(m => 
+                    \`<option value="\${m.id}">\${m.name} (\${m.prison_name})</option>\`
+                ).join('')
+                document.getElementById('ticket-member').innerHTML = '<option value="">선택하세요</option>' + memberOptions
+
+                // 직원 목록 로드
+                const staffRes = await axios.get(\`\${API_BASE}/staff\`)
+                const staff = staffRes.data.staff || []
+                
+                const staffOptions = staff.map(s => 
+                    \`<option value="\${s.id}">\${s.name} (\${s.role === 'admin' ? '관리자' : '직원'})</option>\`
+                ).join('')
+                document.getElementById('ticket-assigned-to').innerHTML = '<option value="">미배정</option>' + staffOptions
+
+                // 모달 열기
+                document.getElementById('new-ticket-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('티켓 생성 모달 오류:', error)
+                alert('티켓 생성 모달을 여는데 실패했습니다.')
+            }
+        }
+
+        function closeNewTicketModal() {
+            document.getElementById('new-ticket-modal').classList.add('hidden')
+            // 폼 초기화
+            document.getElementById('ticket-type').value = ''
+            document.getElementById('ticket-title').value = ''
+            document.getElementById('ticket-description').value = ''
+            document.getElementById('ticket-member').value = ''
+            document.getElementById('ticket-priority').value = 'normal'
+            document.getElementById('ticket-assigned-to').value = ''
+            document.getElementById('point-amount').value = ''
+            toggleTicketFields()
+        }
+
+        function toggleTicketFields() {
+            const ticketType = document.getElementById('ticket-type').value
+            const memberField = document.getElementById('ticket-member-field')
+            const pointFields = document.getElementById('point-adjustment-fields')
+
+            // 회원 선택 필드 표시 조건
+            if (['ORDER', 'POINT_ADJUSTMENT', 'MEMBER'].includes(ticketType)) {
+                memberField.classList.remove('hidden')
+            } else {
+                memberField.classList.add('hidden')
+            }
+
+            // 포인트 조정 전용 필드
+            if (ticketType === 'POINT_ADJUSTMENT') {
+                pointFields.classList.remove('hidden')
+            } else {
+                pointFields.classList.add('hidden')
+            }
+        }
+
+        async function createTicket() {
+            const ticketType = document.getElementById('ticket-type').value
+            const title = document.getElementById('ticket-title').value
+            const description = document.getElementById('ticket-description').value
+            const memberId = document.getElementById('ticket-member').value
+            const priority = document.getElementById('ticket-priority').value
+            const assignedTo = document.getElementById('ticket-assigned-to').value
+
+            // 필수 항목 검증
+            if (!ticketType || !title) {
+                alert('티켓 유형과 제목은 필수입니다.')
+                return
+            }
+
+            // 회원 필수 유형 검증
+            if (['ORDER', 'POINT_ADJUSTMENT', 'MEMBER'].includes(ticketType) && !memberId) {
+                alert('이 유형은 회원 선택이 필수입니다.')
+                return
+            }
+
+            const data = {
+                type: ticketType,
+                title: title,
+                description: description,
+                member_id: memberId || null,
+                priority: priority,
+                assigned_to: assignedTo || null,
+                created_by: currentStaff.id
+            }
+
+            // 포인트 조정일 경우 추가 데이터
+            if (ticketType === 'POINT_ADJUSTMENT') {
+                const pointType = document.getElementById('point-type').value
+                const adjustmentType = document.getElementById('adjustment-type').value
+                const amount = parseFloat(document.getElementById('point-amount').value)
+
+                if (!amount || amount <= 0) {
+                    alert('금액을 입력해주세요.')
+                    return
+                }
+
+                data.point_type = pointType
+                data.adjustment_type = adjustmentType
+                data.amount = amount
+            }
+
+            try {
+                await axios.post(\`\${API_BASE}/tickets\`, data)
+                alert('티켓이 생성되었습니다.')
+                closeNewTicketModal()
+                if (currentView === 'tickets') await loadTickets()
+                if (currentView === 'dashboard') await loadDashboard()
+            } catch (error) {
+                alert('티켓 생성 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
         function showNewMemberModal() { alert('회원 등록 모달 (구현 예정)') }
         function showNewBookModal() { alert('도서 등록 모달 (구현 예정)') }
         function showNewStaffModal() { alert('직원 등록 모달 (구현 예정)') }

@@ -100,7 +100,7 @@ tickets.get('/:id', async (c) => {
 // 티켓 생성
 tickets.post('/', async (c) => {
   try {
-    const { title, description, member_id, ticket_type, priority, created_by } = await c.req.json()
+    const { title, description, member_id, ticket_type, priority, assigned_to, created_by } = await c.req.json()
 
     if (!title || !ticket_type || !created_by) {
       return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
@@ -108,13 +108,16 @@ tickets.post('/', async (c) => {
 
     // 티켓 번호 생성 (T + 타임스탬프)
     const ticket_number = `T${Date.now()}`
+    
+    // 상태 설정: assigned_to가 있으면 'assigned', 없으면 'open'
+    const status = assigned_to ? 'assigned' : 'open'
 
     const result = await c.env.DB.prepare(
-      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, status, assigned_to, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       ticket_number, title, description || '', member_id || null, 
-      ticket_type, priority || 'normal', created_by
+      ticket_type, priority || 'normal', status, assigned_to || null, created_by
     ).run()
 
     return c.json({ 
