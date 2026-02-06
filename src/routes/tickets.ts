@@ -1,0 +1,236 @@
+import { Hono } from 'hono'
+
+type Bindings = {
+  DB: D1Database
+}
+
+const tickets = new Hono<{ Bindings: Bindings }>()
+
+// 티켓 목록 조회
+tickets.get('/', async (c) => {
+  try {
+    const status = c.req.query('status') || 'all'
+    const type = c.req.query('type') || 'all'
+    const assigned_to = c.req.query('assigned_to')
+
+    let query = `
+      SELECT t.*, 
+             m.name as member_name,
+             s.name as assigned_to_name,
+             c.name as created_by_name
+      FROM tickets t
+      LEFT JOIN members m ON t.member_id = m.id
+      LEFT JOIN staff s ON t.assigned_to = s.id
+      LEFT JOIN staff c ON t.created_by = c.id
+      WHERE 1=1
+    `
+    const params: any[] = []
+
+    if (status && status !== 'all') {
+      query += ` AND t.status = ?`
+      params.push(status)
+    }
+
+    if (type && type !== 'all') {
+      query += ` AND t.ticket_type = ?`
+      params.push(type)
+    }
+
+    if (assigned_to) {
+      query += ` AND t.assigned_to = ?`
+      params.push(assigned_to)
+    }
+
+    query += ` ORDER BY 
+      CASE t.priority 
+        WHEN 'urgent' THEN 1
+        WHEN 'high' THEN 2
+        WHEN 'normal' THEN 3
+        WHEN 'low' THEN 4
+      END,
+      t.created_at DESC
+    `
+
+    const { results } = await c.env.DB.prepare(query).bind(...params).all()
+
+    return c.json({ tickets: results })
+  } catch (error) {
+    console.error('티켓 목록 조회 오류:', error)
+    return c.json({ error: '티켓 목록 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 티켓 상세 조회
+tickets.get('/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+
+    const ticket = await c.env.DB.prepare(
+      `SELECT t.*, 
+              m.name as member_name, m.points as member_points, m.betting_points as member_betting_points,
+              s.name as assigned_to_name,
+              c.name as created_by_name
+       FROM tickets t
+       LEFT JOIN members m ON t.member_id = m.id
+       LEFT JOIN staff s ON t.assigned_to = s.id
+       LEFT JOIN staff c ON t.created_by = c.id
+       WHERE t.id = ?`
+    ).bind(id).first()
+
+    if (!ticket) {
+      return c.json({ error: '티켓을 찾을 수 없습니다.' }, 404)
+    }
+
+    // 댓글/답변 조회
+    const { results: comments } = await c.env.DB.prepare(
+      `SELECT tc.*, s.name as staff_name
+       FROM ticket_comments tc
+       LEFT JOIN staff s ON tc.staff_id = s.id
+       WHERE tc.ticket_id = ?
+       ORDER BY tc.created_at ASC`
+    ).bind(id).all()
+
+    return c.json({ ticket, comments: comments || [] })
+  } catch (error) {
+    console.error('티켓 상세 조회 오류:', error)
+    return c.json({ error: '티켓 상세 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 티켓 생성
+tickets.post('/', async (c) => {
+  try {
+    const { title, description, member_id, ticket_type, priority, created_by } = await c.req.json()
+
+    if (!title || !ticket_type || !created_by) {
+      return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
+    }
+
+    // 티켓 번호 생성 (T + 타임스탬프)
+    const ticket_number = `T${Date.now()}`
+
+    const result = await c.env.DB.prepare(
+      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      ticket_number, title, description || '', member_id || null, 
+      ticket_type, priority || 'normal', created_by
+    ).run()
+
+    return c.json({ 
+      success: true, 
+      ticket_id: result.meta.last_row_id,
+      ticket_number
+    })
+  } catch (error) {
+    console.error('티켓 생성 오류:', error)
+    return c.json({ error: '티켓 생성 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 티켓 수정
+tickets.patch('/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    const updates = await c.req.json()
+
+    const allowedFields = ['title', 'description', 'status', 'priority', 'assigned_to']
+    const setClause: string[] = ['updated_at = CURRENT_TIMESTAMP']
+    const params: any[] = []
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (allowedFields.includes(key)) {
+        setClause.push(`${key} = ?`)
+        params.push(value)
+      }
+    }
+
+    params.push(id)
+
+    await c.env.DB.prepare(
+      `UPDATE tickets SET ${setClause.join(', ')} WHERE id = ?`
+    ).bind(...params).run()
+
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('티켓 수정 오류:', error)
+    return c.json({ error: '티켓 수정 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 댓글/답변 추가
+tickets.post('/:id/comments', async (c) => {
+  try {
+    const ticket_id = c.req.param('id')
+    const { staff_id, comment, comment_type } = await c.req.json()
+
+    if (!staff_id || !comment) {
+      return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
+    }
+
+    const result = await c.env.DB.prepare(
+      `INSERT INTO ticket_comments (ticket_id, staff_id, comment, comment_type)
+       VALUES (?, ?, ?, ?)`
+    ).bind(ticket_id, staff_id, comment, comment_type || 'internal').run()
+
+    // 티켓 업데이트 시간 갱신
+    await c.env.DB.prepare(
+      'UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(ticket_id).run()
+
+    return c.json({ 
+      success: true, 
+      comment_id: result.meta.last_row_id 
+    })
+  } catch (error) {
+    console.error('댓글 추가 오류:', error)
+    return c.json({ error: '댓글 추가 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 대시보드 통계
+tickets.get('/stats/dashboard', async (c) => {
+  try {
+    // 총 티켓 수 (상태별)
+    const { results: statusStats } = await c.env.DB.prepare(
+      `SELECT status, COUNT(*) as count 
+       FROM tickets 
+       GROUP BY status`
+    ).all()
+
+    // 우선순위별 통계
+    const { results: priorityStats } = await c.env.DB.prepare(
+      `SELECT priority, COUNT(*) as count 
+       FROM tickets 
+       WHERE status IN ('open', 'assigned', 'in_progress')
+       GROUP BY priority`
+    ).all()
+
+    // 유형별 통계
+    const { results: typeStats } = await c.env.DB.prepare(
+      `SELECT ticket_type, COUNT(*) as count 
+       FROM tickets 
+       GROUP BY ticket_type`
+    ).all()
+
+    // 오늘 완료된 티켓
+    const today = new Date().toISOString().split('T')[0]
+    const todayCompleted = await c.env.DB.prepare(
+      `SELECT COUNT(*) as count 
+       FROM tickets 
+       WHERE status = 'completed' AND DATE(updated_at) = ?`
+    ).bind(today).first()
+
+    return c.json({
+      statusStats: statusStats || [],
+      priorityStats: priorityStats || [],
+      typeStats: typeStats || [],
+      todayCompleted: (todayCompleted as any)?.count || 0
+    })
+  } catch (error) {
+    console.error('대시보드 통계 오류:', error)
+    return c.json({ error: '대시보드 통계 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+export default tickets
