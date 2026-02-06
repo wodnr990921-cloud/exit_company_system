@@ -3986,7 +3986,7 @@ app.get('/', (c) => {
         }
         
         async function executePointAdjust() {
-            const pointType = document.getElementById('point-adjust-type').value
+            const pointTypeRaw = document.getElementById('point-adjust-type').value
             const amount = parseInt(document.getElementById('point-adjust-amount').value)
             const reason = document.getElementById('point-adjust-reason').value
             
@@ -4001,22 +4001,29 @@ app.get('/', (c) => {
             }
             
             try {
-                // 포인트 조정 API 호출
+                // API 필드 매핑: UI -> API
+                // pointTypeRaw: 'points' -> 'regular', 'betting_points' -> 'betting'
+                // currentAdjustMode: 'add' -> 'add', 'subtract' -> 'deduct'
+                const pointType = pointTypeRaw === 'points' ? 'regular' : 'betting'
+                const transactionType = currentAdjustMode === 'add' ? 'add' : 'deduct'
+                
+                // 포인트 조정 API 호출 (point_transactions 테이블에 자동 기록)
                 await axios.post(\`\${API_BASE}/points/adjust\`, {
                     member_id: currentMemberId,
                     point_type: pointType,
-                    adjustment_type: currentAdjustMode, // 'add' or 'subtract'
+                    transaction_type: transactionType,
                     amount: amount,
-                    description: reason || \`포인트 \${currentAdjustMode === 'add' ? '지급' : '차감'}\`,
+                    description: reason || \`관리자 직접 \${currentAdjustMode === 'add' ? '지급' : '차감'} - \${currentStaff.name}\`,
                     created_by: currentStaff.id
                 })
                 
-                alert(\`포인트가 \${currentAdjustMode === 'add' ? '지급' : '차감'}되었습니다.\`)
+                alert(\`포인트가 \${currentAdjustMode === 'add' ? '지급' : '차감'}되었습니다.\n거래 내역에 기록되었습니다.\`)
                 closePointAdjustModal()
                 
-                // 회원 정보 새로고침
+                // 회원 정보 새로고침 (거래 내역 포함)
                 await showMemberDetail(currentMemberId)
             } catch (error) {
+                console.error('포인트 조정 오류:', error)
                 alert('포인트 조정 실패: ' + (error.response?.data?.error || error.message))
             }
         }
