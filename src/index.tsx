@@ -17,6 +17,7 @@ import mailroom from './routes/mailroom'
 type Bindings = {
   DB: D1Database
   R2: R2Bucket
+  AI: any
 }
 
 const app = new Hono<{ Bindings: Bindings }>()

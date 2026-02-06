@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 type Bindings = {
   DB: D1Database
   R2: R2Bucket
+  AI: any
 }
 
 const mailroom = new Hono<{ Bindings: Bindings }>()
@@ -222,6 +223,13 @@ mailroom.post('/:id/ocr', async (c) => {
   try {
     const id = c.req.param('id')
     
+    // 상태를 ocr_processing으로 변경
+    await c.env.DB.prepare(`
+      UPDATE mailroom_items 
+      SET status = 'ocr_processing', updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(id).run()
+    
     // 우편물 정보 조회
     const { results } = await c.env.DB.prepare(`
       SELECT * FROM mailroom_items WHERE id = ?
@@ -239,18 +247,50 @@ mailroom.post('/:id/ocr', async (c) => {
     
     // 각 이미지에 대해 OCR 수행
     for (const key of imageKeys) {
-      // R2에서 이미지 가져오기
-      const object = await c.env.R2.get(key)
-      if (!object) continue
-      
-      // TODO: Cloudflare AI Workers OCR 연동
-      // 현재는 placeholder 데이터
-      ocrResults.push({
-        image_key: key,
-        text: 'OCR 텍스트 (구현 예정)',
-        confidence: 0.95,
-        has_envelope: false // 봉투 감지 여부
-      })
+      try {
+        // R2에서 이미지 가져오기
+        const object = await c.env.R2.get(key)
+        if (!object) {
+          console.log(`Image not found in R2: ${key}`)
+          continue
+        }
+        
+        // 이미지를 ArrayBuffer로 변환
+        const imageBuffer = await object.arrayBuffer()
+        
+        // Cloudflare AI Workers로 OCR 실행
+        // 모델: @cf/unum/uform-gen2-qwen-500m (Vision + Text)
+        const aiResponse = await c.env.AI.run('@cf/unum/uform-gen2-qwen-500m', {
+          image: Array.from(new Uint8Array(imageBuffer)),
+          prompt: "이 이미지의 모든 텍스트를 추출해주세요. 한글과 영어를 모두 인식하세요.",
+          max_tokens: 512
+        })
+        
+        // OCR 결과 파싱
+        const extractedText = aiResponse?.description || aiResponse?.text || ''
+        
+        // 봉투 감지 (간단한 키워드 기반)
+        const hasEnvelope = detectEnvelope(extractedText)
+        
+        ocrResults.push({
+          image_key: key,
+          text: extractedText,
+          confidence: 0.85, // AI 모델은 confidence를 제공하지 않을 수 있음
+          has_envelope: hasEnvelope,
+          raw_response: aiResponse
+        })
+        
+        console.log(`OCR completed for ${key}: ${extractedText.substring(0, 100)}...`)
+      } catch (imageError: any) {
+        console.error(`OCR failed for image ${key}:`, imageError)
+        ocrResults.push({
+          image_key: key,
+          text: `[OCR 실패: ${imageError.message}]`,
+          confidence: 0,
+          has_envelope: false,
+          error: imageError.message
+        })
+      }
     }
     
     // OCR 결과 저장
@@ -266,9 +306,32 @@ mailroom.post('/:id/ocr', async (c) => {
     })
   } catch (error: any) {
     console.error('OCR 처리 오류:', error)
-    return c.json({ error: 'OCR 처리 중 오류가 발생했습니다.' }, 500)
+    
+    // 오류 발생 시 상태를 received로 되돌림
+    try {
+      await c.env.DB.prepare(`
+        UPDATE mailroom_items 
+        SET status = 'received', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(c.req.param('id')).run()
+    } catch (dbError) {
+      console.error('상태 되돌리기 실패:', dbError)
+    }
+    
+    return c.json({ error: 'OCR 처리 중 오류가 발생했습니다: ' + error.message }, 500)
   }
 })
+
+// 봉투 감지 헬퍼 함수
+function detectEnvelope(text: string): boolean {
+  const envelopeKeywords = [
+    '발신', '수신', '우편번호', '주소', '보내는 사람', '받는 사람',
+    '우표', '등기', '소인', 'sender', 'receiver', 'address', 'zip code'
+  ]
+  
+  const lowerText = text.toLowerCase()
+  return envelopeKeywords.some(keyword => lowerText.includes(keyword.toLowerCase()))
+}
 
 // 우편물 삭제
 mailroom.delete('/:id', async (c) => {
