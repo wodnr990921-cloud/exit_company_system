@@ -165,16 +165,18 @@ tickets.patch('/:id', async (c) => {
 tickets.post('/:id/comments', async (c) => {
   try {
     const ticket_id = c.req.param('id')
-    const { content, created_by } = await c.req.json()
+    const { content, created_by, comment_type } = await c.req.json()
 
     if (!created_by || !content) {
       return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
     }
 
+    const finalCommentType = comment_type || 'internal'
+
     const result = await c.env.DB.prepare(
-      `INSERT INTO ticket_comments (ticket_id, staff_id, comment)
-       VALUES (?, ?, ?)`
-    ).bind(ticket_id, created_by, content).run()
+      `INSERT INTO ticket_comments (ticket_id, staff_id, comment, comment_type)
+       VALUES (?, ?, ?, ?)`
+    ).bind(ticket_id, created_by, content, finalCommentType).run()
 
     // 티켓 업데이트 시간 갱신
     await c.env.DB.prepare(

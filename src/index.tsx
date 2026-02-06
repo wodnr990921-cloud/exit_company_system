@@ -1326,13 +1326,28 @@ app.get('/', (c) => {
                     <!-- 댓글 탭 -->
                     <div id="ticket-tab-comments" class="tab-content hidden">
                         <div class="card mb-4">
-                            <h4 class="font-bold mb-3"><i class="fas fa-comment mr-2"></i>댓글 작성</h4>
+                            <h4 class="font-bold mb-3"><i class="fas fa-comment mr-2"></i>댓글/답변 작성</h4>
+                            
+                            <!-- 댓글 타입 선택 -->
+                            <div class="mb-3">
+                                <label class="block text-sm font-medium mb-1">타입</label>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="comment-type" value="internal" checked class="mr-2">
+                                        <span>내부 메모 (직원만 보기)</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="comment-type" value="response" class="mr-2">
+                                        <span class="text-blue-600 font-bold">회원 답변 (출력용)</span>
+                                    </label>
+                                </div>
+                            </div>
                             
                             <!-- 답변 템플릿 선택 -->
-                            <div class="mb-3">
+                            <div class="mb-3" id="template-section">
                                 <label class="block text-sm font-medium mb-1">빠른 답변 템플릿</label>
                                 <select id="comment-template" onchange="insertTemplate()" class="w-full px-3 py-2 border rounded">
-                                    <option value="">-- 템플릿 선택 --</option>
+                                    <option value="">-- 템플릿 선택 또는 직접 입력 --</option>
                                     <option value="order_received">주문 접수 완료</option>
                                     <option value="order_processing">주문 처리 중</option>
                                     <option value="order_shipped">발송 완료</option>
@@ -1346,16 +1361,35 @@ app.get('/', (c) => {
                             <textarea 
                                 id="comment-content" 
                                 class="w-full px-3 py-2 border rounded mb-2" 
-                                rows="4" 
-                                placeholder="댓글을 입력하세요..."
+                                rows="5" 
+                                placeholder="내용을 입력하세요... (수기 작성 가능)"
                             ></textarea>
-                            <button onclick="addComment()" class="btn btn-primary">
-                                <i class="fas fa-paper-plane mr-2"></i>댓글 등록
-                            </button>
+                            
+                            <div class="flex gap-2">
+                                <button onclick="addComment()" class="btn btn-primary flex-1">
+                                    <i class="fas fa-paper-plane mr-2"></i>저장
+                                </button>
+                                <button onclick="addAndNotify()" class="btn btn-success flex-1" id="notify-btn" style="display:none;">
+                                    <i class="fas fa-bell mr-2"></i>저장 + 알림 발송
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 일괄 답변 출력 버튼 -->
+                        <div class="card mb-4 bg-blue-50">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h4 class="font-bold text-blue-800"><i class="fas fa-print mr-2"></i>답변 출력</h4>
+                                    <p class="text-sm text-blue-600">회원 답변으로 저장된 댓글을 일괄 출력합니다</p>
+                                </div>
+                                <button onclick="printAllResponses()" class="btn btn-primary">
+                                    <i class="fas fa-file-alt mr-2"></i>답변 일괄 출력
+                                </button>
+                            </div>
                         </div>
 
                         <div class="card">
-                            <h4 class="font-bold mb-3"><i class="fas fa-comments mr-2"></i>댓글 목록</h4>
+                            <h4 class="font-bold mb-3"><i class="fas fa-comments mr-2"></i>댓글/답변 목록</h4>
                             <div id="comments-list" class="space-y-3 max-h-[400px] overflow-y-auto">
                                 로딩중...
                             </div>
@@ -1445,6 +1479,17 @@ app.get('/', (c) => {
             document.getElementById('login-form').addEventListener('submit', async (e) => {
                 e.preventDefault()
                 await login()
+            })
+
+            // 댓글 타입 라디오 버튼 이벤트 (delegation)
+            document.addEventListener('change', (e) => {
+                if (e.target.name === 'comment-type') {
+                    const isResponse = e.target.value === 'response'
+                    const notifyBtn = document.getElementById('notify-btn')
+                    if (notifyBtn) {
+                        notifyBtn.style.display = isResponse ? 'block' : 'none'
+                    }
+                }
             })
         })
 
@@ -2355,17 +2400,24 @@ app.get('/', (c) => {
                 const response = await axios.get(\`\${API_BASE}/tickets/\${ticketId}/comments\`)
                 const comments = response.data.comments || []
 
-                const commentsHtml = comments.map(c => \`
-                    <div class="bg-gray-50 p-3 rounded">
+                const commentsHtml = comments.map(c => {
+                    const isResponse = c.comment_type === 'response'
+                    const bgColor = isResponse ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-gray-50'
+                    const typeLabel = isResponse ? '<span class="text-xs bg-blue-600 text-white px-2 py-1 rounded">회원 답변</span>' : '<span class="text-xs bg-gray-500 text-white px-2 py-1 rounded">내부 메모</span>'
+                    
+                    return \`
+                    <div class="\${bgColor} p-3 rounded">
                         <div class="flex justify-between items-start mb-2">
-                            <div>
+                            <div class="flex items-center gap-2">
                                 <span class="font-bold">\${c.created_by_name}</span>
-                                <span class="text-xs text-gray-500 ml-2">\${new Date(c.created_at).toLocaleString()}</span>
+                                \${typeLabel}
+                                <span class="text-xs text-gray-500">\${new Date(c.created_at).toLocaleString()}</span>
                             </div>
                         </div>
-                        <p class="text-gray-800">\${c.content}</p>
+                        <p class="text-gray-800 whitespace-pre-wrap">\${c.content || c.comment}</p>
                     </div>
-                \`).join('')
+                \`
+                }).join('')
 
                 document.getElementById('comments-list').innerHTML = commentsHtml || 
                     '<p class="text-gray-500 text-center py-4">댓글이 없습니다.</p>'
@@ -2381,20 +2433,45 @@ app.get('/', (c) => {
 
             const content = document.getElementById('comment-content').value.trim()
             if (!content) {
-                alert('댓글 내용을 입력해주세요.')
+                alert('내용을 입력해주세요.')
                 return
             }
+
+            const commentType = document.querySelector('input[name="comment-type"]:checked').value
 
             try {
                 await axios.post(\`\${API_BASE}/tickets/\${currentTicketId}/comments\`, {
                     content,
-                    created_by: currentStaff.id
+                    created_by: currentStaff.id,
+                    comment_type: commentType
                 })
                 document.getElementById('comment-content').value = ''
                 document.getElementById('comment-template').value = ''
                 await loadTicketComments(currentTicketId)
+                
+                if (commentType === 'response') {
+                    alert('회원 답변이 저장되었습니다. "답변 일괄 출력"으로 인쇄할 수 있습니다.')
+                }
             } catch (error) {
-                alert('댓글 등록 실패: ' + (error.response?.data?.error || error.message))
+                alert('저장 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        async function addAndNotify() {
+            await addComment()
+            // TODO: 알림 발송 기능 (향후 구현)
+            alert('답변이 저장되었습니다. 알림 발송 기능은 향후 추가 예정입니다.')
+        }
+                        <p class="text-gray-800">\${c.content}</p>
+                    </div>
+                \`).join('')
+
+                document.getElementById('comments-list').innerHTML = commentsHtml || 
+                    '<p class="text-gray-500 text-center py-4">댓글이 없습니다.</p>'
+            } catch (error) {
+                console.error('댓글 로드 오류:', error)
+                document.getElementById('comments-list').innerHTML = 
+                    '<p class="text-red-500 text-center py-4">댓글을 불러올 수 없습니다.</p>'
             }
         }
 
@@ -2448,6 +2525,151 @@ app.get('/', (c) => {
                 'low': '<span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">낮음</span>'
             }
             return badges[priority] || priority
+        }
+
+        // 일괄 답변 출력
+        async function printAllResponses() {
+            if (!currentTicketId) return
+
+            try {
+                const [ticketRes, commentsRes] = await Promise.all([
+                    axios.get(\`\${API_BASE}/tickets/\${currentTicketId}\`),
+                    axios.get(\`\${API_BASE}/tickets/\${currentTicketId}/comments\`)
+                ])
+
+                const ticket = ticketRes.data.ticket
+                const comments = commentsRes.data.comments || []
+                
+                // 회원 답변만 필터링
+                const responses = comments.filter(c => c.comment_type === 'response')
+
+                if (responses.length === 0) {
+                    alert('출력할 회원 답변이 없습니다.')
+                    return
+                }
+
+                // 인쇄용 HTML 생성
+                const printWindow = window.open('', '_blank', 'width=800,height=600')
+                const printContent = \`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>답변서 - \${ticket.ticket_number}</title>
+                        <style>
+                            body {
+                                font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+                                padding: 40px;
+                                line-height: 1.8;
+                            }
+                            .header {
+                                text-align: center;
+                                border-bottom: 3px double #333;
+                                padding-bottom: 20px;
+                                margin-bottom: 30px;
+                            }
+                            .header h1 {
+                                font-size: 28px;
+                                margin: 0 0 10px 0;
+                            }
+                            .info-section {
+                                margin-bottom: 30px;
+                                background: #f5f5f5;
+                                padding: 15px;
+                                border-radius: 5px;
+                            }
+                            .info-row {
+                                display: flex;
+                                margin: 5px 0;
+                            }
+                            .info-label {
+                                font-weight: bold;
+                                width: 120px;
+                            }
+                            .response-item {
+                                margin: 20px 0;
+                                padding: 20px;
+                                border: 2px solid #333;
+                                border-radius: 5px;
+                                page-break-inside: avoid;
+                            }
+                            .response-header {
+                                font-weight: bold;
+                                margin-bottom: 10px;
+                                color: #0066cc;
+                                border-bottom: 1px solid #ddd;
+                                padding-bottom: 5px;
+                            }
+                            .response-content {
+                                white-space: pre-wrap;
+                                font-size: 15px;
+                            }
+                            .footer {
+                                margin-top: 40px;
+                                text-align: right;
+                                font-size: 14px;
+                            }
+                            @media print {
+                                body { padding: 20px; }
+                                .no-print { display: none; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>답 변 서</h1>
+                            <p>티켓번호: \${ticket.ticket_number}</p>
+                        </div>
+
+                        <div class="info-section">
+                            <div class="info-row">
+                                <div class="info-label">회원명:</div>
+                                <div>\${ticket.member_name || '-'}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">티켓 제목:</div>
+                                <div>\${ticket.title}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">티켓 유형:</div>
+                                <div>\${getTicketTypeText(ticket.ticket_type)}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">발행일:</div>
+                                <div>\${new Date().toLocaleDateString('ko-KR')}</div>
+                            </div>
+                        </div>
+
+                        <div class="responses-section">
+                            \${responses.map((r, index) => \`
+                                <div class="response-item">
+                                    <div class="response-header">
+                                        답변 \${index + 1} - \${r.created_by_name} (\${new Date(r.created_at).toLocaleString('ko-KR')})
+                                    </div>
+                                    <div class="response-content">\${r.content || r.comment}</div>
+                                </div>
+                            \`).join('')}
+                        </div>
+
+                        <div class="footer">
+                            <p>EXIT 시스템</p>
+                            <p>\${new Date().toLocaleDateString('ko-KR')}</p>
+                        </div>
+
+                        <div class="no-print" style="text-align: center; margin-top: 30px;">
+                            <button onclick="window.print()" style="padding: 10px 30px; font-size: 16px; cursor: pointer;">인쇄</button>
+                            <button onclick="window.close()" style="padding: 10px 30px; font-size: 16px; cursor: pointer; margin-left: 10px;">닫기</button>
+                        </div>
+                    </body>
+                    </html>
+                \`
+
+                printWindow.document.write(printContent)
+                printWindow.document.close()
+            } catch (error) {
+                console.error('답변 출력 오류:', error)
+                alert('답변 출력에 실패했습니다.')
+            }
         }
             } catch (error) {
                 console.error('티켓 상세 로드 오류:', error)
