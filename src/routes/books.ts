@@ -37,10 +37,30 @@ books.get('/', async (c) => {
   }
 })
 
+// 도서 상세 조회
+books.get('/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+
+    const book = await c.env.DB.prepare(
+      'SELECT * FROM books WHERE id = ?'
+    ).bind(id).first()
+
+    if (!book) {
+      return c.json({ error: '도서를 찾을 수 없습니다.' }, 404)
+    }
+
+    return c.json({ book })
+  } catch (error) {
+    console.error('도서 상세 조회 오류:', error)
+    return c.json({ error: '도서 상세 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 도서 등록
 books.post('/', async (c) => {
   try {
-    const { title, author, publisher, isbn, price, stock } = await c.req.json()
+    const { title, author, publisher, isbn, price, stock, description } = await c.req.json()
 
     if (!title || price === undefined) {
       return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
@@ -49,9 +69,18 @@ books.post('/', async (c) => {
     const status = (stock && stock > 0) ? 'available' : 'out_of_stock'
 
     const result = await c.env.DB.prepare(
-      `INSERT INTO books (title, author, publisher, isbn, price, stock, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(title, author || '', publisher || '', isbn || '', price, stock || 0, status).run()
+      `INSERT INTO books (title, author, publisher, isbn, price, stock, status, description)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      title, 
+      author || '', 
+      publisher || '', 
+      isbn || '', 
+      price, 
+      stock || 0, 
+      status,
+      description || ''
+    ).run()
 
     return c.json({ 
       success: true, 
@@ -69,7 +98,7 @@ books.patch('/:id', async (c) => {
     const id = c.req.param('id')
     const updates = await c.req.json()
 
-    const allowedFields = ['title', 'author', 'publisher', 'isbn', 'price', 'stock']
+    const allowedFields = ['title', 'author', 'publisher', 'isbn', 'price', 'stock', 'status', 'description']
     const setClause: string[] = []
     const params: any[] = []
 
@@ -80,8 +109,8 @@ books.patch('/:id', async (c) => {
       }
     }
 
-    // 재고에 따라 상태 자동 업데이트
-    if ('stock' in updates) {
+    // status가 명시적으로 전달되지 않았지만 재고가 변경된 경우 자동 업데이트
+    if ('stock' in updates && !('status' in updates)) {
       const status = updates.stock > 0 ? 'available' : 'out_of_stock'
       setClause.push('status = ?')
       params.push(status)

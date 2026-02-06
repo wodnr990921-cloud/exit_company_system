@@ -768,6 +768,158 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 도서 등록 모달 -->
+        <div id="new-book-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-book mr-2"></i>도서 등록</h3>
+                        <button onclick="closeNewBookModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <!-- 제목 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">제목 *</label>
+                            <input type="text" id="book-title" class="w-full px-3 py-2 border rounded" placeholder="도서 제목">
+                        </div>
+
+                        <!-- 저자 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">저자</label>
+                            <input type="text" id="book-author" class="w-full px-3 py-2 border rounded" placeholder="저자명">
+                        </div>
+
+                        <!-- 출판사 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">출판사</label>
+                            <input type="text" id="book-publisher" class="w-full px-3 py-2 border rounded" placeholder="출판사명">
+                        </div>
+
+                        <!-- ISBN -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">ISBN</label>
+                            <input type="text" id="book-isbn" class="w-full px-3 py-2 border rounded" placeholder="ISBN 번호">
+                        </div>
+
+                        <!-- 가격 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">가격 *</label>
+                            <input type="number" id="book-price" class="w-full px-3 py-2 border rounded" placeholder="0" min="0">
+                        </div>
+
+                        <!-- 재고 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">재고</label>
+                            <input type="number" id="book-stock" class="w-full px-3 py-2 border rounded" placeholder="0" min="0" value="0">
+                        </div>
+
+                        <!-- 설명 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">설명</label>
+                            <textarea id="book-description" class="w-full px-3 py-2 border rounded" rows="3" placeholder="도서 설명 또는 메모"></textarea>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-2 mt-6">
+                            <button onclick="closeNewBookModal()" class="btn btn-secondary">취소</button>
+                            <button onclick="createBook()" class="btn btn-primary">등록</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 도서 상세/수정 모달 -->
+        <div id="book-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold"><i class="fas fa-book mr-2"></i>도서 상세</h3>
+                            <p class="text-sm text-gray-600">
+                                <span id="detail-book-title"></span>
+                            </p>
+                        </div>
+                        <button onclick="closeBookDetail()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- 제목 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">제목 *</label>
+                            <input type="text" id="edit-book-title" class="w-full px-3 py-2 border rounded">
+                        </div>
+
+                        <!-- 저자 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">저자</label>
+                            <input type="text" id="edit-book-author" class="w-full px-3 py-2 border rounded">
+                        </div>
+
+                        <!-- 출판사 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">출판사</label>
+                            <input type="text" id="edit-book-publisher" class="w-full px-3 py-2 border rounded">
+                        </div>
+
+                        <!-- ISBN -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">ISBN</label>
+                            <input type="text" id="edit-book-isbn" class="w-full px-3 py-2 border rounded">
+                        </div>
+
+                        <!-- 가격 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">가격 *</label>
+                            <input type="number" id="edit-book-price" class="w-full px-3 py-2 border rounded" min="0">
+                        </div>
+
+                        <!-- 재고 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">재고</label>
+                            <div class="flex space-x-2">
+                                <input type="number" id="edit-book-stock" class="flex-1 px-3 py-2 border rounded" min="0">
+                                <button onclick="adjustStock(-10)" class="btn btn-secondary">-10</button>
+                                <button onclick="adjustStock(-1)" class="btn btn-secondary">-1</button>
+                                <button onclick="adjustStock(1)" class="btn btn-secondary">+1</button>
+                                <button onclick="adjustStock(10)" class="btn btn-secondary">+10</button>
+                            </div>
+                        </div>
+
+                        <!-- 상태 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">상태</label>
+                            <select id="edit-book-status" class="w-full px-3 py-2 border rounded">
+                                <option value="available">판매가능</option>
+                                <option value="out_of_stock">품절</option>
+                                <option value="discontinued">단종</option>
+                            </select>
+                        </div>
+
+                        <!-- 설명 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">설명</label>
+                            <textarea id="edit-book-description" class="w-full px-3 py-2 border rounded" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="flex justify-between mt-6">
+                            <button onclick="deleteBook()" class="btn btn-danger">
+                                <i class="fas fa-trash mr-2"></i>삭제
+                            </button>
+                            <div class="flex space-x-2">
+                                <button onclick="closeBookDetail()" class="btn btn-secondary">취소</button>
+                                <button onclick="updateBook()" class="btn btn-primary">저장</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 티켓 상세 모달 (배팅 폴더 포함) -->
         <div id="ticket-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1175,7 +1327,7 @@ app.get('/', (c) => {
                 const books = response.data.books
 
                 const html = books.length > 0 ? books.map(b => \`
-                    <div class="card">
+                    <div class="card hover:shadow-lg transition cursor-pointer" onclick="showBookDetail(\${b.id})">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <h3 class="font-bold text-lg">\${b.title}</h3>
@@ -1187,6 +1339,9 @@ app.get('/', (c) => {
                                 <p class="text-sm \${b.stock > 0 ? 'text-green-600' : 'text-red-600'}">
                                     재고: \${b.stock}권
                                 </p>
+                                <span class="text-xs px-2 py-1 rounded \${b.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    \${b.status === 'available' ? '판매중' : '품절'}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -1991,7 +2146,152 @@ app.get('/', (c) => {
             document.getElementById('member-detail-modal').classList.add('hidden')
         }
 
-        function showNewBookModal() { alert('도서 등록 모달 (구현 예정)') }
+        // 도서 등록 모달
+        function showNewBookModal() {
+            document.getElementById('new-book-modal').classList.remove('hidden')
+        }
+
+        function closeNewBookModal() {
+            document.getElementById('new-book-modal').classList.add('hidden')
+            // 폼 초기화
+            document.getElementById('book-title').value = ''
+            document.getElementById('book-author').value = ''
+            document.getElementById('book-publisher').value = ''
+            document.getElementById('book-isbn').value = ''
+            document.getElementById('book-price').value = ''
+            document.getElementById('book-stock').value = '0'
+            document.getElementById('book-description').value = ''
+        }
+
+        async function createBook() {
+            const title = document.getElementById('book-title').value
+            const author = document.getElementById('book-author').value
+            const publisher = document.getElementById('book-publisher').value
+            const isbn = document.getElementById('book-isbn').value
+            const price = parseFloat(document.getElementById('book-price').value)
+            const stock = parseInt(document.getElementById('book-stock').value) || 0
+            const description = document.getElementById('book-description').value
+
+            // 필수 항목 검증
+            if (!title || !price || price <= 0) {
+                alert('제목과 가격은 필수입니다.')
+                return
+            }
+
+            const data = {
+                title: title,
+                author: author,
+                publisher: publisher,
+                isbn: isbn,
+                price: price,
+                stock: stock,
+                description: description
+            }
+
+            try {
+                await axios.post(\`\${API_BASE}/books\`, data)
+                alert('도서가 등록되었습니다.')
+                closeNewBookModal()
+                if (currentView === 'books') await loadBooks()
+            } catch (error) {
+                alert('도서 등록 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 도서 상세/수정 모달
+        let currentBookId = null
+
+        async function showBookDetail(bookId) {
+            try {
+                const response = await axios.get(\`\${API_BASE}/books/\${bookId}\`)
+                const book = response.data.book
+
+                currentBookId = bookId
+
+                // 기본 정보 표시
+                document.getElementById('detail-book-title').textContent = book.title
+                document.getElementById('edit-book-title').value = book.title
+                document.getElementById('edit-book-author').value = book.author || ''
+                document.getElementById('edit-book-publisher').value = book.publisher || ''
+                document.getElementById('edit-book-isbn').value = book.isbn || ''
+                document.getElementById('edit-book-price').value = book.price
+                document.getElementById('edit-book-stock').value = book.stock
+                document.getElementById('edit-book-status').value = book.status || 'available'
+                document.getElementById('edit-book-description').value = book.description || ''
+
+                document.getElementById('book-detail-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('도서 상세 로드 오류:', error)
+                alert('도서 정보를 불러오는데 실패했습니다.')
+            }
+        }
+
+        function closeBookDetail() {
+            currentBookId = null
+            document.getElementById('book-detail-modal').classList.add('hidden')
+        }
+
+        function adjustStock(amount) {
+            const stockInput = document.getElementById('edit-book-stock')
+            const currentStock = parseInt(stockInput.value) || 0
+            const newStock = Math.max(0, currentStock + amount)
+            stockInput.value = newStock
+        }
+
+        async function updateBook() {
+            if (!currentBookId) return
+
+            const title = document.getElementById('edit-book-title').value
+            const author = document.getElementById('edit-book-author').value
+            const publisher = document.getElementById('edit-book-publisher').value
+            const isbn = document.getElementById('edit-book-isbn').value
+            const price = parseFloat(document.getElementById('edit-book-price').value)
+            const stock = parseInt(document.getElementById('edit-book-stock').value)
+            const status = document.getElementById('edit-book-status').value
+            const description = document.getElementById('edit-book-description').value
+
+            // 필수 항목 검증
+            if (!title || !price || price <= 0) {
+                alert('제목과 가격은 필수입니다.')
+                return
+            }
+
+            const data = {
+                title: title,
+                author: author,
+                publisher: publisher,
+                isbn: isbn,
+                price: price,
+                stock: stock,
+                status: status,
+                description: description
+            }
+
+            try {
+                await axios.patch(\`\${API_BASE}/books/\${currentBookId}\`, data)
+                alert('도서 정보가 수정되었습니다.')
+                closeBookDetail()
+                if (currentView === 'books') await loadBooks()
+            } catch (error) {
+                alert('도서 수정 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        async function deleteBook() {
+            if (!currentBookId) return
+
+            if (!confirm('정말 이 도서를 삭제하시겠습니까?')) return
+
+            try {
+                await axios.delete(\`\${API_BASE}/books/\${currentBookId}\`)
+                alert('도서가 삭제되었습니다.')
+                closeBookDetail()
+                if (currentView === 'books') await loadBooks()
+            } catch (error) {
+                alert('도서 삭제 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
         function showNewStaffModal() { alert('직원 등록 모달 (구현 예정)') }
         function showMemberDetail(id) { alert(\`회원 상세 모달 (ID: \${id}) (구현 예정)\`) }
     </script>
