@@ -578,7 +578,26 @@ app.get('/', (c) => {
                     </button>
                 </div>
 
-                <div id="staff-list" class="space-y-4"></div>
+                <!-- 역할별 필터 -->
+                <div class="card mb-6">
+                    <div class="flex gap-2">
+                        <button onclick="filterStaffByRole('all')" class="btn btn-secondary" id="filter-all">
+                            전체
+                        </button>
+                        <button onclick="filterStaffByRole('admin')" class="btn btn-secondary" id="filter-admin">
+                            <i class="fas fa-crown mr-1 text-yellow-500"></i>관리자
+                        </button>
+                        <button onclick="filterStaffByRole('staff')" class="btn btn-secondary" id="filter-staff">
+                            <i class="fas fa-user mr-1 text-blue-500"></i>직원
+                        </button>
+                        <button onclick="filterStaffByRole('viewer')" class="btn btn-secondary" id="filter-viewer">
+                            <i class="fas fa-eye mr-1 text-gray-500"></i>뷰어
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 직원 목록 -->
+                <div id="staff-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
 
             <!-- 일일 마감 뷰 (관리자 전용) -->
@@ -1624,12 +1643,15 @@ app.get('/', (c) => {
                         <div>
                             <label class="block text-sm font-medium mb-1">권한 *</label>
                             <select id="staff-role" class="w-full px-3 py-2 border rounded">
-                                <option value="staff">일반 직원</option>
-                                <option value="admin">관리자</option>
+                                <option value="staff">일반 직원 (Staff)</option>
+                                <option value="viewer">뷰어 (Viewer) - 읽기 전용</option>
+                                <option value="admin">관리자 (Admin)</option>
                             </select>
-                            <p class="text-xs text-gray-500 mt-1">
-                                관리자는 배팅 관리, 직원 관리, 포인트 승인 등 모든 권한을 가집니다.
-                            </p>
+                            <div class="text-xs text-gray-500 mt-2 space-y-1">
+                                <p><strong>Admin:</strong> 모든 기능 접근 (회원 삭제, 직원 관리, 배팅, 마감)</p>
+                                <p><strong>Staff:</strong> 일반 업무 (티켓 처리, 회원 등록/수정, 포인트 조정)</p>
+                                <p><strong>Viewer:</strong> 읽기 전용 (조회만 가능, 생성/수정/삭제 불가)</p>
+                            </div>
                         </div>
                         
                         <div class="flex justify-end space-x-2 mt-6">
@@ -1673,9 +1695,15 @@ app.get('/', (c) => {
                                 <div>
                                     <label class="block text-sm font-medium mb-1">권한</label>
                                     <select id="edit-staff-role" class="w-full px-3 py-2 border rounded">
-                                        <option value="staff">일반 직원</option>
-                                        <option value="admin">관리자</option>
+                                        <option value="staff">일반 직원 (Staff)</option>
+                                        <option value="viewer">뷰어 (Viewer) - 읽기 전용</option>
+                                        <option value="admin">관리자 (Admin)</option>
                                     </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">역할 변경 사유 (선택)</label>
+                                    <input type="text" id="edit-staff-role-reason" class="w-full px-3 py-2 border rounded" placeholder="예: 승진, 부서 이동 등">
+                                    <p class="text-xs text-gray-500 mt-1">권한 변경 시 이력에 기록됩니다</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium mb-1">가입일</label>
@@ -1703,9 +1731,9 @@ app.get('/', (c) => {
                         </div>
 
                         <!-- 업무 통계 -->
-                        <div class="card lg:col-span-2">
+                        <div class="card">
                             <h4 class="font-bold mb-3"><i class="fas fa-chart-bar mr-2"></i>업무 통계</h4>
-                            <div id="staff-statistics" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div id="staff-statistics" class="grid grid-cols-2 gap-4">
                                 <div class="text-center p-3 bg-blue-50 rounded">
                                     <p class="text-2xl font-bold text-blue-600" id="stat-assigned-tickets">0</p>
                                     <p class="text-xs text-gray-600">배정된 티켓</p>
@@ -1722,6 +1750,14 @@ app.get('/', (c) => {
                                     <p class="text-2xl font-bold text-orange-600" id="stat-attendance-days">0</p>
                                     <p class="text-xs text-gray-600">출근일수</p>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- 권한 변경 이력 -->
+                        <div class="card">
+                            <h4 class="font-bold mb-3"><i class="fas fa-history mr-2"></i>권한 변경 이력</h4>
+                            <div id="staff-role-changes" class="space-y-2 max-h-60 overflow-y-auto">
+                                <p class="text-sm text-gray-500">로딩 중...</p>
                             </div>
                         </div>
                     </div>
@@ -3060,31 +3096,278 @@ console.log('권한 관리 함수 로드 완료')
 
 
         // 직원 목록 로드
+        // ==========================================
+        // 직원 관리 함수 (개선 버전)
+        // ==========================================
+
+        let currentStaffFilter = 'all'
+        let allStaffList = []
+        let currentEditingStaffId = null
+
+        // 직원 목록 로드
         async function loadStaff() {
             try {
                 const response = await axios.get(\`\${API_BASE}/staff\`)
-                const staff = response.data.staff
+                allStaffList = response.data.staff
+                renderStaffList()
+            } catch (error) {
+                console.error('직원 목록 로드 오류:', error)
+                document.getElementById('staff-list').innerHTML = '<p class="text-red-500 text-center py-8">직원 목록을 불러올 수 없습니다.</p>'
+            }
+        }
 
-                const html = staff.length > 0 ? staff.map(s => \`
-                    <div class="card hover:shadow-lg transition cursor-pointer" onclick="showStaffDetail(\${s.id})">
-                        <div class="flex justify-between items-center">
+        // 역할별 필터링
+        function filterStaffByRole(role) {
+            currentStaffFilter = role
+            
+            // 필터 버튼 활성화 상태 업데이트
+            document.querySelectorAll('[id^="filter-"]').forEach(btn => {
+                btn.classList.remove('btn-primary')
+                btn.classList.add('btn-secondary')
+            })
+            document.getElementById(\`filter-\${role}\`).classList.remove('btn-secondary')
+            document.getElementById(\`filter-\${role}\`).classList.add('btn-primary')
+            
+            renderStaffList()
+        }
+
+        // 직원 목록 렌더링
+        function renderStaffList() {
+            let filteredStaff = allStaffList
+            
+            if (currentStaffFilter !== 'all') {
+                filteredStaff = allStaffList.filter(s => s.role === currentStaffFilter)
+            }
+            
+            const getRoleBadge = (role) => {
+                const badges = {
+                    'admin': '<span class="status-badge bg-yellow-100 text-yellow-800"><i class="fas fa-crown mr-1"></i>관리자</span>',
+                    'staff': '<span class="status-badge bg-blue-100 text-blue-800"><i class="fas fa-user mr-1"></i>직원</span>',
+                    'viewer': '<span class="status-badge bg-gray-100 text-gray-800"><i class="fas fa-eye mr-1"></i>뷰어</span>'
+                }
+                return badges[role] || role
+            }
+            
+            const html = filteredStaff.length > 0 ? filteredStaff.map(s => \`
+                <div class="card hover:shadow-lg transition cursor-pointer" onclick="showStaffDetail(\${s.id})">
+                    <div class="flex flex-col space-y-3">
+                        <div class="flex justify-between items-start">
                             <div>
                                 <h3 class="font-bold text-lg">\${s.name}</h3>
                                 <p class="text-sm text-gray-600">\${s.email}</p>
-                                <span class="status-badge \${s.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}">
-                                    \${s.role === 'admin' ? '관리자' : '직원'}
-                                </span>
                             </div>
-                            <div class="text-right text-sm text-gray-500">
-                                <p>등록일: \${new Date(s.created_at).toLocaleDateString()}</p>
-                            </div>
+                            \${getRoleBadge(s.role)}
+                        </div>
+                        <div class="text-sm text-gray-500 pt-2 border-t">
+                            <i class="fas fa-calendar mr-1"></i>등록: \${new Date(s.created_at).toLocaleDateString()}
                         </div>
                     </div>
-                \`).join('') : '<p class="text-gray-500 text-center py-8">직원이 없습니다.</p>'
+                </div>
+            \`).join('') : '<p class="text-gray-500 text-center py-8 col-span-full">직원이 없습니다.</p>'
+            
+            document.getElementById('staff-list').innerHTML = html
+        }
 
-                document.getElementById('staff-list').innerHTML = html
+        // 직원 상세 조회
+        async function showStaffDetail(staffId) {
+            if (!isAdmin()) {
+                alert('관리자만 직원 정보를 조회할 수 있습니다.')
+                return
+            }
+            
+            currentEditingStaffId = staffId
+            
+            try {
+                // 직원 정보 조회
+                const staffRes = await axios.get(\`\${API_BASE}/staff/\${staffId}\`)
+                const staff = staffRes.data.staff
+                
+                // 업무 통계 조회
+                const statsRes = await axios.get(\`\${API_BASE}/staff/\${staffId}/stats\`)
+                const stats = statsRes.data
+                
+                // 권한 변경 이력 조회
+                const changesRes = await axios.get(\`\${API_BASE}/staff/\${staffId}/role-changes\`)
+                const changes = changesRes.data.changes
+                
+                // 기본 정보 채우기
+                document.getElementById('detail-staff-name').textContent = staff.name
+                document.getElementById('edit-staff-name').value = staff.name || ''
+                document.getElementById('edit-staff-email').value = staff.email || ''
+                document.getElementById('edit-staff-role').value = staff.role || 'staff'
+                document.getElementById('detail-staff-created').value = new Date(staff.created_at).toLocaleString() || ''
+                document.getElementById('edit-staff-role-reason').value = ''
+                
+                // 비밀번호 필드 초기화
+                document.getElementById('edit-staff-new-password').value = ''
+                document.getElementById('edit-staff-password-confirm').value = ''
+                
+                // 업무 통계 채우기
+                document.getElementById('stat-assigned-tickets').textContent = stats.assigned_tickets || 0
+                document.getElementById('stat-completed-tickets').textContent = stats.completed_tickets || 0
+                document.getElementById('stat-completion-rate').textContent = \`\${stats.completion_rate || 0}%\`
+                document.getElementById('stat-attendance-days').textContent = stats.attendance_days || 0
+                
+                // 권한 변경 이력 렌더링
+                const getRoleTextLocal = (role) => {
+                    const roles = {
+                        'admin': '관리자',
+                        'staff': '직원',
+                        'viewer': '뷰어'
+                    }
+                    return roles[role] || role
+                }
+                
+                const changesHtml = changes.length > 0 ? changes.map(change => \`
+                    <div class="p-2 bg-gray-50 rounded text-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="font-medium">\${getRoleTextLocal(change.old_role)}</span>
+                                <i class="fas fa-arrow-right mx-1 text-gray-400"></i>
+                                <span class="font-medium">\${getRoleTextLocal(change.new_role)}</span>
+                            </div>
+                            <span class="text-xs text-gray-500">\${new Date(change.created_at).toLocaleDateString()}</span>
+                        </div>
+                        \${change.reason ? \`<p class="text-xs text-gray-600 mt-1">사유: \${change.reason}</p>\` : ''}
+                        <p class="text-xs text-gray-500 mt-1">변경자: \${change.changed_by_name}</p>
+                    </div>
+                \`).join('') : '<p class="text-sm text-gray-500">권한 변경 이력이 없습니다.</p>'
+                
+                document.getElementById('staff-role-changes').innerHTML = changesHtml
+                
+                // 모달 표시
+                document.getElementById('staff-detail-modal').classList.remove('hidden')
+                
             } catch (error) {
-                console.error('직원 목록 로드 오류:', error)
+                console.error('직원 상세 조회 오류:', error)
+                alert('직원 정보를 불러올 수 없습니다.')
+            }
+        }
+
+        // 직원 상세 모달 닫기
+        function closeStaffDetail() {
+            document.getElementById('staff-detail-modal').classList.add('hidden')
+            currentEditingStaffId = null
+        }
+
+        // 직원 정보 업데이트
+        async function updateStaff() {
+            if (!currentEditingStaffId) return
+            
+            try {
+                const name = document.getElementById('edit-staff-name').value
+                const role = document.getElementById('edit-staff-role').value
+                const reason = document.getElementById('edit-staff-role-reason').value
+                const newPassword = document.getElementById('edit-staff-new-password').value
+                const confirmPassword = document.getElementById('edit-staff-password-confirm').value
+                
+                if (!name || !role) {
+                    alert('필수 항목을 입력해주세요.')
+                    return
+                }
+                
+                // 비밀번호 확인
+                if (newPassword && newPassword !== confirmPassword) {
+                    alert('비밀번호가 일치하지 않습니다.')
+                    return
+                }
+                
+                const updateData = { name, role, reason }
+                if (newPassword) {
+                    updateData.password = newPassword
+                }
+                
+                await axios.patch(\`\${API_BASE}/staff/\${currentEditingStaffId}\`, updateData)
+                
+                alert('직원 정보가 업데이트되었습니다.')
+                closeStaffDetail()
+                await loadStaff()
+                
+            } catch (error) {
+                console.error('직원 업데이트 오류:', error)
+                alert('직원 정보 업데이트에 실패했습니다: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 직원 삭제
+        async function deleteStaff() {
+            if (!currentEditingStaffId) return
+            
+            if (!confirm('정말 이 직원을 삭제하시겠습니까?\\n\\n이 작업은 되돌릴 수 없습니다.')) {
+                return
+            }
+            
+            try {
+                await axios.delete(\`\${API_BASE}/staff/\${currentEditingStaffId}\`)
+                alert('직원이 삭제되었습니다.')
+                closeStaffDetail()
+                await loadStaff()
+            } catch (error) {
+                console.error('직원 삭제 오류:', error)
+                alert('직원 삭제에 실패했습니다: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 새 직원 모달 표시
+        function showNewStaffModal() {
+            if (!isAdmin()) {
+                alert('관리자만 직원을 등록할 수 있습니다.')
+                return
+            }
+            
+            // 입력 필드 초기화
+            document.getElementById('staff-name').value = ''
+            document.getElementById('staff-email').value = ''
+            document.getElementById('staff-password').value = ''
+            document.getElementById('staff-password-confirm').value = ''
+            document.getElementById('staff-role').value = 'staff'
+            
+            document.getElementById('new-staff-modal').classList.remove('hidden')
+        }
+
+        // 새 직원 모달 닫기
+        function closeNewStaffModal() {
+            document.getElementById('new-staff-modal').classList.add('hidden')
+        }
+
+        // 직원 등록
+        async function createStaff() {
+            try {
+                const name = document.getElementById('staff-name').value
+                const email = document.getElementById('staff-email').value
+                const password = document.getElementById('staff-password').value
+                const confirmPassword = document.getElementById('staff-password-confirm').value
+                const role = document.getElementById('staff-role').value
+                
+                if (!name || !email || !password || !role) {
+                    alert('모든 필수 항목을 입력해주세요.')
+                    return
+                }
+                
+                if (password !== confirmPassword) {
+                    alert('비밀번호가 일치하지 않습니다.')
+                    return
+                }
+                
+                if (password.length < 6) {
+                    alert('비밀번호는 최소 6자 이상이어야 합니다.')
+                    return
+                }
+                
+                await axios.post(\`\${API_BASE}/staff\`, {
+                    name,
+                    email,
+                    password,
+                    role
+                })
+                
+                alert('직원이 등록되었습니다.')
+                closeNewStaffModal()
+                await loadStaff()
+                
+            } catch (error) {
+                console.error('직원 등록 오류:', error)
+                alert('직원 등록에 실패했습니다: ' + (error.response?.data?.error || error.message))
             }
         }
 

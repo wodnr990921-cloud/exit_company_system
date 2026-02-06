@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { requireRole, requireExactRole, ROLES } from '../middleware/auth'
 
 type Bindings = {
   DB: D1Database
@@ -6,8 +7,8 @@ type Bindings = {
 
 const staff = new Hono<{ Bindings: Bindings }>()
 
-// 직원 목록 조회
-staff.get('/', async (c) => {
+// 직원 목록 조회 - admin 권한 필요
+staff.get('/', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const { results } = await c.env.DB.prepare(
       `SELECT id, email, name, role, created_at FROM staff ORDER BY created_at DESC`
@@ -20,8 +21,8 @@ staff.get('/', async (c) => {
   }
 })
 
-// 직원 상세 조회
-staff.get('/:id', async (c) => {
+// 직원 상세 조회 - admin 권한 필요
+staff.get('/:id', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const id = c.req.param('id')
 
@@ -40,8 +41,8 @@ staff.get('/:id', async (c) => {
   }
 })
 
-// 직원 등록
-staff.post('/', async (c) => {
+// 직원 등록 - admin 권한 필요
+staff.post('/', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const { email, password, name, role } = await c.req.json()
 
@@ -72,11 +73,21 @@ staff.post('/', async (c) => {
   }
 })
 
-// 직원 수정
-staff.patch('/:id', async (c) => {
+// 직원 수정 (권한 변경 로그 포함) - admin 권한 필요
+staff.patch('/:id', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const id = c.req.param('id')
-    const { name, role, password } = await c.req.json()
+    const { name, role, password, reason } = await c.req.json()
+    const currentUser = c.get('staff')
+
+    // 기존 직원 정보 조회 (역할 변경 로그용)
+    const oldStaff = await c.env.DB.prepare(
+      'SELECT role FROM staff WHERE id = ?'
+    ).bind(id).first()
+
+    if (!oldStaff) {
+      return c.json({ error: '직원을 찾을 수 없습니다.' }, 404)
+    }
 
     const updates: string[] = []
     const params: any[] = []
@@ -106,6 +117,20 @@ staff.patch('/:id', async (c) => {
       `UPDATE staff SET ${updates.join(', ')} WHERE id = ?`
     ).bind(...params).run()
 
+    // 역할이 변경된 경우 로그 기록
+    if (role && role !== (oldStaff as any).role) {
+      await c.env.DB.prepare(
+        `INSERT INTO staff_role_changes (staff_id, old_role, new_role, changed_by, reason)
+         VALUES (?, ?, ?, ?, ?)`
+      ).bind(
+        id, 
+        (oldStaff as any).role, 
+        role, 
+        currentUser.id,
+        reason || '역할 변경'
+      ).run()
+    }
+
     return c.json({ success: true })
   } catch (error) {
     console.error('직원 수정 오류:', error)
@@ -113,8 +138,8 @@ staff.patch('/:id', async (c) => {
   }
 })
 
-// 직원 삭제
-staff.delete('/:id', async (c) => {
+// 직원 삭제 - admin 권한 필요
+staff.delete('/:id', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const id = c.req.param('id')
 
@@ -144,8 +169,8 @@ staff.delete('/:id', async (c) => {
   }
 })
 
-// 직원 업무 통계
-staff.get('/:id/stats', async (c) => {
+// 직원 업무 통계 - admin 권한 필요
+staff.get('/:id/stats', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const id = c.req.param('id')
     const startDate = c.req.query('start_date')
@@ -200,6 +225,27 @@ staff.get('/:id/stats', async (c) => {
   } catch (error) {
     console.error('직원 통계 조회 오류:', error)
     return c.json({ error: '직원 통계 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 권한 변경 이력 조회 - admin 권한 필요
+staff.get('/:id/role-changes', requireRole(ROLES.ADMIN), async (c) => {
+  try {
+    const id = c.req.param('id')
+
+    const { results } = await c.env.DB.prepare(
+      `SELECT rc.*, s.name as changed_by_name
+       FROM staff_role_changes rc
+       LEFT JOIN staff s ON rc.changed_by = s.id
+       WHERE rc.staff_id = ?
+       ORDER BY rc.created_at DESC
+       LIMIT 50`
+    ).bind(id).all()
+
+    return c.json({ changes: results })
+  } catch (error) {
+    console.error('권한 변경 이력 조회 오류:', error)
+    return c.json({ error: '권한 변경 이력 조회 중 오류가 발생했습니다.' }, 500)
   }
 })
 
