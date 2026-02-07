@@ -417,6 +417,7 @@ app.get('/', (c) => {
                 </div>
 
                 <div id="tickets-list" class="space-y-4"></div>
+                <div id="tickets-pagination"></div>
             </div>
 
             <!-- 회원 관리 뷰 -->
@@ -440,6 +441,7 @@ app.get('/', (c) => {
                 </div>
 
                 <div id="members-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="members-pagination"></div>
             </div>
 
             <!-- 도서 관리 뷰 -->
@@ -2312,6 +2314,13 @@ console.log('권한 관리 함수 로드 완료')
         let currentStaff = null
         let currentView = 'dashboard'
         let currentAttendanceId = null
+        
+        // 페이지네이션 상태 관리
+        const pagination = {
+            members: { page: 1, limit: 20, total: 0, totalPages: 0 },
+            tickets: { page: 1, limit: 20, total: 0, totalPages: 0 },
+            betting: { page: 1, limit: 20, total: 0, totalPages: 0 }
+        }
 
         // 페이지 로드
         document.addEventListener('DOMContentLoaded', async () => {
@@ -2957,17 +2966,24 @@ console.log('권한 관리 함수 로드 완료')
         }
 
         // 티켓 목록 로드
-        async function loadTickets() {
+        async function loadTickets(page = 1) {
             const status = document.getElementById('ticket-status-filter').value
             const type = document.getElementById('ticket-type-filter').value
+            pagination.tickets.page = page
 
             try {
-                let url = \`\${API_BASE}/tickets?\`
+                let url = \`\${API_BASE}/tickets?page=\${page}&limit=\${pagination.tickets.limit}&\`
                 if (status !== 'all') url += \`status=\${status}&\`
                 if (type !== 'all') url += \`ticket_type=\${type}&\`
 
                 const response = await axios.get(url)
                 const tickets = response.data.tickets
+                const paginationInfo = response.data.pagination
+                
+                // 페이지네이션 정보 업데이트
+                if (paginationInfo) {
+                    pagination.tickets = { ...pagination.tickets, ...paginationInfo }
+                }
 
                 const html = tickets.length > 0 ? tickets.map(t => \`
                     <div class="card hover:shadow-lg transition cursor-pointer" onclick="showTicketDetail(\${t.id})">
@@ -2990,18 +3006,81 @@ console.log('권한 관리 함수 로드 완료')
                 \`).join('') : '<p class="text-gray-500 text-center py-8">티켓이 없습니다.</p>'
 
                 document.getElementById('tickets-list').innerHTML = html
+                
+                // 페이지네이션 UI 렌더링
+                renderPagination('tickets', 'tickets-pagination', 'loadTickets')
             } catch (error) {
                 console.error('티켓 목록 로드 오류:', error)
             }
         }
 
+        // 페이지네이션 UI 렌더링
+        function renderPagination(type, containerId, onPageChange) {
+            const paginationData = pagination[type]
+            const container = document.getElementById(containerId)
+            
+            if (!container || paginationData.totalPages <= 1) {
+                if (container) container.innerHTML = ''
+                return
+            }
+            
+            const { page, totalPages } = paginationData
+            let html = '<div class="flex justify-center items-center space-x-2 mt-6">'
+            
+            // 이전 버튼
+            if (page > 1) {
+                html += \`<button onclick="\${onPageChange}(\${page - 1})" class="btn btn-secondary px-3 py-1">
+                    <i class="fas fa-chevron-left"></i> 이전
+                </button>\`
+            }
+            
+            // 페이지 번호
+            const startPage = Math.max(1, page - 2)
+            const endPage = Math.min(totalPages, page + 2)
+            
+            if (startPage > 1) {
+                html += \`<button onclick="\${onPageChange}(1)" class="btn btn-secondary px-3 py-1">1</button>\`
+                if (startPage > 2) html += '<span class="px-2">...</span>'
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === page) {
+                    html += \`<button class="btn btn-primary px-3 py-1">\${i}</button>\`
+                } else {
+                    html += \`<button onclick="\${onPageChange}(\${i})" class="btn btn-secondary px-3 py-1">\${i}</button>\`
+                }
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += '<span class="px-2">...</span>'
+                html += \`<button onclick="\${onPageChange}(\${totalPages})" class="btn btn-secondary px-3 py-1">\${totalPages}</button>\`
+            }
+            
+            // 다음 버튼
+            if (page < totalPages) {
+                html += \`<button onclick="\${onPageChange}(\${page + 1})" class="btn btn-secondary px-3 py-1">
+                    다음 <i class="fas fa-chevron-right"></i>
+                </button>\`
+            }
+            
+            html += '</div>'
+            container.innerHTML = html
+        }
+
         // 회원 목록 로드
-        async function loadMembers() {
+        async function loadMembers(page = 1) {
             const search = document.getElementById('member-search').value
+            pagination.members.page = page
 
             try {
-                const response = await axios.get(\`\${API_BASE}/members?search=\${search}\`)
+                const response = await axios.get(\`\${API_BASE}/members?search=\${search}&page=\${page}&limit=\${pagination.members.limit}\`)
                 const members = response.data.members
+                const paginationInfo = response.data.pagination
+                
+                // 페이지네이션 정보 업데이트
+                if (paginationInfo) {
+                    pagination.members = { ...pagination.members, ...paginationInfo }
+                }
 
                 const html = members.length > 0 ? members.map(m => \`
                     <div class="card hover:shadow-lg transition cursor-pointer" onclick="showMemberDetail(\${m.id})">
@@ -3017,6 +3096,9 @@ console.log('권한 관리 함수 로드 완료')
                 \`).join('') : '<p class="text-gray-500 text-center py-8">회원이 없습니다.</p>'
 
                 document.getElementById('members-list').innerHTML = html
+                
+                // 페이지네이션 UI 렌더링
+                renderPagination('members', 'members-pagination', 'loadMembers')
             } catch (error) {
                 console.error('회원 목록 로드 오류:', error)
             }
