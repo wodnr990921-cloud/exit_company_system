@@ -474,23 +474,29 @@ betting.post('/folders', async (c) => {
       ).bind(folderId, bet.match_id, bet.bet_type, bet.odds).run()
     }
 
-    // 회원 배팅 포인트 차감
-    await c.env.DB.prepare(
-      'UPDATE members SET betting_points = betting_points - ? WHERE id = ?'
-    ).bind(total_bet_amount, member_id).run()
-
-    // 포인트 거래 내역 기록
+    // ⚡ D1 배치 실행: 회원 배팅 포인트 차감 + 포인트 거래 내역 기록을 원자적으로 실행
     const newBalance = (member as any).betting_points - total_bet_amount
-    await c.env.DB.prepare(
-      `INSERT INTO point_transactions (
-        member_id, ticket_id, point_type, transaction_type, 
-        amount, balance_after, description, created_by
-      ) VALUES (?, ?, 'betting', 'use', ?, ?, ?, ?)`
-    ).bind(
-      member_id, ticket_id, -total_bet_amount, newBalance,
-      `배팅: ${folderNumber} (${folder_type === 'single' ? '단폴더' : '다폴더'})`,
-      created_by
-    ).run()
+    const batchResults = await c.env.DB.batch([
+      c.env.DB.prepare(
+        'UPDATE members SET betting_points = betting_points - ? WHERE id = ?'
+      ).bind(total_bet_amount, member_id),
+      
+      c.env.DB.prepare(
+        `INSERT INTO point_transactions (
+          member_id, ticket_id, point_type, transaction_type, 
+          amount, balance_after, description, created_by
+        ) VALUES (?, ?, 'betting', 'use', ?, ?, ?, ?)`
+      ).bind(
+        member_id, ticket_id, -total_bet_amount, newBalance,
+        `배팅: ${folderNumber} (${folder_type === 'single' ? '단폴더' : '다폴더'})`,
+        created_by
+      )
+    ])
+
+    // 배치 실행 결과 확인
+    if (!batchResults || batchResults.length !== 2) {
+      throw new Error('배치 실행 실패: 포인트 차감과 거래 기록 동기화 실패')
+    }
 
     return c.json({ 
       success: true, 
@@ -509,6 +515,9 @@ betting.get('/folders', async (c) => {
   try {
     const member_id = c.req.query('member_id')
     const status = c.req.query('status') || 'all'
+    const page = parseInt(c.req.query('page') || '1')
+    const limit = parseInt(c.req.query('limit') || '20')
+    const offset = (page - 1) * limit
 
     let query = `
       SELECT bf.*, m.name as member_name, t.ticket_number
@@ -529,7 +538,25 @@ betting.get('/folders', async (c) => {
       params.push(status)
     }
 
-    query += ` ORDER BY bf.created_at DESC`
+    // 총 개수 조회
+    let countQuery = `SELECT COUNT(*) as total FROM bet_folders bf WHERE 1=1`
+    const countParams: any[] = []
+    
+    if (member_id) {
+      countQuery += ` AND bf.member_id = ?`
+      countParams.push(member_id)
+    }
+    
+    if (status && status !== 'all') {
+      countQuery += ` AND bf.status = ?`
+      countParams.push(status)
+    }
+    
+    const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first()
+    const total = (countResult as any)?.total || 0
+
+    query += ` ORDER BY bf.created_at DESC LIMIT ? OFFSET ?`
+    params.push(limit, offset)
 
     const { results } = await c.env.DB.prepare(query).bind(...params).all()
 
@@ -545,7 +572,15 @@ betting.get('/folders', async (c) => {
       folder.bets = folderBets || []
     }
 
-    return c.json({ folders: results })
+    return c.json({ 
+      folders: results,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    })
   } catch (error) {
     console.error('배팅 폴더 목록 조회 오류:', error)
     return c.json({ error: '배팅 폴더 목록 조회 중 오류가 발생했습니다.' }, 500)
@@ -578,6 +613,7 @@ betting.get('/settlements/pending', async (c) => {
 })
 
 // 정산 승인
+// D1 batch 실행으로 원자성 보장
 betting.post('/settlements/:id/approve', async (c) => {
   try {
     const settlement_id = c.req.param('id')
@@ -600,45 +636,55 @@ betting.post('/settlements/:id/approve', async (c) => {
       return c.json({ error: '이미 처리된 정산입니다.' }, 400)
     }
 
-    // 회원 배팅 포인트 증가
-    await c.env.DB.prepare(
-      'UPDATE members SET betting_points = betting_points + ? WHERE id = ?'
-    ).bind((settlement as any).settlement_amount, (settlement as any).member_id).run()
-
-    // 정산 상태 업데이트
-    await c.env.DB.prepare(
-      `UPDATE bet_settlements 
-       SET status = 'approved', approved_by = ?, approved_at = CURRENT_TIMESTAMP
-       WHERE id = ?`
-    ).bind(approved_by, settlement_id).run()
-
-    // 폴더 승인 상태 업데이트
-    await c.env.DB.prepare(
-      `UPDATE bet_folders 
-       SET approved_by = ?, approved_at = CURRENT_TIMESTAMP, settled_at = CURRENT_TIMESTAMP
-       WHERE id = ?`
-    ).bind(approved_by, (settlement as any).folder_id).run()
-
-    // 회원 새 잔액 조회
+    // 회원 현재 잔액 조회
     const member = await c.env.DB.prepare(
       'SELECT betting_points FROM members WHERE id = ?'
     ).bind((settlement as any).member_id).first()
 
-    // 포인트 거래 내역 기록
-    await c.env.DB.prepare(
-      `INSERT INTO point_transactions (
-        member_id, point_type, transaction_type, 
-        amount, balance_after, description, approved_by, approved_at
-      ) VALUES (?, 'betting', 'earn', ?, ?, ?, ?, CURRENT_TIMESTAMP)`
-    ).bind(
-      (settlement as any).member_id,
-      (settlement as any).settlement_amount,
-      (member as any).betting_points,
-      `배팅 당첨금 지급`,
-      approved_by
-    ).run()
+    if (!member) {
+      return c.json({ error: '회원을 찾을 수 없습니다.' }, 404)
+    }
 
-    return c.json({ success: true, new_balance: (member as any).betting_points })
+    const newBalance = (member as any).betting_points + (settlement as any).settlement_amount
+
+    // ⚡ D1 배치 실행: 포인트 증가 + 정산 상태 업데이트 + 폴더 승인 + 거래 기록을 원자적으로 실행
+    const batchResults = await c.env.DB.batch([
+      c.env.DB.prepare(
+        'UPDATE members SET betting_points = betting_points + ? WHERE id = ?'
+      ).bind((settlement as any).settlement_amount, (settlement as any).member_id),
+      
+      c.env.DB.prepare(
+        `UPDATE bet_settlements 
+         SET status = 'approved', approved_by = ?, approved_at = CURRENT_TIMESTAMP
+         WHERE id = ?`
+      ).bind(approved_by, settlement_id),
+      
+      c.env.DB.prepare(
+        `UPDATE bet_folders 
+         SET approved_by = ?, approved_at = CURRENT_TIMESTAMP, settled_at = CURRENT_TIMESTAMP
+         WHERE id = ?`
+      ).bind(approved_by, (settlement as any).folder_id),
+      
+      c.env.DB.prepare(
+        `INSERT INTO point_transactions (
+          member_id, point_type, transaction_type, 
+          amount, balance_after, description, approved_by, approved_at
+        ) VALUES (?, 'betting', 'earn', ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+      ).bind(
+        (settlement as any).member_id,
+        (settlement as any).settlement_amount,
+        newBalance,
+        `배팅 당첨금 지급`,
+        approved_by
+      )
+    ])
+
+    // 배치 실행 결과 확인
+    if (!batchResults || batchResults.length !== 4) {
+      throw new Error('배치 실행 실패: 정산 처리 동기화 실패')
+    }
+
+    return c.json({ success: true, new_balance: newBalance })
   } catch (error) {
     console.error('정산 승인 오류:', error)
     return c.json({ error: '정산 승인 중 오류가 발생했습니다.' }, 500)

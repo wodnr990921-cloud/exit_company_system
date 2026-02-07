@@ -84,6 +84,7 @@ points.get('/pending', requireRole(ROLES.ADMIN), async (c) => {
 })
 
 // 포인트 동결 승인 - admin 권한 필요
+// D1 batch 실행으로 원자성 보장
 points.post('/approve/:id', requireRole(ROLES.ADMIN), async (c) => {
   try {
     const transaction_id = c.req.param('id')
@@ -114,40 +115,60 @@ points.post('/approve/:id', requireRole(ROLES.ADMIN), async (c) => {
       // 승인: 실제 포인트 차감 및 동결 포인트 감소
       const pointField = point_type === 'regular' ? 'points' : 'betting_points'
 
-      await c.env.DB.prepare(
-        `UPDATE members 
-         SET ${pointField} = ${pointField} - ?, frozen_points = frozen_points - ?
-         WHERE id = ?`
-      ).bind(amount, amount, member_id).run()
-
-      // 거래 상태 업데이트
-      await c.env.DB.prepare(
-        `UPDATE point_transactions 
-         SET status = 'completed', approved_by = ?, approved_at = CURRENT_TIMESTAMP
-         WHERE id = ?`
-      ).bind(approved_by, transaction_id).run()
-
-      // 새 잔액 조회
+      // 회원 현재 잔액 조회
       const member = await c.env.DB.prepare(
         `SELECT ${pointField} as balance FROM members WHERE id = ?`
       ).bind(member_id).first()
 
+      if (!member) {
+        return c.json({ error: '회원을 찾을 수 없습니다.' }, 404)
+      }
+
+      const newBalance = (member as any).balance - amount
+
+      // ⚡ D1 배치 실행: 포인트 차감 + 동결 해제 + 거래 상태 업데이트를 원자적으로 실행
+      const results = await c.env.DB.batch([
+        c.env.DB.prepare(
+          `UPDATE members 
+           SET ${pointField} = ${pointField} - ?, frozen_points = frozen_points - ?
+           WHERE id = ?`
+        ).bind(amount, amount, member_id),
+        
+        c.env.DB.prepare(
+          `UPDATE point_transactions 
+           SET status = 'completed', approved_by = ?, approved_at = CURRENT_TIMESTAMP, balance_after = ?
+           WHERE id = ?`
+        ).bind(approved_by, newBalance, transaction_id)
+      ])
+
+      // 배치 실행 결과 확인
+      if (!results || results.length !== 2) {
+        throw new Error('배치 실행 실패')
+      }
+
       return c.json({ 
         success: true, 
-        new_balance: (member as any).balance 
+        new_balance: newBalance 
       })
     } else if (action === 'reject') {
-      // 거부: 동결 포인트만 감소
-      await c.env.DB.prepare(
-        'UPDATE members SET frozen_points = frozen_points - ? WHERE id = ?'
-      ).bind(amount, member_id).run()
+      // 거부: 동결 포인트만 감소 + 거래 상태 업데이트
+      // ⚡ D1 배치 실행: 동결 해제 + 거래 상태 업데이트를 원자적으로 실행
+      const results = await c.env.DB.batch([
+        c.env.DB.prepare(
+          'UPDATE members SET frozen_points = frozen_points - ? WHERE id = ?'
+        ).bind(amount, member_id),
+        
+        c.env.DB.prepare(
+          `UPDATE point_transactions 
+           SET status = 'rejected', approved_by = ?, approved_at = CURRENT_TIMESTAMP
+           WHERE id = ?`
+        ).bind(approved_by, transaction_id)
+      ])
 
-      // 거래 상태 업데이트
-      await c.env.DB.prepare(
-        `UPDATE point_transactions 
-         SET status = 'rejected', approved_by = ?, approved_at = CURRENT_TIMESTAMP
-         WHERE id = ?`
-      ).bind(approved_by, transaction_id).run()
+      // 배치 실행 결과 확인
+      if (!results || results.length !== 2) {
+        throw new Error('배치 실행 실패')
+      }
 
       return c.json({ success: true })
     } else {
@@ -161,6 +182,7 @@ points.post('/approve/:id', requireRole(ROLES.ADMIN), async (c) => {
 
 // 포인트 직접 조정 (관리자 전용)
 // 포인트 직접 조정 - staff 이상 권한 필요
+// D1 batch 실행으로 원자성 보장
 points.post('/adjust', requireRole(ROLES.STAFF), async (c) => {
   try {
     const { 
@@ -189,30 +211,34 @@ points.post('/adjust', requireRole(ROLES.STAFF), async (c) => {
       finalAmount = Math.abs(amount)
     }
 
-    // 포인트 업데이트
-    await c.env.DB.prepare(
-      `UPDATE members SET ${pointField} = ${pointField} + ? WHERE id = ?`
-    ).bind(finalAmount, member_id).run()
+    const newBalance = (member as any).balance + finalAmount
 
-    // 새 잔액 조회
-    const updatedMember = await c.env.DB.prepare(
-      `SELECT ${pointField} as balance FROM members WHERE id = ?`
-    ).bind(member_id).first()
+    // ⚡ D1 배치 실행: 포인트 업데이트 + 거래 기록을 원자적으로 실행
+    const results = await c.env.DB.batch([
+      c.env.DB.prepare(
+        `UPDATE members SET ${pointField} = ${pointField} + ? WHERE id = ?`
+      ).bind(finalAmount, member_id),
+      
+      c.env.DB.prepare(
+        `INSERT INTO point_transactions (
+          member_id, point_type, transaction_type, 
+          amount, balance_after, description, status, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, 'completed', ?)`
+      ).bind(
+        member_id, point_type, transaction_type,
+        finalAmount, newBalance, description || '관리자 직접 조정', created_by
+      )
+    ])
 
-    // 거래 내역 기록
-    await c.env.DB.prepare(
-      `INSERT INTO point_transactions (
-        member_id, point_type, transaction_type, 
-        amount, balance_after, description, status, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, 'completed', ?)`
-    ).bind(
-      member_id, point_type, transaction_type,
-      finalAmount, (updatedMember as any).balance, description || '관리자 직접 조정', created_by
-    ).run()
+    // 배치 실행 결과 확인
+    if (!results || results.length !== 2) {
+      throw new Error('배치 실행 실패')
+    }
 
     return c.json({ 
       success: true, 
-      new_balance: (updatedMember as any).balance 
+      new_balance: newBalance,
+      transaction_id: results[1].meta?.last_row_id
     })
   } catch (error) {
     console.error('포인트 직접 조정 오류:', error)

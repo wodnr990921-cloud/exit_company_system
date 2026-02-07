@@ -12,6 +12,9 @@ members.get('/', requireRole(ROLES.VIEWER), async (c) => {
   try {
     const search = c.req.query('search') || ''
     const status = c.req.query('status') || 'all'
+    const page = parseInt(c.req.query('page') || '1')
+    const limit = parseInt(c.req.query('limit') || '20')
+    const offset = (page - 1) * limit
 
     let query = `
       SELECT id, member_number, name, institution, inmate_number, po_box_address, depositor_name,
@@ -32,11 +35,38 @@ members.get('/', requireRole(ROLES.VIEWER), async (c) => {
       params.push(status)
     }
 
-    query += ` ORDER BY created_at DESC`
+    // 총 개수 조회
+    let countQuery = `SELECT COUNT(*) as total FROM members WHERE 1=1`
+    const countParams: any[] = []
+    
+    if (search) {
+      countQuery += ` AND (name LIKE ? OR member_number LIKE ? OR inmate_number LIKE ? OR institution LIKE ?)`
+      const searchPattern = `%${search}%`
+      countParams.push(searchPattern, searchPattern, searchPattern, searchPattern)
+    }
+    
+    if (status && status !== 'all') {
+      countQuery += ` AND status = ?`
+      countParams.push(status)
+    }
+    
+    const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first()
+    const total = (countResult as any)?.total || 0
+
+    query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    params.push(limit, offset)
 
     const { results } = await c.env.DB.prepare(query).bind(...params).all()
 
-    return c.json({ members: results })
+    return c.json({ 
+      members: results,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    })
   } catch (error) {
     console.error('회원 목록 조회 오류:', error)
     return c.json({ error: '회원 목록 조회 중 오류가 발생했습니다.' }, 500)

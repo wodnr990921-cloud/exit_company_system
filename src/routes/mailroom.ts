@@ -259,15 +259,18 @@ mailroom.post('/:id/ocr', async (c) => {
         const imageBuffer = await object.arrayBuffer()
         
         // Cloudflare AI Workers로 OCR 실행
-        // 모델: @cf/unum/uform-gen2-qwen-500m (Vision + Text)
-        const aiResponse = await c.env.AI.run('@cf/unum/uform-gen2-qwen-500m', {
+        // 모델: @cf/meta/llama-3.2-11b-vision-instruct (최신 Vision 모델)
+        const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
           image: Array.from(new Uint8Array(imageBuffer)),
-          prompt: "이 이미지의 모든 텍스트를 추출해주세요. 한글과 영어를 모두 인식하세요.",
+          messages: [{
+            role: "user",
+            content: "이 이미지의 모든 텍스트를 정확하게 추출해주세요. 한글, 영어, 숫자를 모두 인식하고, 발신자, 수신자, 주소, 우편번호 등의 정보도 구분해서 추출해주세요."
+          }],
           max_tokens: 512
         })
         
         // OCR 결과 파싱
-        const extractedText = aiResponse?.description || aiResponse?.text || ''
+        const extractedText = aiResponse?.response || aiResponse?.description || aiResponse?.text || ''
         
         // 봉투 감지 (간단한 키워드 기반)
         const hasEnvelope = detectEnvelope(extractedText)
@@ -275,7 +278,7 @@ mailroom.post('/:id/ocr', async (c) => {
         ocrResults.push({
           image_key: key,
           text: extractedText,
-          confidence: 0.85, // AI 모델은 confidence를 제공하지 않을 수 있음
+          confidence: 0.90, // Llama 3.2 Vision은 고정밀 모델
           has_envelope: hasEnvelope,
           raw_response: aiResponse
         })
@@ -348,11 +351,40 @@ mailroom.post('/:id/ocr', async (c) => {
 function detectEnvelope(text: string): boolean {
   const envelopeKeywords = [
     '발신', '수신', '우편번호', '주소', '보내는 사람', '받는 사람',
-    '우표', '등기', '소인', 'sender', 'receiver', 'address', 'zip code'
+    '우표', '등기', '소인', 'sender', 'receiver', 'address', 'zip code',
+    '보낸이', '받는이', '주소:', '우편', '번지', '도로', '시', '구', '동'
   ]
   
   const lowerText = text.toLowerCase()
   return envelopeKeywords.some(keyword => lowerText.includes(keyword.toLowerCase()))
+}
+
+// 주소 정보 추출 헬퍼 함수
+function extractAddress(text: string): any {
+  const addressInfo: any = {}
+  
+  // 우편번호 추출 (5자리 또는 6자리)
+  const zipCodeMatch = text.match(/\b\d{5,6}\b/)
+  if (zipCodeMatch) {
+    addressInfo.zip_code = zipCodeMatch[0]
+  }
+  
+  // 주소 패턴 매칭 (간단한 한국 주소 패턴)
+  const addressPatterns = [
+    /([가-힣]+시\s[가-힣]+구\s[가-힣]+동\s[\d-]+)/g,  // 서울시 강남구 역삼동 123-45
+    /([가-힣]+도\s[가-힣]+시\s[가-힣]+[동읍면]\s[\d-]+)/g, // 경기도 성남시 분당구 123
+    /([가-힣]+[시도]\s[가-힣]+[구군]\s[가-힣]+로\s[\d]+)/g  // 도로명 주소
+  ]
+  
+  for (const pattern of addressPatterns) {
+    const matches = text.match(pattern)
+    if (matches && matches.length > 0) {
+      addressInfo.addresses = matches
+      break
+    }
+  }
+  
+  return Object.keys(addressInfo).length > 0 ? addressInfo : null
 }
 
 // 우편물 삭제

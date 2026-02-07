@@ -13,6 +13,9 @@ tickets.get('/', async (c) => {
     const status = c.req.query('status') || 'all'
     const type = c.req.query('type') || 'all'
     const assigned_to = c.req.query('assigned_to')
+    const page = parseInt(c.req.query('page') || '1')
+    const limit = parseInt(c.req.query('limit') || '20')
+    const offset = (page - 1) * limit
 
     let query = `
       SELECT t.*, 
@@ -42,6 +45,28 @@ tickets.get('/', async (c) => {
       params.push(assigned_to)
     }
 
+    // 총 개수 조회
+    let countQuery = `SELECT COUNT(*) as total FROM tickets t WHERE 1=1`
+    const countParams: any[] = []
+    
+    if (status && status !== 'all') {
+      countQuery += ` AND t.status = ?`
+      countParams.push(status)
+    }
+    
+    if (type && type !== 'all') {
+      countQuery += ` AND t.ticket_type = ?`
+      countParams.push(type)
+    }
+    
+    if (assigned_to) {
+      countQuery += ` AND t.assigned_to = ?`
+      countParams.push(assigned_to)
+    }
+    
+    const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first()
+    const total = (countResult as any)?.total || 0
+
     query += ` ORDER BY 
       CASE t.priority 
         WHEN 'urgent' THEN 1
@@ -50,11 +75,21 @@ tickets.get('/', async (c) => {
         WHEN 'low' THEN 4
       END,
       t.created_at DESC
+      LIMIT ? OFFSET ?
     `
+    params.push(limit, offset)
 
     const { results } = await c.env.DB.prepare(query).bind(...params).all()
 
-    return c.json({ tickets: results })
+    return c.json({ 
+      tickets: results,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    })
   } catch (error) {
     console.error('티켓 목록 조회 오류:', error)
     return c.json({ error: '티켓 목록 조회 중 오류가 발생했습니다.' }, 500)
@@ -121,9 +156,43 @@ tickets.post('/', async (c) => {
       ticket_type, priority || 'normal', status, assigned_to || null, created_by
     ).run()
 
+    const ticketId = result.meta.last_row_id
+
+    // 티켓이 배정된 경우 알림 생성
+    if (assigned_to) {
+      await createNotification(c.env.DB, {
+        staff_id: Number(assigned_to),
+        type: 'ticket_assigned',
+        title: '새 티켓이 배정되었습니다',
+        message: `티켓 ${ticket_number}: ${title}`,
+        link: `/tickets/${ticketId}`,
+        priority: priority === 'urgent' ? 'urgent' : priority === 'high' ? 'high' : 'normal'
+      })
+    }
+
+    // 긴급 티켓인 경우 모든 staff에게 알림
+    if (priority === 'urgent') {
+      const { results: allStaff } = await c.env.DB.prepare(
+        'SELECT id FROM staff WHERE status = ?'
+      ).bind('active').all()
+
+      for (const staff of allStaff || []) {
+        if ((staff as any).id !== assigned_to) {
+          await createNotification(c.env.DB, {
+            staff_id: (staff as any).id,
+            type: 'ticket_urgent',
+            title: '긴급 티켓 생성됨',
+            message: `긴급 티켓 ${ticket_number}: ${title}`,
+            link: `/tickets/${ticketId}`,
+            priority: 'urgent'
+          })
+        }
+      }
+    }
+
     return c.json({ 
       success: true, 
-      ticket_id: result.meta.last_row_id,
+      ticket_id: ticketId,
       ticket_number
     })
   } catch (error) {
@@ -227,6 +296,9 @@ tickets.patch('/:id', async (c) => {
     const setClause: string[] = ['updated_at = CURRENT_TIMESTAMP']
     const params: any[] = []
 
+    // 티켓 배정 변경 감지를 위해 기존 티켓 정보 조회
+    const oldTicket = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first()
+
     for (const [key, value] of Object.entries(updates)) {
       if (allowedFields.includes(key)) {
         setClause.push(`${key} = ?`)
@@ -239,6 +311,43 @@ tickets.patch('/:id', async (c) => {
     await c.env.DB.prepare(
       `UPDATE tickets SET ${setClause.join(', ')} WHERE id = ?`
     ).bind(...params).run()
+
+    // 📢 알림: 티켓이 배정되었을 때
+    if (updates.assigned_to && oldTicket && (oldTicket as any).assigned_to !== updates.assigned_to) {
+      // 티켓 정보 조회
+      const ticket = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first()
+      
+      if (ticket) {
+        await createNotification(c.env.DB, {
+          staff_id: Number(updates.assigned_to),
+          type: 'ticket_assigned',
+          title: '새 티켓이 배정되었습니다',
+          message: `티켓 ${(ticket as any).ticket_number}: ${(ticket as any).title}`,
+          link: `/tickets/${id}`,
+          priority: (ticket as any).priority === 'urgent' ? 'urgent' : (ticket as any).priority === 'high' ? 'high' : 'normal'
+        })
+      }
+    }
+
+    // 📢 알림: 긴급 티켓으로 변경되었을 때
+    if (updates.priority === 'urgent' && oldTicket && (oldTicket as any).priority !== 'urgent') {
+      // 티켓 담당자에게 알림
+      if ((oldTicket as any).assigned_to) {
+        const ticket = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first()
+        
+        if (ticket) {
+          await c.env.DB.prepare(
+            `INSERT INTO notifications (staff_id, type, title, message, link)
+             VALUES (?, 'ticket_urgent', ?, ?, ?)`
+          ).bind(
+            (oldTicket as any).assigned_to,
+            '⚠️ 긴급 티켓으로 변경됨',
+            `티켓 #${(ticket as any).ticket_number}이(가) 긴급으로 변경되었습니다`,
+            `/tickets/${id}`
+          ).run()
+        }
+      }
+    }
 
     return c.json({ success: true })
   } catch (error) {

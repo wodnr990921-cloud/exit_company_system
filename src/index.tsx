@@ -13,6 +13,7 @@ import points from './routes/points'
 import staff_management from './routes/staff_management'
 import closing from './routes/closing'
 import mailroom from './routes/mailroom'
+import notifications from './routes/notifications'
 
 type Bindings = {
   DB: D1Database
@@ -39,6 +40,7 @@ app.route('/api/points', points)
 app.route('/api/staff', staff_management)
 app.route('/api/closing', closing)
 app.route('/api/mailroom', mailroom)
+app.route('/api/notifications', notifications)
 
 // 메인 페이지
 app.get('/', (c) => {
