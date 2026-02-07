@@ -5061,9 +5061,17 @@ console.log('권한 관리 함수 로드 완료')
             const priority = document.getElementById('ticket-priority').value
             const assignedTo = document.getElementById('ticket-assigned-to').value
 
+            // 디버깅: 입력값 확인
+            console.log('티켓 생성 입력값:', { ticketType, title, description })
+
             // 필수 항목 검증
-            if (!ticketType || !title) {
-                alert('티켓 유형과 제목은 필수입니다.')
+            if (!ticketType) {
+                alert('티켓 유형을 선택해주세요.')
+                return
+            }
+            
+            if (!title || title.trim() === '') {
+                alert('제목을 입력해주세요.')
                 return
             }
 
