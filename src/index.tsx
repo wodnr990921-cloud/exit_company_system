@@ -1246,9 +1246,14 @@ app.get('/', (c) => {
                         <!-- 회원 선택 (주문, 포인트 조정, 회원 관리 유형일 때) -->
                         <div id="ticket-member-field" class="hidden">
                             <label class="block text-sm font-medium mb-1">회원 선택 *</label>
-                            <select id="ticket-member" class="w-full px-3 py-2 border rounded">
-                                <option value="">선택하세요</option>
-                            </select>
+                            <div class="flex gap-2">
+                                <select id="ticket-member" class="flex-1 px-3 py-2 border rounded">
+                                    <option value="">선택하세요</option>
+                                </select>
+                                <button type="button" onclick="showNewMemberModalFromTicket()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 whitespace-nowrap">
+                                    <i class="fas fa-user-plus mr-1"></i>신규 회원
+                                </button>
+                            </div>
                         </div>
 
                         <!-- 우선순위 -->
@@ -1266,6 +1271,13 @@ app.get('/', (c) => {
                             <select id="ticket-assigned-to" class="w-full px-3 py-2 border rounded">
                                 <option value="">미배정</option>
                             </select>
+                        </div>
+
+                        <!-- 이미지 첨부 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">이미지 첨부 (선택)</label>
+                            <input type="file" id="ticket-images" class="w-full px-3 py-2 border rounded" accept="image/*" multiple>
+                            <p class="text-xs text-gray-500 mt-1">여러 이미지를 선택할 수 있습니다 (최대 5장)</p>
                         </div>
 
                         <!-- 포인트 조정 전용 필드 -->
@@ -5103,6 +5115,13 @@ console.log('권한 관리 함수 로드 완료')
             document.getElementById('new-member-modal').classList.remove('hidden')
         }
 
+        // 티켓 생성에서 회원 등록 모달 열기 (생성 후 자동 선택)
+        function showNewMemberModalFromTicket() {
+            // 회원 등록 모달 열기
+            showNewMemberModal()
+            // 티켓 모달은 뒤에 유지
+        }
+
         function closeNewMemberModal() {
             document.getElementById('new-member-modal').classList.add('hidden')
             // 폼 초기화
@@ -5145,9 +5164,24 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                await axios.post(\`\${API_BASE}/members\`, data)
+                const response = await axios.post(\`\${API_BASE}/members\`, data)
+                const newMemberId = response.data.member_id
                 alert('회원이 등록되었습니다.')
                 closeNewMemberModal()
+                
+                // 티켓 모달이 열려있으면 회원 목록 새로고침 및 자동 선택
+                const ticketModal = document.getElementById('new-ticket-modal')
+                if (ticketModal && !ticketModal.classList.contains('hidden')) {
+                    const membersRes = await axios.get(\`\${API_BASE}/members\`)
+                    const members = membersRes.data.members || []
+                    const memberOptions = members.map(m => 
+                        \`<option value="\${m.id}">\${m.name} (\${m.institution})</option>\`
+                    ).join('')
+                    document.getElementById('ticket-member').innerHTML = '<option value="">선택하세요</option>' + memberOptions
+                    // 방금 생성한 회원 자동 선택
+                    document.getElementById('ticket-member').value = newMemberId
+                }
+                
                 if (currentView === 'members') await loadMembers()
             } catch (error) {
                 alert('회원 등록 실패: ' + (error.response?.data?.error || error.message))
