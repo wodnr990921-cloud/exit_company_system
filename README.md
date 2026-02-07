@@ -2,6 +2,36 @@
 
 **통합 교도소 도서 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
+## 🆕 최신 업데이트 (2026-02-07)
+
+### ✨ v10.0 Phase 17-18 완료
+
+1. **신규 티켓 생성 모달 개선**
+   - ➕ "신규 회원 등록" 버튼 추가
+   - 티켓 생성 중 회원 등록 가능
+   - 회원 등록 후 자동 선택 및 티켓 모달 복귀
+
+2. **티켓 이미지 업로드 기능 추가** 🖼️
+   - R2 Storage 연동
+   - 다중 이미지 업로드 지원
+   - 이미지 업로드 API: `POST /api/tickets/:id/images`
+   - 이미지 조회 API: `GET /api/tickets/:id/images/:key`
+   - 마이그레이션 0015: `image_keys` 컬럼 추가
+
+3. **전체 시스템 테스트 시뮬레이션**
+   - 자동화된 API 테스트 스크립트 (`system-test-simulation.sh`)
+   - 9개 주요 모듈 테스트 완료
+   - 로그인, 회원, 티켓, 포인트, 배팅, 우편실, 직원, 출근, 일일 마감
+   - 테스트 데이터 시드 스크립트 (`simple-test-data.sql`)
+
+4. **프로덕션 배포 완료**
+   - Cloudflare Pages: https://exit-system.pages.dev
+   - D1 Database: 15개 마이그레이션 적용
+   - R2 Storage: 이미지 업로드 활성화
+   - GitHub: 완전 동기화
+
+---
+
 ## 🌐 접속 정보
 
 - **프로덕션 URL**: https://exit-system.pages.dev ✅ **LIVE**
