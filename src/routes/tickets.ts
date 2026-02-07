@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 
 type Bindings = {
   DB: D1Database
+  R2: R2Bucket
 }
 
 const tickets = new Hono<{ Bindings: Bindings }>()
@@ -128,6 +129,91 @@ tickets.post('/', async (c) => {
   } catch (error) {
     console.error('티켓 생성 오류:', error)
     return c.json({ error: '티켓 생성 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 티켓 이미지 업로드
+tickets.post('/:id/images', async (c) => {
+  try {
+    const ticket_id = c.req.param('id')
+    const formData = await c.req.formData()
+    const files = formData.getAll('images')
+
+    if (!files || files.length === 0) {
+      return c.json({ error: '업로드할 이미지가 없습니다.' }, 400)
+    }
+
+    const uploadedKeys: string[] = []
+
+    for (const file of files) {
+      if (file instanceof File) {
+        const timestamp = Date.now()
+        const randomStr = Math.random().toString(36).substring(7)
+        const key = `tickets/${ticket_id}/${timestamp}-${randomStr}-${file.name}`
+        
+        const arrayBuffer = await file.arrayBuffer()
+        await c.env.R2.put(key, arrayBuffer, {
+          httpMetadata: {
+            contentType: file.type
+          }
+        })
+        
+        uploadedKeys.push(key)
+      }
+    }
+
+    // 티켓 테이블의 image_keys 업데이트
+    const ticket = await c.env.DB.prepare(
+      'SELECT image_keys FROM tickets WHERE id = ?'
+    ).bind(ticket_id).first()
+
+    let existingKeys: string[] = []
+    if (ticket && ticket.image_keys) {
+      try {
+        existingKeys = JSON.parse(ticket.image_keys as string)
+      } catch (e) {
+        existingKeys = []
+      }
+    }
+
+    const allKeys = [...existingKeys, ...uploadedKeys]
+
+    await c.env.DB.prepare(
+      'UPDATE tickets SET image_keys = ? WHERE id = ?'
+    ).bind(JSON.stringify(allKeys), ticket_id).run()
+
+    return c.json({ 
+      success: true, 
+      uploaded_keys: uploadedKeys,
+      all_keys: allKeys
+    })
+  } catch (error) {
+    console.error('이미지 업로드 오류:', error)
+    return c.json({ error: '이미지 업로드 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 티켓 이미지 조회
+tickets.get('/:id/images/:key', async (c) => {
+  try {
+    const key = c.req.param('key')
+    const fullKey = decodeURIComponent(key)
+    
+    const object = await c.env.R2.get(fullKey)
+    
+    if (!object) {
+      return c.json({ error: '이미지를 찾을 수 없습니다.' }, 404)
+    }
+
+    return new Response(object.body, {
+      headers: {
+        'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
+        'Cache-Control': 'public, max-age=31536000'
+      }
+    })
+  } catch (error) {
+    console.error('이미지 조회 오류:', error)
+    return c.json({ error: '이미지 조회 중 오류가 발생했습니다.' }, 500)
   }
 })
 

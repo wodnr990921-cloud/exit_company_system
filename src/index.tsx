@@ -5100,7 +5100,29 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                await axios.post(\`\${API_BASE}/tickets\`, data)
+                const ticketResponse = await axios.post(\`\${API_BASE}/tickets\`, data)
+                const ticketId = ticketResponse.data.ticket_id
+
+                // 이미지 업로드 처리
+                const imageInput = document.getElementById('ticket-images')
+                if (imageInput && imageInput.files.length > 0) {
+                    const formData = new FormData()
+                    for (let i = 0; i < imageInput.files.length; i++) {
+                        formData.append('images', imageInput.files[i])
+                    }
+                    
+                    try {
+                        await axios.post(\`\${API_BASE}/tickets/\${ticketId}/images\`, formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        })
+                    } catch (uploadError) {
+                        console.error('이미지 업로드 오류:', uploadError)
+                        alert('티켓은 생성되었으나 이미지 업로드에 실패했습니다.')
+                    }
+                }
+
                 alert('티켓이 생성되었습니다.')
                 closeNewTicketModal()
                 if (currentView === 'tickets') await loadTickets()
