@@ -2312,10 +2312,18 @@ console.log('권한 관리 함수 로드 완료')
         let currentAttendanceId = null
 
         // 페이지 로드
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 로딩 화면 표시
+            document.getElementById('loading-screen').classList.remove('hidden')
+            
+            // 세션 복구 시도
+            const sessionRestored = await restoreSession()
+            
             setTimeout(() => {
                 document.getElementById('loading-screen').classList.add('hidden')
-                document.getElementById('login-screen').classList.remove('hidden')
+                if (!sessionRestored) {
+                    document.getElementById('login-screen').classList.remove('hidden')
+                }
             }, 500)
 
             // 로그인 폼
@@ -2345,6 +2353,12 @@ console.log('권한 관리 함수 로드 완료')
                 const response = await axios.post(\`\${API_BASE}/auth/login\`, { email, password })
                 currentStaff = response.data.staff
 
+                // localStorage에 세션 정보 저장
+                localStorage.setItem('exit_system_session', JSON.stringify({
+                    staff: currentStaff,
+                    timestamp: Date.now()
+                }))
+
                 document.getElementById('login-screen').classList.add('hidden')
                 document.getElementById('app-screen').classList.remove('hidden')
 
@@ -2364,10 +2378,50 @@ console.log('권한 관리 함수 로드 완료')
         // 로그아웃
         function logout() {
             currentStaff = null
+            // localStorage에서 세션 정보 삭제
+            localStorage.removeItem('exit_system_session')
+            
             document.getElementById('app-screen').classList.add('hidden')
             document.getElementById('login-screen').classList.remove('hidden')
             document.getElementById('login-email').value = ''
             document.getElementById('login-password').value = ''
+        }
+
+        // 세션 복구 (페이지 로드 시)
+        async function restoreSession() {
+            try {
+                const sessionData = localStorage.getItem('exit_system_session')
+                if (!sessionData) return false
+
+                const session = JSON.parse(sessionData)
+                const sessionAge = Date.now() - session.timestamp
+
+                // 세션 만료 시간: 24시간 (86400000ms)
+                if (sessionAge > 86400000) {
+                    localStorage.removeItem('exit_system_session')
+                    return false
+                }
+
+                // 세션 복구
+                currentStaff = session.staff
+
+                document.getElementById('login-screen').classList.add('hidden')
+                document.getElementById('app-screen').classList.remove('hidden')
+
+                document.getElementById('current-user-name').textContent = currentStaff.name
+                document.getElementById('current-user-name-mobile').textContent = currentStaff.name
+                document.getElementById('mobile-menu-user-name').textContent = currentStaff.name
+                
+                // 권한에 따른 UI 초기화
+                initializePermissions()
+
+                await loadDashboard()
+                return true
+            } catch (error) {
+                console.error('세션 복구 실패:', error)
+                localStorage.removeItem('exit_system_session')
+                return false
+            }
         }
 
         // 뷰 전환
