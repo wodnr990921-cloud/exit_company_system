@@ -5082,7 +5082,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             const data = {
-                type: ticketType,
+                ticket_type: ticketType,
                 title: title,
                 description: description,
                 member_id: memberId || null,
