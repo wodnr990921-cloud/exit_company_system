@@ -158,38 +158,6 @@ tickets.post('/', async (c) => {
 
     const ticketId = result.meta.last_row_id
 
-    // 티켓이 배정된 경우 알림 생성
-    if (assigned_to) {
-      await createNotification(c.env.DB, {
-        staff_id: Number(assigned_to),
-        type: 'ticket_assigned',
-        title: '새 티켓이 배정되었습니다',
-        message: `티켓 ${ticket_number}: ${title}`,
-        link: `/tickets/${ticketId}`,
-        priority: priority === 'urgent' ? 'urgent' : priority === 'high' ? 'high' : 'normal'
-      })
-    }
-
-    // 긴급 티켓인 경우 모든 staff에게 알림
-    if (priority === 'urgent') {
-      const { results: allStaff } = await c.env.DB.prepare(
-        'SELECT id FROM staff WHERE status = ?'
-      ).bind('active').all()
-
-      for (const staff of allStaff || []) {
-        if ((staff as any).id !== assigned_to) {
-          await createNotification(c.env.DB, {
-            staff_id: (staff as any).id,
-            type: 'ticket_urgent',
-            title: '긴급 티켓 생성됨',
-            message: `긴급 티켓 ${ticket_number}: ${title}`,
-            link: `/tickets/${ticketId}`,
-            priority: 'urgent'
-          })
-        }
-      }
-    }
-
     return c.json({ 
       success: true, 
       ticket_id: ticketId,
