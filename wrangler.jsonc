@@ -10,15 +10,16 @@
     {
       "binding": "DB",
       "database_name": "exit-system-production",
-      "database_id": ""
+      "database_id": "929f31de-899f-4015-be47-1a20e127bfe7"
     }
   ],
-  "r2_buckets": [
-    {
-      "binding": "R2",
-      "bucket_name": "exit-system-mailroom"
-    }
-  ],
+  // R2 버킷 (우편실 기능 - 나중에 활성화)
+  // "r2_buckets": [
+  //   {
+  //     "binding": "R2",
+  //     "bucket_name": "exit-system-mailroom"
+  //   }
+  // ],
   "ai": {
     "binding": "AI"
   }
