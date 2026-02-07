@@ -5,10 +5,11 @@
 ## 🌐 접속 정보
 
 - **프로덕션 URL**: https://exit-system.pages.dev ✅ **LIVE**
-- **브랜치 URL**: https://f947aa68.exit-system.pages.dev
+- **브랜치 URL**: https://834b2a6b.exit-system.pages.dev
 - **데모 계정**: admin@prison-books.kr / admin123
 - **Cloudflare Pages**: exit-system
 - **D1 Database**: exit-system-production
+- **R2 Storage**: exit-system-mailroom ✅ **활성화됨**
 
 ## 📋 프로젝트 개요
 
@@ -713,8 +714,9 @@ EXIT 시스템 개발팀
 - **플랫폼**: Cloudflare Pages
 - **프로젝트**: exit-system
 - **D1 Database**: exit-system-production (929f31de-899f-4015-be47-1a20e127bfe7)
+- **R2 Storage**: exit-system-mailroom ✅ **활성화됨**
 - **배포 일시**: 2026-02-07
-- **R2 Storage**: 미활성화 (향후 활성화 예정)
+- **최종 배포**: 2026-02-07 (R2 Storage 추가)
 
 ---
 
@@ -733,10 +735,11 @@ EXIT 시스템 개발팀
 - ✅ 관리자 설정 페이지 (v9.3)
 - ✅ 모바일 반응형 UI (v10.0)
 - ✅ Cloudflare Pages 프로덕션 배포 (v10.0)
+- ✅ R2 Storage 활성화 및 통합 (v10.0) 🆕
 
 ### 예정 📅
-- 📅 R2 Storage 활성화 (우편실 이미지 업로드)
 - 📅 Cloudflare AI Workers OCR 실제 연동
+- 📅 우편실 이미지 업로드 UI 개선
 - 📅 알림 시스템 (Email/SMS)
 - 📅 보고서 생성 (PDF/Excel)
 - 📅 전역 검색 기능
