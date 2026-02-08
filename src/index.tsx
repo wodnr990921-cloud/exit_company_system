@@ -1662,8 +1662,8 @@ app.get('/', (c) => {
                         </div>
                         
                         <div class="flex justify-between mt-6">
-                            <button onclick="deleteBook()" class="btn btn-danger">
-                                <i class="fas fa-trash mr-2"></i>삭제
+                            <button onclick="deleteBook()" class="btn btn-danger" data-permission="admin">
+                                <i class="fas fa-trash mr-2"></i>삭제 (관리자 전용)
                             </button>
                             <div class="flex space-x-2">
                                 <button onclick="closeBookDetail()" class="btn btn-secondary">취소</button>
@@ -2288,6 +2288,15 @@ function initializePermissions() {
       btn.disabled = true
       btn.classList.add('opacity-50', 'cursor-not-allowed')
       btn.title = '읽기 전용 권한입니다'
+    })
+  }
+  
+  // Staff는 admin 전용 버튼 비활성화
+  if (!isAdmin()) {
+    document.querySelectorAll('[data-permission="admin"]').forEach(btn => {
+      btn.disabled = true
+      btn.classList.add('opacity-50', 'cursor-not-allowed')
+      btn.title = '관리자 전용 기능입니다'
     })
   }
 }
@@ -3912,7 +3921,7 @@ console.log('권한 관리 함수 로드 완료')
                             </div>
                         </div>
                         <div class="flex justify-end mt-2 space-x-2">
-                            \${m.id ? \`<button onclick="deleteMatch(\${m.id})" class="btn btn-danger btn-sm">삭제</button>\` : ''}
+                            \${m.id && isAdmin() ? \`<button onclick="deleteMatch(\${m.id})" class="btn btn-danger btn-sm">삭제</button>\` : ''}
                         </div>
                     </div>
                 \`).join('')
@@ -4013,6 +4022,11 @@ console.log('권한 관리 함수 로드 완료')
 
         // 경기 삭제
         async function deleteMatch(matchId) {
+            if (!isAdmin()) {
+                alert('경기 삭제는 관리자만 가능합니다.')
+                return
+            }
+            
             if (!confirm('이 경기를 삭제하시겠습니까?')) return
 
             try {
@@ -5640,7 +5654,7 @@ console.log('권한 관리 함수 로드 완료')
                                 <button onclick="viewMailImages(\${item.id})" class="text-blue-500 hover:text-blue-700">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button onclick="deleteMailItem(\${item.id})" class="text-red-500 hover:text-red-700">
+                                <button onclick="deleteMailItem(\${item.id})" class="text-red-500 hover:text-red-700" data-permission="admin">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -5764,6 +5778,11 @@ console.log('권한 관리 함수 로드 완료')
         }
 
         async function deleteMailItem(mailId) {
+            if (!isAdmin()) {
+                alert('우편물 삭제는 관리자만 가능합니다.')
+                return
+            }
+            
             if (!confirm('이 우편물을 삭제하시겠습니까?')) return
 
             try {
@@ -6203,7 +6222,7 @@ console.log('권한 관리 함수 로드 완료')
                                 <button onclick="viewMailImages('\${item.id}')" class="btn btn-sm btn-secondary">
                                     <i class="fas fa-images"></i>
                                 </button>
-                                <button onclick="deleteMailItem('\${item.id}')" class="btn btn-sm btn-danger">
+                                <button onclick="deleteMailItem('\${item.id}')" class="btn btn-sm btn-danger" data-permission="admin">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -6362,6 +6381,11 @@ console.log('권한 관리 함수 로드 완료')
         
         // 우편물 삭제
         async function deleteMailItem(mailId) {
+            if (!isAdmin()) {
+                alert('우편물 삭제는 관리자만 가능합니다.')
+                return
+            }
+            
             if (!confirm('이 우편물을 삭제하시겠습니까?')) return
             
             try {
@@ -6554,6 +6578,11 @@ console.log('권한 관리 함수 로드 완료')
         }
 
         async function deleteBook() {
+            if (!isAdmin()) {
+                alert('도서 삭제는 관리자만 가능합니다.')
+                return
+            }
+            
             if (!currentBookId) return
 
             if (!confirm('정말 이 도서를 삭제하시겠습니까?')) return
