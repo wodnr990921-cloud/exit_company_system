@@ -15,6 +15,7 @@ import closing from './routes/closing'
 import mailroom from './routes/mailroom'
 import notifications from './routes/notifications'
 import modifications from './routes/modifications'
+import ticketItems from './routes/ticket-items'
 
 type Bindings = {
   DB: D1Database
@@ -43,6 +44,7 @@ app.route('/api/closing', closing)
 app.route('/api/mailroom', mailroom)
 app.route('/api/notifications', notifications)
 app.route('/api/modifications', modifications)
+app.route('/api/ticket-items', ticketItems)
 
 // 메인 페이지
 app.get('/', (c) => {
@@ -1943,11 +1945,11 @@ app.get('/', (c) => {
                             <button onclick="showTicketTab('info')" id="tab-info" class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-500">
                                 <i class="fas fa-info-circle mr-1"></i>티켓 정보
                             </button>
+                            <button onclick="showTicketTab('requests')" id="tab-requests" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
+                                <i class="fas fa-shopping-cart mr-1"></i>요청사항 <span id="cart-count" class="ml-1 px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">0</span>
+                            </button>
                             <button onclick="showTicketTab('comments')" id="tab-comments" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
                                 <i class="fas fa-comments mr-1"></i>댓글
-                            </button>
-                            <button onclick="showTicketTab('betting')" id="tab-betting" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
-                                <i class="fas fa-trophy mr-1"></i>배팅 접수
                             </button>
                         </div>
 
@@ -2109,62 +2111,41 @@ app.get('/', (c) => {
                                 </div>
                             </div>
 
-                            <!-- 배팅 탭 -->
-                            <div id="ticket-tab-betting" class="tab-content hidden">
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <!-- 배팅 접수 -->
+                            <!-- 요청사항 탭 (장바구니) -->
+                            <div id="ticket-tab-requests" class="tab-content hidden">
+                                <!-- 요청사항 추가 버튼 -->
+                                <div class="mb-6 flex gap-3 flex-wrap">
+                                    <button onclick="showAddRequestModal('betting')" class="btn btn-success">
+                                        <i class="fas fa-trophy mr-2"></i>배팅 추가
+                                    </button>
+                                    <button onclick="showAddRequestModal('book_order')" class="btn btn-primary">
+                                        <i class="fas fa-book mr-2"></i>도서 발주 추가
+                                    </button>
+                                    <button onclick="showAddRequestModal('point_request')" class="btn btn-warning">
+                                        <i class="fas fa-coins mr-2"></i>포인트 요청 추가
+                                    </button>
+                                </div>
+
+                                <!-- 요청사항 목록 (장바구니) -->
                                 <div class="card">
                                     <h4 class="font-bold mb-3">
-                                        <i class="fas fa-trophy mr-2"></i>배팅 접수
-                                        <span class="text-sm text-gray-600 ml-2">
-                                            (잔액: <span id="member-betting-points">0</span>원)
-                                        </span>
+                                        <i class="fas fa-shopping-cart mr-2"></i>요청사항 목록
+                                        <span class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full" id="cart-badge">0</span>
                                     </h4>
-                                    
-                                    <div class="mb-4">
-                                        <label class="block text-sm font-medium mb-2">경기 선택 (<span id="folder-type-display">단폴더</span>)</label>
-                                        <div id="betting-matches-list" class="space-y-2 max-h-96 overflow-y-auto border rounded p-2">
-                                            로딩중...
-                                        </div>
-                                    </div>
-
-                                    <div class="space-y-3">
-                                        <div>
-                                            <label class="block text-sm font-medium mb-1">배팅 금액</label>
-                                            <input 
-                                                type="number" 
-                                                id="folder-bet-amount" 
-                                                class="w-full px-3 py-2 border rounded" 
-                                                placeholder="배팅 금액 입력"
-                                                oninput="updatePotentialWin()"
-                                            >
-                                        </div>
-
-                                        <div class="bg-blue-50 p-3 rounded">
-                                            <div class="flex justify-between text-sm mb-1">
-                                                <span>총 배당률:</span>
-                                                <span id="total-odds-display" class="font-bold">1.00</span>
-                                            </div>
-                                            <div class="flex justify-between text-sm">
-                                                <span>예상 당첨금:</span>
-                                                <span id="potential-win-display" class="font-bold text-green-600">0원</span>
-                                            </div>
-                                        </div>
-
-                                        <button onclick="submitBetFolder()" class="btn btn-primary w-full">
-                                            <i class="fas fa-check mr-2"></i>배팅 접수
-                                        </button>
+                                    <div id="ticket-requests-list" class="space-y-3">
+                                        <p class="text-gray-500 text-center py-8">추가된 요청사항이 없습니다</p>
                                     </div>
                                 </div>
 
-                                <!-- 배팅 내역 -->
-                                <div class="card">
-                                    <h4 class="font-bold mb-3"><i class="fas fa-history mr-2"></i>배팅 내역</h4>
-                                    <div id="betting-history-list" class="space-y-2 max-h-[500px] overflow-y-auto">
-                                        로딩중...
-                                    </div>
+                                <!-- 일괄 처리 버튼 -->
+                                <div class="mt-4 flex gap-3">
+                                    <button onclick="processAllRequests()" class="btn btn-success flex-1" id="process-all-btn" style="display:none;">
+                                        <i class="fas fa-check-double mr-2"></i>전체 처리
+                                    </button>
+                                    <button onclick="clearAllRequests()" class="btn btn-danger flex-1" id="clear-all-btn" style="display:none;">
+                                        <i class="fas fa-trash mr-2"></i>전체 삭제
+                                    </button>
                                 </div>
-                            </div>
                             </div>
                         </div>
                     </div>
@@ -2172,6 +2153,120 @@ app.get('/', (c) => {
             </div>
         </div>
 
+    </div>
+
+    <!-- 요청사항 추가 모달 -->
+    <div id="add-request-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50" onclick="if(event.target === this) closeAddRequestModal()">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                <h3 class="text-xl font-bold" id="add-request-modal-title">요청사항 추가</h3>
+                <button onclick="closeAddRequestModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <!-- 배팅 추가 폼 -->
+                <div id="betting-form" class="request-form hidden">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">폴더 타입</label>
+                        <select id="new-folder-type" class="w-full px-3 py-2 border rounded" onchange="updateFolderType()">
+                            <option value="single">단폴더</option>
+                            <option value="multi">다폴더</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">
+                            경기 선택 (<span id="new-folder-type-display">단폴더</span>)
+                            <span class="text-xs text-gray-500 ml-2" id="selection-guide">1개만 선택 가능</span>
+                        </label>
+                        <div id="modal-betting-matches-list" class="space-y-2 max-h-64 overflow-y-auto border rounded p-2">
+                            로딩중...
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">배팅 금액</label>
+                        <input type="number" id="new-bet-amount" class="w-full px-3 py-2 border rounded" placeholder="배팅 금액 입력" oninput="updateModalPotentialWin()">
+                    </div>
+
+                    <div class="bg-blue-50 p-3 rounded mb-4">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>총 배당률:</span>
+                            <span id="modal-total-odds-display" class="font-bold">1.00</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>예상 당첨금:</span>
+                            <span id="modal-potential-win-display" class="font-bold text-green-600">0원</span>
+                        </div>
+                    </div>
+
+                    <button onclick="addBettingRequest()" class="btn btn-primary w-full">
+                        <i class="fas fa-plus mr-2"></i>배팅 장바구니에 담기
+                    </button>
+                </div>
+
+                <!-- 도서 발주 폼 -->
+                <div id="book-order-form" class="request-form hidden">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">도서 검색</label>
+                        <input type="text" id="book-search" class="w-full px-3 py-2 border rounded" placeholder="도서명 또는 ISBN 검색" oninput="searchBooksForOrder()">
+                    </div>
+
+                    <div id="book-search-results" class="space-y-2 max-h-64 overflow-y-auto border rounded p-2 mb-4">
+                        <p class="text-gray-500 text-center">도서명을 입력하여 검색하세요</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">수량</label>
+                        <input type="number" id="book-order-quantity" class="w-full px-3 py-2 border rounded" placeholder="수량 입력" min="1" value="1">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">메모</label>
+                        <textarea id="book-order-notes" class="w-full px-3 py-2 border rounded" rows="3" placeholder="특이사항이나 메모를 입력하세요"></textarea>
+                    </div>
+
+                    <button onclick="addBookOrderRequest()" class="btn btn-primary w-full">
+                        <i class="fas fa-plus mr-2"></i>발주 장바구니에 담기
+                    </button>
+                </div>
+
+                <!-- 포인트 요청 폼 -->
+                <div id="point-request-form" class="request-form hidden">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">포인트 타입</label>
+                        <select id="point-request-type" class="w-full px-3 py-2 border rounded">
+                            <option value="regular">일반 포인트</option>
+                            <option value="betting">배팅 포인트</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">처리 유형</label>
+                        <select id="point-transaction-type" class="w-full px-3 py-2 border rounded">
+                            <option value="add">지급</option>
+                            <option value="deduct">차감</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">금액</label>
+                        <input type="number" id="point-request-amount" class="w-full px-3 py-2 border rounded" placeholder="금액 입력" min="1">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">사유</label>
+                        <textarea id="point-request-reason" class="w-full px-3 py-2 border rounded" rows="3" placeholder="처리 사유를 입력하세요" required></textarea>
+                    </div>
+
+                    <button onclick="addPointRequest()" class="btn btn-primary w-full">
+                        <i class="fas fa-plus mr-2"></i>포인트 요청 장바구니에 담기
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 수정 승인 뷰 (Admin 전용) -->
@@ -4742,6 +4837,11 @@ console.log('권한 관리 함수 로드 완료')
                 tab.classList.add('hidden')
             })
             document.getElementById(\`ticket-tab-\${tabName}\`).classList.remove('hidden')
+
+            // requests 탭이 열리면 티켓 아이템 로드
+            if (tabName === 'requests' && currentTicketId) {
+                loadTicketItems(currentTicketId)
+            }
         }
 
         async function updateTicketInfo() {
@@ -6811,6 +6911,527 @@ console.log('권한 관리 함수 로드 완료')
                 if (currentView === 'staff') await loadStaff()
             } catch (error) {
                 alert('직원 삭제 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // ==================== 티켓 아이템 시스템 (장바구니) ====================
+        
+        let currentRequestType = null
+        let selectedMatches = []
+        let selectedBook = null
+
+        // 요청사항 추가 모달 열기
+        function showAddRequestModal(requestType) {
+            currentRequestType = requestType
+            document.getElementById('add-request-modal').classList.remove('hidden')
+            
+            // 모든 폼 숨기기
+            document.querySelectorAll('.request-form').forEach(form => form.classList.add('hidden'))
+            
+            // 선택된 타입의 폼만 표시
+            if (requestType === 'betting') {
+                document.getElementById('add-request-modal-title').textContent = '배팅 추가'
+                document.getElementById('betting-form').classList.remove('hidden')
+                loadMatchesForBetting()
+            } else if (requestType === 'book_order') {
+                document.getElementById('add-request-modal-title').textContent = '도서 발주 추가'
+                document.getElementById('book-order-form').classList.remove('hidden')
+            } else if (requestType === 'point_request') {
+                document.getElementById('add-request-modal-title').textContent = '포인트 요청 추가'
+                document.getElementById('point-request-form').classList.remove('hidden')
+            }
+        }
+
+        // 모달 닫기
+        function closeAddRequestModal() {
+            document.getElementById('add-request-modal').classList.add('hidden')
+            selectedMatches = []
+            selectedBook = null
+        }
+
+        // 경기 목록 로드
+        async function loadMatchesForBetting() {
+            try {
+                const response = await axios.get(\`\${API_BASE}/betting/matches?status=open\`)
+                const matches = response.data.matches || []
+                
+                const container = document.getElementById('modal-betting-matches-list')
+                if (matches.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">진행 중인 경기가 없습니다</p>'
+                    return
+                }
+                
+                container.innerHTML = matches.map(m => \`
+                    <div class="border rounded p-2 hover:bg-gray-50">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium">\${m.home_team} vs \${m.away_team}</span>
+                            <span class="text-xs text-gray-500">\${new Date(m.match_date).toLocaleDateString()}</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1 text-sm">
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="\${m.id}" 
+                                    data-outcome="home_win" 
+                                    data-odds="\${m.home_odds}"
+                                    data-teams="\${m.home_team} vs \${m.away_team}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>홈승 (\${m.home_odds})</span>
+                            </label>
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="\${m.id}" 
+                                    data-outcome="draw" 
+                                    data-odds="\${m.draw_odds}"
+                                    data-teams="\${m.home_team} vs \${m.away_team}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>무승부 (\${m.draw_odds})</span>
+                            </label>
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="\${m.id}" 
+                                    data-outcome="away_win" 
+                                    data-odds="\${m.away_odds}"
+                                    data-teams="\${m.home_team} vs \${m.away_team}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>원정승 (\${m.away_odds})</span>
+                            </label>
+                        </div>
+                    </div>
+                \`).join('')
+            } catch (error) {
+                console.error('경기 목록 로드 오류:', error)
+            }
+        }
+
+        // 경기 선택 토글
+        function toggleMatchSelection(checkbox) {
+            const folderType = document.getElementById('new-folder-type').value
+            const matchId = checkbox.dataset.matchId
+            
+            if (checkbox.checked) {
+                if (folderType === 'single') {
+                    // 단폴더: 기존 선택 해제하고 현재만 선택
+                    document.querySelectorAll('.match-checkbox').forEach(cb => {
+                        if (cb !== checkbox) cb.checked = false
+                    })
+                    selectedMatches = [{
+                        match_id: matchId,
+                        selected_outcome: checkbox.dataset.outcome,
+                        odds: parseFloat(checkbox.dataset.odds),
+                        teams: checkbox.dataset.teams
+                    }]
+                } else {
+                    // 다폴더: 같은 경기의 다른 결과는 해제
+                    document.querySelectorAll(\`.match-checkbox[data-match-id="\${matchId}"]\`).forEach(cb => {
+                        if (cb !== checkbox) cb.checked = false
+                    })
+                    
+                    // 선택 목록에 추가
+                    selectedMatches = selectedMatches.filter(m => m.match_id !== matchId)
+                    selectedMatches.push({
+                        match_id: matchId,
+                        selected_outcome: checkbox.dataset.outcome,
+                        odds: parseFloat(checkbox.dataset.odds),
+                        teams: checkbox.dataset.teams
+                    })
+                }
+            } else {
+                // 선택 해제
+                selectedMatches = selectedMatches.filter(m => 
+                    !(m.match_id === matchId && m.selected_outcome === checkbox.dataset.outcome)
+                )
+            }
+            
+            updateModalPotentialWin()
+        }
+
+        // 폴더 타입 변경
+        function updateFolderType() {
+            const folderType = document.getElementById('new-folder-type').value
+            const displayText = folderType === 'single' ? '단폴더' : '다폴더'
+            const guideText = folderType === 'single' ? '1개만 선택 가능' : '여러 경기 선택 가능'
+            
+            document.getElementById('new-folder-type-display').textContent = displayText
+            document.getElementById('selection-guide').textContent = guideText
+            
+            // 선택 초기화
+            document.querySelectorAll('.match-checkbox').forEach(cb => cb.checked = false)
+            selectedMatches = []
+            updateModalPotentialWin()
+        }
+
+        // 예상 당첨금 업데이트
+        function updateModalPotentialWin() {
+            const betAmount = parseFloat(document.getElementById('new-bet-amount').value) || 0
+            const totalOdds = selectedMatches.reduce((acc, m) => acc * m.odds, 1)
+            const potentialWin = Math.floor(betAmount * totalOdds)
+            
+            document.getElementById('modal-total-odds-display').textContent = totalOdds.toFixed(2)
+            document.getElementById('modal-potential-win-display').textContent = potentialWin.toLocaleString() + '원'
+        }
+
+        // 배팅 요청 추가
+        async function addBettingRequest() {
+            if (!currentTicketId) {
+                alert('티켓이 선택되지 않았습니다.')
+                return
+            }
+            
+            if (selectedMatches.length === 0) {
+                alert('경기를 선택해주세요.')
+                return
+            }
+            
+            const betAmount = parseFloat(document.getElementById('new-bet-amount').value)
+            if (!betAmount || betAmount <= 0) {
+                alert('배팅 금액을 입력해주세요.')
+                return
+            }
+            
+            // 회원 ID 가져오기
+            const memberId = currentTicket?.member_id
+            if (!memberId) {
+                alert('회원 정보를 찾을 수 없습니다.')
+                return
+            }
+            
+            const folderType = document.getElementById('new-folder-type').value
+            const totalOdds = selectedMatches.reduce((acc, m) => acc * m.odds, 1)
+            const potentialWin = Math.floor(betAmount * totalOdds)
+            
+            try {
+                await axios.post(\`\${API_BASE}/ticket-items/\${currentTicketId}\`, {
+                    item_type: 'betting',
+                    item_data: {
+                        member_id: memberId,
+                        folder_type: folderType,
+                        selections: selectedMatches,
+                        bet_amount: betAmount,
+                        total_odds: totalOdds,
+                        potential_win: potentialWin
+                    }
+                })
+                
+                alert('배팅이 장바구니에 추가되었습니다.')
+                closeAddRequestModal()
+                loadTicketItems(currentTicketId)
+            } catch (error) {
+                alert('추가 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 도서 검색
+        async function searchBooksForOrder() {
+            const keyword = document.getElementById('book-search').value
+            if (keyword.length < 2) {
+                document.getElementById('book-search-results').innerHTML = '<p class="text-gray-500 text-center">최소 2글자 이상 입력하세요</p>'
+                return
+            }
+            
+            try {
+                const response = await axios.get(\`\${API_BASE}/books?search=\${keyword}\`)
+                const books = response.data.books || []
+                
+                const container = document.getElementById('book-search-results')
+                if (books.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">검색 결과가 없습니다</p>'
+                    return
+                }
+                
+                container.innerHTML = books.map(book => \`
+                    <div class="border rounded p-2 hover:bg-gray-50 cursor-pointer" onclick='selectBook(\${JSON.stringify(book)})'>
+                        <div class="font-medium">\${book.title}</div>
+                        <div class="text-sm text-gray-600">\${book.author} · \${book.publisher}</div>
+                        <div class="text-sm text-blue-600 font-bold">\${book.price?.toLocaleString()}원 · 재고: \${book.stock}</div>
+                    </div>
+                \`).join('')
+            } catch (error) {
+                console.error('도서 검색 오류:', error)
+            }
+        }
+
+        // 도서 선택
+        function selectBook(book) {
+            selectedBook = book
+            document.getElementById('book-search').value = book.title
+            document.getElementById('book-search-results').innerHTML = \`
+                <div class="border border-blue-500 rounded p-2 bg-blue-50">
+                    <div class="font-medium">\${book.title}</div>
+                    <div class="text-sm text-gray-600">\${book.author} · \${book.publisher}</div>
+                    <div class="text-sm text-blue-600 font-bold">\${book.price?.toLocaleString()}원</div>
+                    <div class="text-xs text-green-600 mt-1">✓ 선택됨</div>
+                </div>
+            \`
+        }
+
+        // 도서 발주 요청 추가
+        async function addBookOrderRequest() {
+            if (!currentTicketId) {
+                alert('티켓이 선택되지 않았습니다.')
+                return
+            }
+            
+            if (!selectedBook) {
+                alert('도서를 선택해주세요.')
+                return
+            }
+            
+            const quantity = parseInt(document.getElementById('book-order-quantity').value) || 1
+            const notes = document.getElementById('book-order-notes').value
+            
+            try {
+                await axios.post(\`\${API_BASE}/ticket-items/\${currentTicketId}\`, {
+                    item_type: 'book_order',
+                    item_data: {
+                        book_id: selectedBook.id,
+                        book_title: selectedBook.title,
+                        book_author: selectedBook.author,
+                        book_price: selectedBook.price,
+                        quantity: quantity,
+                        total_price: selectedBook.price * quantity
+                    },
+                    notes: notes
+                })
+                
+                alert('도서 발주가 장바구니에 추가되었습니다.')
+                closeAddRequestModal()
+                loadTicketItems(currentTicketId)
+            } catch (error) {
+                alert('추가 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 포인트 요청 추가
+        async function addPointRequest() {
+            if (!currentTicketId) {
+                alert('티켓이 선택되지 않았습니다.')
+                return
+            }
+            
+            // 회원 ID 가져오기
+            const memberId = currentTicket?.member_id
+            if (!memberId) {
+                alert('회원 정보를 찾을 수 없습니다.')
+                return
+            }
+            
+            const pointType = document.getElementById('point-request-type').value
+            const transactionType = document.getElementById('point-transaction-type').value
+            const amount = parseInt(document.getElementById('point-request-amount').value)
+            const reason = document.getElementById('point-request-reason').value
+            
+            if (!amount || amount <= 0) {
+                alert('금액을 입력해주세요.')
+                return
+            }
+            
+            if (!reason) {
+                alert('사유를 입력해주세요.')
+                return
+            }
+            
+            try {
+                await axios.post(\`\${API_BASE}/ticket-items/\${currentTicketId}\`, {
+                    item_type: 'point_request',
+                    item_data: {
+                        member_id: memberId,
+                        point_type: pointType,
+                        transaction_type: transactionType,
+                        amount: amount,
+                        description: reason
+                    }
+                })
+                
+                alert('포인트 요청이 장바구니에 추가되었습니다.')
+                closeAddRequestModal()
+                loadTicketItems(currentTicketId)
+            } catch (error) {
+                alert('추가 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 티켓 아이템 목록 로드
+        async function loadTicketItems(ticketId) {
+            try {
+                const response = await axios.get(\`\${API_BASE}/ticket-items/\${ticketId}\`)
+                const items = response.data.items || []
+                
+                const countBadge = document.getElementById('cart-count')
+                const cartBadge = document.getElementById('cart-badge')
+                countBadge.textContent = items.length
+                cartBadge.textContent = items.length
+                
+                const container = document.getElementById('ticket-requests-list')
+                if (items.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">추가된 요청사항이 없습니다</p>'
+                    document.getElementById('process-all-btn').style.display = 'none'
+                    document.getElementById('clear-all-btn').style.display = 'none'
+                    return
+                }
+                
+                document.getElementById('process-all-btn').style.display = 'block'
+                document.getElementById('clear-all-btn').style.display = 'block'
+                
+                container.innerHTML = items.map(item => {
+                    const data = item.item_data
+                    let itemContent = ''
+                    let icon = ''
+                    let color = ''
+                    
+                    if (item.item_type === 'betting') {
+                        icon = 'fa-trophy'
+                        color = 'text-green-600'
+                        itemContent = \`
+                            <div class="font-medium">배팅 (\${data.folder_type === 'single' ? '단폴더' : '다폴더'})</div>
+                            <div class="text-sm text-gray-600">
+                                \${data.selections.map(s => \`\${s.teams} - \${getOutcomeText(s.selected_outcome)} (\${s.odds})\`).join('<br>')}
+                            </div>
+                            <div class="text-sm font-bold text-blue-600">배팅금: \${data.bet_amount?.toLocaleString()}원 · 예상 당첨금: \${data.potential_win?.toLocaleString()}원</div>
+                        \`
+                    } else if (item.item_type === 'book_order') {
+                        icon = 'fa-book'
+                        color = 'text-blue-600'
+                        itemContent = \`
+                            <div class="font-medium">도서 발주: \${data.book_title}</div>
+                            <div class="text-sm text-gray-600">\${data.book_author} · \${data.quantity}권</div>
+                            <div class="text-sm font-bold text-blue-600">금액: \${data.total_price?.toLocaleString()}원</div>
+                            \${item.notes ? \`<div class="text-xs text-gray-500 mt-1">메모: \${item.notes}</div>\` : ''}
+                        \`
+                    } else if (item.item_type === 'point_request') {
+                        icon = 'fa-coins'
+                        color = 'text-yellow-600'
+                        const pointTypeText = data.point_type === 'regular' ? '일반 포인트' : '배팅 포인트'
+                        const transactionText = data.transaction_type === 'add' ? '지급' : '차감'
+                        itemContent = \`
+                            <div class="font-medium">포인트 \${transactionText}: \${pointTypeText}</div>
+                            <div class="text-sm text-gray-600">\${data.description}</div>
+                            <div class="text-sm font-bold text-blue-600">\${data.transaction_type === 'add' ? '+' : '-'}\${data.amount?.toLocaleString()}원</div>
+                        \`
+                    }
+                    
+                    const statusBadge = getStatusBadge(item.status)
+                    
+                    return \`
+                        <div class="border rounded-lg p-4 hover:bg-gray-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center">
+                                    <i class="fas \${icon} \${color} mr-2"></i>
+                                    <div class="flex-1">\${itemContent}</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    \${statusBadge}
+                                    \${item.status === 'pending' ? \`
+                                        <button onclick="deleteTicketItem(\${item.id})" class="text-red-500 hover:text-red-700">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    \` : ''}
+                                </div>
+                            </div>
+                            \${item.status === 'pending' ? \`
+                                <button onclick="processSingleItem(\${item.id})" class="btn btn-sm btn-success mt-2">
+                                    <i class="fas fa-check mr-1"></i>처리
+                                </button>
+                            \` : ''}
+                        </div>
+                    \`
+                }).join('')
+            } catch (error) {
+                console.error('티켓 아이템 로드 오류:', error)
+            }
+        }
+
+        // 결과 텍스트 변환
+        function getOutcomeText(outcome) {
+            const map = {
+                'home_win': '홈승',
+                'draw': '무승부',
+                'away_win': '원정승'
+            }
+            return map[outcome] || outcome
+        }
+
+        // 상태 배지
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded">대기</span>',
+                'processing': '<span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">처리중</span>',
+                'completed': '<span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">완료</span>',
+                'cancelled': '<span class="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded">취소</span>'
+            }
+            return badges[status] || status
+        }
+
+        // 단일 아이템 처리
+        async function processSingleItem(itemId) {
+            if (!confirm('이 요청을 처리하시겠습니까?')) return
+            
+            try {
+                await axios.post(\`\${API_BASE}/ticket-items/\${itemId}/process\`, {
+                    processed_by: currentStaff.id
+                })
+                
+                alert('처리가 완료되었습니다.')
+                loadTicketItems(currentTicketId)
+            } catch (error) {
+                alert('처리 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 티켓 아이템 삭제
+        async function deleteTicketItem(itemId) {
+            if (!confirm('이 요청을 삭제하시겠습니까?')) return
+            
+            try {
+                await axios.delete(\`\${API_BASE}/ticket-items/\${itemId}\`)
+                alert('삭제되었습니다.')
+                loadTicketItems(currentTicketId)
+            } catch (error) {
+                alert('삭제 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 전체 처리
+        async function processAllRequests() {
+            if (!confirm('모든 대기 중인 요청을 일괄 처리하시겠습니까?')) return
+            
+            try {
+                const response = await axios.get(\`\${API_BASE}/ticket-items/\${currentTicketId}\`)
+                const items = response.data.items || []
+                const pendingItems = items.filter(item => item.status === 'pending')
+                
+                for (const item of pendingItems) {
+                    await axios.post(\`\${API_BASE}/ticket-items/\${item.id}/process\`, {
+                        processed_by: currentStaff.id
+                    })
+                }
+                
+                alert(\`\${pendingItems.length}개의 요청이 처리되었습니다.\`)
+                loadTicketItems(currentTicketId)
+            } catch (error) {
+                alert('처리 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 전체 삭제
+        async function clearAllRequests() {
+            if (!confirm('모든 대기 중인 요청을 삭제하시겠습니까?')) return
+            
+            try {
+                const response = await axios.get(\`\${API_BASE}/ticket-items/\${currentTicketId}\`)
+                const items = response.data.items || []
+                const pendingItems = items.filter(item => item.status === 'pending')
+                
+                for (const item of pendingItems) {
+                    await axios.delete(\`\${API_BASE}/ticket-items/\${item.id}\`)
+                }
+                
+                alert(\`\${pendingItems.length}개의 요청이 삭제되었습니다.\`)
+                loadTicketItems(currentTicketId)
+            } catch (error) {
+                alert('삭제 실패: ' + (error.response?.data?.error || error.message))
             }
         }
 
