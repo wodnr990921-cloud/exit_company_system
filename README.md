@@ -1,47 +1,50 @@
-# EXIT System v10.0 ✅ 모바일 반응형 UI 완성
+# EXIT System v8.8.0 🔐 수정 승인 시스템
 
 **통합 교도소 도서 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
-## 🆕 최신 업데이트 (2026-02-07)
+## 🆕 최신 업데이트 (2026-02-08)
 
-### ✨ v10.0 Phase 17-18 완료
+### ✨ v8.8.0 수정 승인 시스템 추가
 
-1. **신규 티켓 생성 모달 개선**
-   - ➕ "신규 회원 등록" 버튼 추가
-   - 티켓 생성 중 회원 등록 가능
-   - 회원 등록 후 자동 선택 및 티켓 모달 복귀
+1. **직원 권한 제한** 🚫
+   - 직원은 중요 데이터 삭제 불가 (Admin 전용)
+   - 도서, 우편물, 경기, 티켓 삭제 버튼 비활성화
+   - 권한 부족 시 알림 메시지 표시
 
-2. **티켓 이미지 업로드 기능 추가** 🖼️
-   - R2 Storage 연동
-   - 다중 이미지 업로드 지원
-   - 이미지 업로드 API: `POST /api/tickets/:id/images`
-   - 이미지 조회 API: `GET /api/tickets/:id/images/:key`
-   - 마이그레이션 0015: `image_keys` 컬럼 추가
+2. **수정 승인 워크플로우** ✅
+   - 직원의 중요 데이터 수정은 관리자 승인 필요
+   - `modification_requests` 테이블 생성
+   - 수정 전/후 값 추적 (old_value/new_value)
+   - 수정 사유(reason) 기록 필수
 
-3. **전체 시스템 테스트 시뮬레이션**
-   - 자동화된 API 테스트 스크립트 (`system-test-simulation.sh`)
-   - 9개 주요 모듈 테스트 완료
-   - 로그인, 회원, 티켓, 포인트, 배팅, 우편실, 직원, 출근, 일일 마감
-   - 테스트 데이터 시드 스크립트 (`simple-test-data.sql`)
+3. **관리자 승인 페이지** 📋
+   - `/api/modifications` 라우트 추가
+   - Admin 전용 "수정 승인" 메뉴
+   - 대기 중인 수정 요청 목록 표시
+   - 승인/거부 버튼으로 간편 처리
+   - 승인 시 자동으로 변경사항 적용
 
-4. **프로덕션 배포 완료**
-   - Cloudflare Pages: https://exit-system.pages.dev
-   - D1 Database: 15개 마이그레이션 적용
-   - R2 Storage: 이미지 업로드 활성화
-   - GitHub: 완전 동기화
+4. **권한 구조**
+   - **Admin (Level 3)**: 모든 권한 + 승인 권한
+   - **Staff (Level 2)**: 생성/수정 가능, 삭제 불가, 수정은 승인 필요
+   - **Viewer (Level 1)**: 읽기 전용
+
+5. **데이터베이스 업데이트**
+   - 마이그레이션 0012: modification_requests 테이블
+   - 12개 마이그레이션 적용 완료
 
 ---
 
 ## 🌐 접속 정보
 
-- **프로덕션 URL**: https://exit-system.pages.dev ✅ **LIVE (v8.7.1)**
-- **최신 배포**: https://8527a2d3.exit-system.pages.dev (Production)
+- **프로덕션 URL**: https://exit-system.pages.dev ✅ **LIVE (v8.8.0)**
+- **최신 배포**: https://f1a2fc4e.exit-system.pages.dev (Production)
 - **데모 계정**: admin@prison-books.kr / admin123
 - **Cloudflare Pages**: exit-system
-- **D1 Database**: exit-system-production
+- **D1 Database**: exit-system-production (12 migrations)
 - **R2 Storage**: exit-system-mailroom ✅ **활성화됨**
-- **Last Deployed**: 2026-02-08 06:20 UTC
-- **Build Size**: 442.84 kB (50 modules)
+- **Last Deployed**: 2026-02-08 06:50 UTC
+- **Build Size**: 454.08 kB (51 modules)
 - **Status**: 🟢 **All Systems Operational**
 
 ## 📋 프로젝트 개요
