@@ -2579,9 +2579,25 @@ console.log('권한 관리 함수 로드 완료')
             currentView = view
             document.querySelectorAll('.view-content').forEach(el => el.classList.add('hidden'))
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
+            document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'))
 
             document.getElementById(\`\${view}-view\`).classList.remove('hidden')
-            event.target.closest('.nav-item').classList.add('active')
+            
+            // 데스크톱 네비게이션 활성화
+            const desktopNavButtons = document.querySelectorAll('.nav-item')
+            desktopNavButtons.forEach(btn => {
+                if (btn.getAttribute('onclick')?.includes(\`showView('\${view}')\`)) {
+                    btn.classList.add('active')
+                }
+            })
+            
+            // 모바일 네비게이션 활성화
+            const mobileNavButtons = document.querySelectorAll('.mobile-nav-item')
+            mobileNavButtons.forEach(btn => {
+                if (btn.getAttribute('onclick')?.includes(\`showView('\${view}')\`)) {
+                    btn.classList.add('active')
+                }
+            })
 
             // 각 뷰 로드
             if (view === 'dashboard') loadDashboard()
@@ -4821,7 +4837,10 @@ console.log('권한 관리 함수 로드 완료')
                 showTicketTab('info') // 기본 탭: 티켓 정보
             } catch (error) {
                 console.error('티켓 상세 로드 오류:', error)
-                alert('티켓 정보를 불러오는데 실패했습니다.')
+                console.error('에러 상세:', error.response?.data)
+                console.error('상태 코드:', error.response?.status)
+                const errorMsg = error.response?.data?.error || error.message || '알 수 없는 오류'
+                alert(\`티켓 정보를 불러오는데 실패했습니다.\\n\\n오류: \${errorMsg}\`)
             }
         }
 
