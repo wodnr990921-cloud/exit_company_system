@@ -4740,18 +4740,15 @@ console.log('권한 관리 함수 로드 완료')
 
         async function showTicketDetail(ticketId) {
             currentTicketId = ticketId
-            selectedMatches = []
             
             try {
-                const [ticketRes, matchesRes, staffRes] = await Promise.all([
+                const [ticketRes, staffRes] = await Promise.all([
                     axios.get(\`\${API_BASE}/tickets/\${ticketId}\`),
-                    axios.get(\`\${API_BASE}/betting/matches?status=scheduled\`),
                     axios.get(\`\${API_BASE}/staff\`)
                 ])
 
                 const ticket = ticketRes.data.ticket
                 currentTicket = ticket // 전역 변수에 저장
-                const matches = matchesRes.data.matches || []
                 const staffList = staffRes.data.staff || []
 
                 // 티켓 기본 정보 (헤더)
@@ -4781,79 +4778,8 @@ console.log('권한 관리 함수 로드 완료')
                 // 댓글 로드
                 await loadTicketComments(ticketId)
 
-                // 회원 배팅 포인트 로드
-                if (ticket.member_id) {
-                    try {
-                        const memberRes = await axios.get(\`\${API_BASE}/members/\${ticket.member_id}\`)
-                        const bettingPointsEl = document.getElementById('member-betting-points')
-                        if (bettingPointsEl) {
-                            bettingPointsEl.textContent = memberRes.data.member.betting_points.toLocaleString()
-                        }
-                    } catch (error) {
-                        console.error('회원 배팅 포인트 로드 오류:', error)
-                    }
-                }
-
-                // 경기 목록 표시
-                const matchesHtml = matches.map(m => {
-                    let oddsInfo = ''
-                    if (m.betting_type === 'win_draw_lose') {
-                        oddsInfo = \`홈승: \${m.home_odds} | 무: \${m.draw_odds || '-'} | 원정승: \${m.away_odds}\`
-                    } else if (m.betting_type === 'over_under') {
-                        oddsInfo = \`기준: \${m.over_under_line} | 오버: \${m.over_odds} | 언더: \${m.under_odds}\`
-                    } else if (m.betting_type === 'handicap') {
-                        oddsInfo = \`핸디: \${m.handicap_line} | 홈: \${m.handicap_home_odds} | 원정: \${m.handicap_away_odds}\`
-                    }
-
-                    return \`
-                        <div class="border rounded p-3 hover:bg-gray-50 cursor-pointer" onclick="toggleMatchSelection(\${m.id})">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <div class="flex items-center">
-                                        <input type="checkbox" id="match-select-\${m.id}" class="mr-2" disabled>
-                                        <h4 class="font-bold">\${m.match_name}</h4>
-                                    </div>
-                                    <p class="text-sm text-gray-600 ml-6">\${m.home_team} vs \${m.away_team}</p>
-                                    <p class="text-xs text-gray-500 ml-6">\${new Date(m.match_date).toLocaleString()}</p>
-                                    <p class="text-xs text-blue-600 ml-6 mt-1">\${oddsInfo}</p>
-                                </div>
-                            </div>
-                            <div id="bet-selection-\${m.id}" class="hidden mt-3 ml-6 space-y-2">
-                                \${getBetTypeOptions(m)}
-                            </div>
-                        </div>
-                    \`
-                }).join('')
-
-                document.getElementById('betting-matches-list').innerHTML = matchesHtml || 
-                    '<p class="text-gray-500 text-center py-4">예정된 경기가 없습니다.</p>'
-
-                // 기존 배팅 폴더 로드
-                if (ticket.member_id) {
-                    const foldersRes = await axios.get(\`\${API_BASE}/betting/folders?member_id=\${ticket.member_id}\`)
-                    const folders = foldersRes.data.folders || []
-                    
-                    const foldersHtml = folders.map(f => \`
-                        <div class="bg-gray-50 p-3 rounded">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="font-bold">\${f.folder_number} [\${f.folder_type === 'single' ? '단폴더' : '다폴더'}]</p>
-                                    <p class="text-sm text-gray-600">배팅: \${f.total_bet_amount.toLocaleString()}원 | 배당: \${f.total_odds.toFixed(2)}</p>
-                                    <p class="text-sm text-green-600">예상 당첨: \${f.potential_win.toLocaleString()}원</p>
-                                </div>
-                                <span class="status-badge status-\${f.status}">\${getStatusText(f.status)}</span>
-                            </div>
-                            <div class="mt-2 space-y-1 text-xs text-gray-600">
-                                \${(f.bets || []).map(b => \`
-                                    <p><i class="fas fa-chevron-right mr-1"></i>\${b.match_name}: \${getBetTypeText(b.bet_type)} (\${b.odds})</p>
-                                \`).join('')}
-                            </div>
-                        </div>
-                    \`).join('')
-
-                    document.getElementById('betting-history-list').innerHTML = foldersHtml || 
-                        '<p class="text-gray-500 text-sm">배팅 내역이 없습니다.</p>'
-                }
+                // 경기 데이터는 로드되었지만 요청사항 탭의 배팅 추가 모달에서 사용됨
+                // showAddRequestModal('betting')에서 loadMatchesForBetting()를 호출하여 경기 목록 표시
 
                 // 우편물 이미지 로드 (mailroom_id가 있는 경우)
                 if (ticket.mailroom_id) {
