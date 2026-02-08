@@ -34,14 +34,15 @@
 
 ## 🌐 접속 정보
 
-- **프로덕션 URL**: https://a4947c33.exit-system.pages.dev ✅ **LIVE (v8.7.1)**
-- **이전 브랜치 URL**: https://834b2a6b.exit-system.pages.dev
+- **프로덕션 URL**: https://exit-system.pages.dev ✅ **LIVE (v8.7.1)**
+- **최신 배포**: https://8527a2d3.exit-system.pages.dev (Production)
 - **데모 계정**: admin@prison-books.kr / admin123
 - **Cloudflare Pages**: exit-system
 - **D1 Database**: exit-system-production
 - **R2 Storage**: exit-system-mailroom ✅ **활성화됨**
-- **Last Deployed**: 2026-02-08
+- **Last Deployed**: 2026-02-08 06:20 UTC
 - **Build Size**: 442.84 kB (50 modules)
+- **Status**: 🟢 **All Systems Operational**
 
 ## 📋 프로젝트 개요
 
