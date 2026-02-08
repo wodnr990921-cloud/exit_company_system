@@ -2326,6 +2326,42 @@ function hasPermission(requiredRole) {
   return userLevel >= requiredLevel
 }
 
+// ==========================================
+// 안전한 DOM 조작 헬퍼 함수
+// ==========================================
+
+// 안전하게 요소의 textContent 설정
+function safeSetText(elementId, text) {
+  const el = document.getElementById(elementId)
+  if (el) {
+    el.textContent = text
+    return true
+  }
+  console.warn(\`Element not found: \${elementId}\`)
+  return false
+}
+
+// 안전하게 요소의 innerHTML 설정
+function safeSetHTML(elementId, html) {
+  const el = document.getElementById(elementId)
+  if (el) {
+    el.innerHTML = html
+    return true
+  }
+  console.warn(\`Element not found: \${elementId}\`)
+  return false
+}
+
+// 안전하게 요소의 value 가져오기
+function safeGetValue(elementId, defaultValue = '') {
+  const el = document.getElementById(elementId)
+  if (el) {
+    return el.value
+  }
+  console.warn(\`Element not found: \${elementId}\`)
+  return defaultValue
+}
+
 // Admin 권한 체크
 function isAdmin() {
   return currentStaff?.role === ROLES.ADMIN
@@ -4747,9 +4783,15 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 회원 배팅 포인트 로드
                 if (ticket.member_id) {
-                    const memberRes = await axios.get(\`\${API_BASE}/members/\${ticket.member_id}\`)
-                    document.getElementById('member-betting-points').textContent = 
-                        memberRes.data.member.betting_points.toLocaleString()
+                    try {
+                        const memberRes = await axios.get(\`\${API_BASE}/members/\${ticket.member_id}\`)
+                        const bettingPointsEl = document.getElementById('member-betting-points')
+                        if (bettingPointsEl) {
+                            bettingPointsEl.textContent = memberRes.data.member.betting_points.toLocaleString()
+                        }
+                    } catch (error) {
+                        console.error('회원 배팅 포인트 로드 오류:', error)
+                    }
                 }
 
                 // 경기 목록 표시
