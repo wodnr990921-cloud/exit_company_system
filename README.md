@@ -1,50 +1,52 @@
-# EXIT System v8.8.0 🔐 수정 승인 시스템
+# EXIT System v9.0 🛒 티켓 기반 장바구니 시스템
 
 **통합 교도소 도서 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
 ## 🆕 최신 업데이트 (2026-02-08)
 
-### ✨ v8.8.0 수정 승인 시스템 추가
+### ✨ v9.0 티켓 기반 장바구니 시스템 🛒
 
-1. **직원 권한 제한** 🚫
-   - 직원은 중요 데이터 삭제 불가 (Admin 전용)
-   - 도서, 우편물, 경기, 티켓 삭제 버튼 비활성화
-   - 권한 부족 시 알림 메시지 표시
+1. **통합 요청사항 탭** 📋
+   - 기존 배팅 탭 → "요청사항" 탭으로 교체
+   - 하나의 티켓에 여러 요청사항 담기 (장바구니 방식)
+   - 3가지 타입 지원: 배팅, 도서 발주, 포인트 요청
+   - 장바구니 카운트 배지 표시
 
-2. **수정 승인 워크플로우** ✅
-   - 직원의 중요 데이터 수정은 관리자 승인 필요
-   - `modification_requests` 테이블 생성
-   - 수정 전/후 값 추적 (old_value/new_value)
-   - 수정 사유(reason) 기록 필수
+2. **요청사항 추가 모달** ➕
+   - 배팅 추가: 경기 선택, 단/다폴더, 배당률 계산
+   - 도서 발주 추가: 도서 검색, 수량 선택, 메모
+   - 포인트 요청 추가: 일반/배팅 포인트, 지급/차감, 사유
 
-3. **관리자 승인 페이지** 📋
-   - `/api/modifications` 라우트 추가
-   - Admin 전용 "수정 승인" 메뉴
-   - 대기 중인 수정 요청 목록 표시
-   - 승인/거부 버튼으로 간편 처리
-   - 승인 시 자동으로 변경사항 적용
+3. **자동 배당 시스템** 🎯
+   - 배팅 → `betting_folders` 테이블로 자동 처리
+   - 도서 발주 → 발주 시스템으로 자동 배당 (구현 예정)
+   - 포인트 요청 → `point_transactions` 테이블로 자동 처리
+   - 티켓은 유지되며 요청사항만 처리
 
-4. **권한 구조**
-   - **Admin (Level 3)**: 모든 권한 + 승인 권한
-   - **Staff (Level 2)**: 생성/수정 가능, 삭제 불가, 수정은 승인 필요
-   - **Viewer (Level 1)**: 읽기 전용
+4. **일괄 처리 기능** 🔄
+   - 개별 아이템 처리/삭제
+   - 전체 처리: 모든 대기 중 요청 일괄 처리
+   - 전체 삭제: 모든 대기 중 요청 일괄 삭제
+   - 처리 상태: pending → processing → completed
 
-5. **데이터베이스 업데이트**
-   - 마이그레이션 0012: modification_requests 테이블
-   - 12개 마이그레이션 적용 완료
+5. **데이터베이스 구조** 🗄️
+   - `ticket_items` 테이블 생성 (마이그레이션 0017)
+   - `item_type`: betting, book_order, point_request
+   - `item_data`: JSON 형태로 상세 정보 저장
+   - `status`: pending, processing, completed, cancelled
 
 ---
 
 ## 🌐 접속 정보
 
-- **프로덕션 URL**: https://exit-system.pages.dev ✅ **LIVE (v8.8.0)**
-- **최신 배포**: https://f1a2fc4e.exit-system.pages.dev (Production)
+- **프로덕션 URL**: https://exit-system.pages.dev ✅ **LIVE (v9.0)**
+- **최신 배포**: https://ac655732.exit-system.pages.dev (Production)
 - **데모 계정**: admin@prison-books.kr / admin123
 - **Cloudflare Pages**: exit-system
-- **D1 Database**: exit-system-production (12 migrations)
+- **D1 Database**: exit-system-production (13 migrations)
 - **R2 Storage**: exit-system-mailroom ✅ **활성화됨**
-- **Last Deployed**: 2026-02-08 06:50 UTC
-- **Build Size**: 454.08 kB (51 modules)
+- **Last Deployed**: 2026-02-08 07:30 UTC
+- **Build Size**: 489.84 kB (52 modules)
 - **Status**: 🟢 **All Systems Operational**
 
 ## 📋 프로젝트 개요
