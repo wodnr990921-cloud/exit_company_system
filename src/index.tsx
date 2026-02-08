@@ -207,36 +207,36 @@ app.get('/', (c) => {
             </nav>
         </div>
 
-        <!-- 네비게이션 (데스크톱) -->
-        <nav class="bg-white shadow-sm border-t border-gray-200">
+        <!-- 네비게이션 (데스크톱만 표시, 모바일은 햄버거 메뉴 사용) -->
+        <nav class="hidden md:block bg-white shadow-sm border-t border-gray-200">
             <div class="max-w-7xl mx-auto px-4">
                 <div class="flex space-x-2 overflow-x-auto">
                     <button onclick="showView('dashboard')" class="nav-item px-4 py-3 rounded-t-lg">
-                        <i class="fas fa-home mr-2"></i><span class="hidden sm:inline">대시보드</span>
+                        <i class="fas fa-home mr-2"></i>대시보드
                     </button>
                     <button onclick="showView('tickets')" class="nav-item px-4 py-3 rounded-t-lg">
-                        <i class="fas fa-ticket-alt mr-2"></i><span class="hidden sm:inline">티켓 관리</span>
+                        <i class="fas fa-ticket-alt mr-2"></i>티켓 관리
                     </button>
                     <button onclick="showView('members')" class="nav-item px-4 py-3 rounded-t-lg">
-                        <i class="fas fa-users mr-2"></i><span class="hidden sm:inline">회원 관리</span>
+                        <i class="fas fa-users mr-2"></i>회원 관리
                     </button>
                     <button onclick="showView('books')" class="nav-item px-4 py-3 rounded-t-lg">
-                        <i class="fas fa-book mr-2"></i><span class="hidden sm:inline">도서 관리</span>
+                        <i class="fas fa-book mr-2"></i>도서 관리
                     </button>
                     <button onclick="showView('mailroom')" class="nav-item px-4 py-3 rounded-t-lg">
-                        <i class="fas fa-envelope-open-text mr-2"></i><span class="hidden sm:inline">우편실</span>
+                        <i class="fas fa-envelope-open-text mr-2"></i>우편실
                     </button>
                     <button id="betting-nav" onclick="showView('betting')" class="nav-item px-4 py-3 rounded-t-lg hidden">
-                        <i class="fas fa-trophy mr-2"></i><span class="hidden sm:inline">배팅 관리</span>
+                        <i class="fas fa-trophy mr-2"></i>배팅 관리
                     </button>
                     <button id="staff-nav" onclick="showView('staff')" class="nav-item px-4 py-3 rounded-t-lg hidden">
-                        <i class="fas fa-user-tie mr-2"></i><span class="hidden sm:inline">직원 관리</span>
+                        <i class="fas fa-user-tie mr-2"></i>직원 관리
                     </button>
                     <button id="closing-nav" onclick="showView('closing')" class="nav-item px-4 py-3 rounded-t-lg hidden">
-                        <i class="fas fa-calculator mr-2"></i><span class="hidden sm:inline">일일 마감</span>
+                        <i class="fas fa-calculator mr-2"></i>일일 마감
                     </button>
                     <button id="modifications-nav" onclick="showView('modifications')" class="nav-item px-4 py-3 rounded-t-lg hidden">
-                        <i class="fas fa-check-circle mr-2"></i><span class="hidden sm:inline">수정 승인</span>
+                        <i class="fas fa-check-circle mr-2"></i>수정 승인
                     </button>
                 </div>
             </div>
@@ -4389,6 +4389,7 @@ console.log('권한 관리 함수 로드 완료')
 
         // 티켓 상세 모달 (배팅 폴더 포함)
         let currentTicketId = null
+        let currentTicket = null
         let selectedMatches = [] // 다폴더용 선택된 경기들
 
         // 티켓 이미지 뷰어 관련 변수
@@ -4696,6 +4697,7 @@ console.log('권한 관리 함수 로드 완료')
                 ])
 
                 const ticket = ticketRes.data.ticket
+                currentTicket = ticket // 전역 변수에 저장
                 const matches = matchesRes.data.matches || []
                 const staffList = staffRes.data.staff || []
 
