@@ -14,6 +14,7 @@ import staff_management from './routes/staff_management'
 import closing from './routes/closing'
 import mailroom from './routes/mailroom'
 import notifications from './routes/notifications'
+import modifications from './routes/modifications'
 
 type Bindings = {
   DB: D1Database
@@ -41,6 +42,7 @@ app.route('/api/staff', staff_management)
 app.route('/api/closing', closing)
 app.route('/api/mailroom', mailroom)
 app.route('/api/notifications', notifications)
+app.route('/api/modifications', modifications)
 
 // 메인 페이지
 app.get('/', (c) => {
@@ -197,6 +199,9 @@ app.get('/', (c) => {
                 <button id="closing-nav-mobile" onclick="showView('closing'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
                     <i class="fas fa-calculator mr-3 w-5"></i>일일 마감
                 </button>
+                <button id="modifications-nav-mobile" onclick="showView('modifications'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
+                    <i class="fas fa-check-circle mr-3 w-5"></i>수정 승인
+                </button>
             </nav>
         </div>
 
@@ -227,6 +232,9 @@ app.get('/', (c) => {
                     </button>
                     <button id="closing-nav" onclick="showView('closing')" class="nav-item px-4 py-3 rounded-t-lg hidden">
                         <i class="fas fa-calculator mr-2"></i><span class="hidden sm:inline">일일 마감</span>
+                    </button>
+                    <button id="modifications-nav" onclick="showView('modifications')" class="nav-item px-4 py-3 rounded-t-lg hidden">
+                        <i class="fas fa-check-circle mr-2"></i><span class="hidden sm:inline">수정 승인</span>
                     </button>
                 </div>
             </div>
@@ -2166,6 +2174,29 @@ app.get('/', (c) => {
 
     </div>
 
+    <!-- 수정 승인 뷰 (Admin 전용) -->
+    <div id="modifications-view" class="view-content hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div class="mb-6 sm:mb-8">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800"><i class="fas fa-check-circle mr-3"></i>수정 승인 관리</h2>
+                <p class="text-gray-600 mt-2">직원의 수정 요청을 승인하거나 거부합니다</p>
+            </div>
+
+            <!-- 대기중인 수정 요청 -->
+            <div class="card mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold"><i class="fas fa-clock mr-2"></i>승인 대기 (<span id="pending-count">0</span>)</h3>
+                    <button onclick="loadPendingModifications()" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-sync mr-2"></i>새로고침
+                    </button>
+                </div>
+                <div id="pending-modifications-list">
+                    <p class="text-gray-500 text-center py-8">로딩중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     <script>
@@ -2271,9 +2302,13 @@ function initializePermissions() {
   setElementPermission('betting-nav', ROLES.ADMIN)
   setElementPermission('staff-nav', ROLES.ADMIN)
   setElementPermission('closing-nav', ROLES.ADMIN)
+  setElementPermission('modifications-nav', ROLES.ADMIN)
   
   // Admin 전용 메뉴 (모바일)
   setElementPermission('betting-nav-mobile', ROLES.ADMIN)
+  setElementPermission('staff-nav-mobile', ROLES.ADMIN)
+  setElementPermission('closing-nav-mobile', ROLES.ADMIN)
+  setElementPermission('modifications-nav-mobile', ROLES.ADMIN)
   setElementPermission('staff-nav-mobile', ROLES.ADMIN)
   setElementPermission('closing-nav-mobile', ROLES.ADMIN)
   
@@ -2462,6 +2497,7 @@ console.log('권한 관리 함수 로드 완료')
             else if (view === 'betting') loadBetting()
             else if (view === 'staff') loadStaff()
             else if (view === 'closing') loadClosing()
+            else if (view === 'modifications') loadPendingModifications()
         }
 
         // 대시보드 로드
@@ -6776,6 +6812,96 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 alert('직원 삭제 실패: ' + (error.response?.data?.error || error.message))
             }
+        }
+
+        // ==================== 수정 승인 시스템 ====================
+        
+        async function loadPendingModifications() {
+            try {
+                const response = await axios.get(\`\${API_BASE}/modifications/pending\`)
+                const requests = response.data.requests || []
+                
+                document.getElementById('pending-count').textContent = requests.length
+                
+                const container = document.getElementById('pending-modifications-list')
+                
+                if (requests.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">승인 대기중인 수정 요청이 없습니다.</p>'
+                    return
+                }
+                
+                container.innerHTML = requests.map(req => \`
+                    <div class="border rounded-lg p-4 mb-3 hover:bg-gray-50">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="font-medium text-blue-600">\${getTargetTypeText(req.target_type)}</span>
+                                <span class="text-gray-400 mx-2">|</span>
+                                <span class="text-gray-600">\${req.field_name}</span>
+                            </div>
+                            <span class="text-xs text-gray-500">\${new Date(req.created_at).toLocaleString()}</span>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-3 rounded mb-3">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-1">이전 값</p>
+                                    <p class="font-mono text-sm text-red-600">\${req.old_value || '(없음)'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-1">새로운 값</p>
+                                    <p class="font-mono text-sm text-green-600">\${req.new_value}</p>
+                                </div>
+                            </div>
+                            \${req.reason ? \`<p class="text-sm text-gray-600 mt-2"><strong>사유:</strong> \${req.reason}</p>\` : ''}
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">
+                                <i class="fas fa-user mr-1"></i>\${req.requester_name} (\${req.requester_role === 'staff' ? '직원' : '관리자'})
+                            </span>
+                            <div class="flex space-x-2">
+                                <button onclick="reviewModification(\${req.id}, 'approve')" class="btn btn-sm btn-success">
+                                    <i class="fas fa-check mr-1"></i>승인
+                                </button>
+                                <button onclick="reviewModification(\${req.id}, 'reject')" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-times mr-1"></i>거부
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                \`).join('')
+            } catch (error) {
+                console.error('수정 요청 로드 오류:', error)
+                document.getElementById('pending-modifications-list').innerHTML = 
+                    '<p class="text-red-500 text-center py-8">로드 실패</p>'
+            }
+        }
+        
+        async function reviewModification(requestId, action) {
+            if (!confirm(\`이 수정 요청을 \${action === 'approve' ? '승인' : '거부'}하시겠습니까?\`)) return
+            
+            try {
+                await axios.post(\`\${API_BASE}/modifications/\${requestId}/review\`, {
+                    action: action,
+                    reviewed_by: currentStaff.id
+                })
+                
+                alert(action === 'approve' ? '수정이 승인되고 적용되었습니다.' : '수정 요청이 거부되었습니다.')
+                await loadPendingModifications()
+            } catch (error) {
+                alert('처리 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        function getTargetTypeText(type) {
+            const typeMap = {
+                'member': '회원',
+                'book': '도서',
+                'ticket': '티켓',
+                'match': '경기',
+                'staff': '직원'
+            }
+            return typeMap[type] || type
         }
     </script>
 </body>
