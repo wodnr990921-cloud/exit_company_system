@@ -6917,7 +6917,7 @@ console.log('권한 관리 함수 로드 완료')
         // ==================== 티켓 아이템 시스템 (장바구니) ====================
         
         let currentRequestType = null
-        let selectedMatches = []
+        // selectedMatches는 이미 위에서 선언됨 (라인 4392)
         let selectedBook = null
 
         // 요청사항 추가 모달 열기
@@ -7112,23 +7112,6 @@ console.log('권한 관리 함수 로드 완료')
                         odds: parseFloat(checkbox.dataset.odds),
                         teams: checkbox.dataset.teams,
                         line: checkbox.dataset.line ? parseFloat(checkbox.dataset.line) : null
-                    })
-                }
-            } else {
-                // 선택 해제
-                selectedMatches = selectedMatches.filter(m => 
-                    !(m.match_id === matchId && m.selected_outcome === checkbox.dataset.outcome)
-                )
-            }
-            
-            updateModalPotentialWin()
-        }
-                    selectedMatches = selectedMatches.filter(m => m.match_id !== matchId)
-                    selectedMatches.push({
-                        match_id: matchId,
-                        selected_outcome: checkbox.dataset.outcome,
-                        odds: parseFloat(checkbox.dataset.odds),
-                        teams: checkbox.dataset.teams
                     })
                 }
             } else {
