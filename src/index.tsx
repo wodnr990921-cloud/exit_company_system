@@ -6025,8 +6025,6 @@ console.log('권한 관리 함수 로드 완료')
         }
 
 
-        // ==================== 우편실 관리 ====================
-        
         let uploadedImageKeys = [] // 업로드된 이미지 키 저장
         let selectedMailItems = [] // 검수 시 선택된 우편물들
         

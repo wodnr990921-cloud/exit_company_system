@@ -204,8 +204,11 @@ points.post('/adjust', requireRole(ROLES.STAFF), async (c) => {
       return c.json({ error: '회원을 찾을 수 없습니다.' }, 404)
     }
 
+    // transaction_type에 따라 부호 결정
+    // 'add': 양수 (지급)
+    // 'deduct', 'use', 'adjust': 음수 (차감)
     let finalAmount = amount
-    if (transaction_type === 'use' || transaction_type === 'adjust') {
+    if (transaction_type === 'deduct' || transaction_type === 'use' || transaction_type === 'adjust') {
       finalAmount = -Math.abs(amount)
     } else {
       finalAmount = Math.abs(amount)
