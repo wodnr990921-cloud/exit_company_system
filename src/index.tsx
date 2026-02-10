@@ -6861,6 +6861,25 @@ console.log('권한 관리 함수 로드 완료')
                     const mailroomId = response.data.mailroom_id
                     const mailNumber = response.data.mail_number
                     
+                    // 임시 티켓 자동 생성
+                    try {
+                        const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
+                            member_id: null,  // 미지정
+                            staff_id: null,   // 담당자 미배정
+                            ticket_type: 'mailroom',
+                            priority: 'normal',
+                            title: \`[임시] 우편물 \${mailNumber}\`,
+                            description: \`우편물 자동 등록\\n번호: \${mailNumber}\\n상태: OCR 처리 대기 중\`,
+                            status: 'pending',
+                            mailroom_id: mailroomId
+                        })
+                        
+                        console.log('임시 티켓 생성됨:', ticketRes.data.ticket.ticket_number)
+                    } catch (ticketError) {
+                        console.error('임시 티켓 생성 실패:', ticketError)
+                        // 티켓 생성 실패해도 우편물 등록은 성공이므로 계속 진행
+                    }
+                    
                     // OCR 처리 시작 (비동기)
                     updateLoadingModal(loadingModal, files.length, files.length, 'OCR 처리 시작 중...')
                     
@@ -7220,64 +7239,69 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
             
-            const name = document.getElementById('inspection-name').value
-            const number = document.getElementById('inspection-number').value
-            const institution = document.getElementById('inspection-institution').value
-            const mailboxAddress = document.getElementById('inspection-address').value
-            const notes = document.getElementById('inspection-notes').value
-            
-            if (!name || !number) {
-                alert('발신자 이름과 수용번호를 입력해주세요.')
-                return
-            }
+            const name = document.getElementById('inspection-name').value.trim()
+            const number = document.getElementById('inspection-number').value.trim()
+            const institution = document.getElementById('inspection-institution').value.trim()
+            const mailboxAddress = document.getElementById('inspection-address').value.trim()
+            const notes = document.getElementById('inspection-notes').value.trim()
             
             try {
-                // 1. 회원 검색 또는 생성
-                const membersRes = await axios.get(\`\${API_BASE}/members?search=\${number}\`)
-                const members = membersRes.data.members || []
+                let memberId = null
+                let memberName = '미지정'
                 
-                let memberId
-                
-                if (members.length === 0) {
-                    // 신규 회원 등록
-                    const confirmCreate = window.confirm(\`수용번호 "\${number}"를 찾을 수 없습니다.\\n\\n신규 회원으로 등록하시겠습니까?\`)
-                    if (!confirmCreate) return
+                // 회원 정보가 있으면 처리
+                if (name && number) {
+                    // 1. 회원 검색
+                    const membersRes = await axios.get(\`\${API_BASE}/members?search=\${number}\`)
+                    const members = membersRes.data.members || []
                     
-                    const newMemberRes = await axios.post(\`\${API_BASE}/members\`, {
-                        name,
-                        member_number: number,
-                        inmate_number: number,
-                        institution: institution || '미지정',
-                        mailbox_address: mailboxAddress || '',
-                        depositor_name: name,
-                        status: 'active',
-                        notes: '우편물 검수에서 자동 등록'
-                    })
-                    
-                    memberId = newMemberRes.data.member.id
-                    alert(\`신규 회원이 등록되었습니다: \${name}\`)
-                } else {
-                    memberId = members[0].id
+                    if (members.length === 0) {
+                        // 신규 회원 등록
+                        const confirmCreate = window.confirm(\`수용번호 "\${number}"를 찾을 수 없습니다.\\n\\n신규 회원으로 등록하시겠습니까?\\n\\n(취소 시 미지정 회원으로 처리됩니다)\`)
+                        
+                        if (confirmCreate) {
+                            const newMemberRes = await axios.post(\`\${API_BASE}/members\`, {
+                                name,
+                                member_number: number,
+                                inmate_number: number,
+                                institution: institution || '미지정',
+                                mailbox_address: mailboxAddress || '',
+                                depositor_name: name,
+                                status: 'active',
+                                notes: '우편물 검수에서 자동 등록'
+                            })
+                            
+                            memberId = newMemberRes.data.member.id
+                            memberName = name
+                            alert(\`신규 회원이 등록되었습니다: \${name}\`)
+                        }
+                    } else {
+                        // 기존 회원 매칭
+                        memberId = members[0].id
+                        memberName = members[0].name
+                    }
                 }
                 
                 // 2. 우편물 정보 업데이트
                 await axios.put(\`\${API_BASE}/mailroom/\${currentInspectionId}\`, {
                     member_id: memberId,
-                    member_name: name,
-                    member_number: number,
-                    institution: institution,
+                    member_name: memberName,
+                    member_number: number || '',
+                    institution: institution || '',
                     notes: notes,
                     status: 'assigned'
                 })
                 
-                // 3. 티켓 생성 및 확정
+                // 3. 티켓 생성 및 확정 (임시 티켓 → 정식 티켓)
                 const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
-                    member_id: memberId,
+                    member_id: memberId,  // null 가능 (미지정)
                     staff_id: parseInt(staffId),
                     ticket_type: 'mailroom',
                     priority: 'normal',
-                    title: \`우편물 처리: \${name}\`,
-                    description: \`우편물 검수 완료\\n발신자: \${name}\\n수용번호: \${number}\\n기관: \${institution}\`,
+                    title: \`우편물 처리: \${memberName}\`,
+                    description: memberId 
+                        ? \`우편물 검수 완료\\n발신자: \${name}\\n수용번호: \${number}\\n기관: \${institution}\`
+                        : \`우편물 검수 완료\\n회원: 미지정\\n담당자가 추후 회원을 연결해주세요.\`,
                     status: 'in_progress'
                 })
                 
@@ -7289,7 +7313,11 @@ console.log('권한 관리 함수 로드 완료')
                     ticket_id: ticketRes.data.ticket.id
                 })
                 
-                alert(\`담당자 배정 완료!\\n\\n티켓 번호: \${ticketNumber}\\n담당자가 배정되었습니다.\`)
+                const message = memberId 
+                    ? \`담당자 배정 완료!\\n\\n티켓 번호: \${ticketNumber}\\n회원: \${memberName}\\n담당자가 배정되었습니다.\`
+                    : \`담당자 배정 완료!\\n\\n티켓 번호: \${ticketNumber}\\n회원: 미지정\\n\\n담당자가 티켓 상세에서 회원을 등록할 수 있습니다.\`
+                
+                alert(message)
                 
                 closeInspectionDetail()
                 await loadProcessedMail()
