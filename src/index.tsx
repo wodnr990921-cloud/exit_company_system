@@ -61,6 +61,12 @@ app.get('/', (c) => {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
+        /* 데스크톱 네비게이션 강제 표시 */
+        @media (min-width: 768px) {
+            nav.hidden.md\:block {
+                display: block !important;
+            }
+        }
         .hidden { display: none !important; }
         .loading { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
