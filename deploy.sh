@@ -16,7 +16,7 @@ if [ -z "$1" ]; then
 fi
 
 COMMIT_MESSAGE="$1"
-CLOUDFLARE_API_TOKEN="GmLjbrVQa6y7pupsPiS4plyhNqHAz1U6BliHpHpi"
+# API Token은 환경 변수에서 자동 로드됨 ($CLOUDFLARE_API_TOKEN)
 
 # 1. Git 커밋 및 푸시
 echo "📝 Step 1/4: Git 커밋 및 푸시..."
@@ -39,7 +39,7 @@ echo ""
 
 # 3. Cloudflare 배포
 echo "☁️  Step 3/4: Cloudflare Pages 배포..."
-CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" npx wrangler pages deploy dist --project-name exit-system
+CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" npx wrangler pages deploy dist --project-name exit-company-system
 
 echo ""
 echo "✅ Cloudflare 배포 완료!"

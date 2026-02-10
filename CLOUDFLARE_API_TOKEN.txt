@@ -1,0 +1,18 @@
+Cloudflare API Token
+====================
+
+Token: GmLjbrVQa6y7pupsPiS4plyhNqHAz1U6BliHpHpi
+
+이 토큰은 다음 위치에 저장되어 있습니다:
+- ~/.bashrc (환경 변수로 자동 로드)
+- /home/user/webapp/.env
+- /home/user/webapp/CLOUDFLARE_API_TOKEN.txt (이 파일)
+
+사용법:
+- 자동: 새 터미널을 열면 $CLOUDFLARE_API_TOKEN 환경 변수로 사용 가능
+- 수동: export CLOUDFLARE_API_TOKEN="GmLjbrVQa6y7pupsPiS4plyhNqHAz1U6BliHpHpi"
+
+배포 명령:
+cd /home/user/webapp
+npm run build
+npx wrangler pages deploy dist --project-name exit-company-system
