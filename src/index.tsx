@@ -6338,8 +6338,9 @@ console.log('권한 관리 함수 로드 완료')
                 items.map(item => {
                     const imageKeys = item.image_keys ? JSON.parse(item.image_keys) : []
                     const firstImage = imageKeys[0] || null
-                    const ocrResult = item.ocr_result ? JSON.parse(item.ocr_result) : {}
-                    const ocrText = ocrResult.text || '없음'
+                    const ocrData = item.ocr_result ? JSON.parse(item.ocr_result) : {}
+                    const ocrResults = ocrData.results || []
+                    const ocrText = ocrResults.length > 0 && ocrResults[0].text ? ocrResults[0].text.substring(0, 100) : '없음'
                     
                     return \`
                         <div class="card cursor-pointer hover:shadow-lg transition-shadow" onclick="showInspectionDetail(\${item.id})">
