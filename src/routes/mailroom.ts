@@ -240,15 +240,26 @@ mailroom.post('/ocr-simple', async (c) => {
     const imageBuffer = await object.arrayBuffer()
     
     // Cloudflare AI Workers로 OCR 실행
-    const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
-      image: Array.from(new Uint8Array(imageBuffer)),
-      messages: [{
-        role: "user",
-        content: "이 이미지는 편지 봉투입니다. 수신자 이름, 번호, 기관명을 추출해주세요. 모든 텍스트를 그대로 출력해주세요."
-      }]
-    })
+    let text = ''
     
-    const text = aiResponse?.response || ''
+    try {
+      if (!c.env.AI) {
+        throw new Error('AI binding is not configured')
+      }
+      
+      const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
+        image: Array.from(new Uint8Array(imageBuffer)),
+        messages: [{
+          role: "user",
+          content: "이 이미지는 편지 봉투입니다. 수신자 이름, 번호, 기관명을 추출해주세요. 모든 텍스트를 그대로 출력해주세요."
+        }]
+      })
+      
+      text = aiResponse?.response || ''
+    } catch (aiError: any) {
+      console.error('AI OCR error:', aiError)
+      text = `[OCR 실패: Workers AI를 사용할 수 없습니다. Cloudflare Dashboard에서 Workers AI를 활성화해주세요.]`
+    }
     
     return c.json({ 
       success: true,
@@ -306,17 +317,28 @@ mailroom.post('/:id/ocr', async (c) => {
         
         // Cloudflare AI Workers로 OCR 실행
         // 모델: @cf/meta/llama-3.2-11b-vision-instruct (최신 Vision 모델)
-        const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
-          image: Array.from(new Uint8Array(imageBuffer)),
-          messages: [{
-            role: "user",
-            content: "이 이미지의 모든 텍스트를 정확하게 추출해주세요. 한글, 영어, 숫자를 모두 인식하고, 발신자, 수신자, 주소, 우편번호 등의 정보도 구분해서 추출해주세요."
-          }],
-          max_tokens: 512
-        })
+        let extractedText = ''
         
-        // OCR 결과 파싱
-        const extractedText = aiResponse?.response || aiResponse?.description || aiResponse?.text || ''
+        try {
+          if (!c.env.AI) {
+            throw new Error('AI binding is not configured. Please set up Workers AI in wrangler.toml')
+          }
+          
+          const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
+            image: Array.from(new Uint8Array(imageBuffer)),
+            messages: [{
+              role: "user",
+              content: "이 이미지의 모든 텍스트를 정확하게 추출해주세요. 한글, 영어, 숫자를 모두 인식하고, 발신자, 수신자, 주소, 우편번호 등의 정보도 구분해서 추출해주세요."
+            }],
+            max_tokens: 512
+          })
+          
+          // OCR 결과 파싱
+          extractedText = aiResponse?.response || aiResponse?.description || aiResponse?.text || ''
+        } catch (aiError: any) {
+          console.error(`AI OCR error for ${key}:`, aiError)
+          extractedText = `[AI OCR 실패: ${aiError.message || 'Workers AI 권한이 필요합니다'}]`
+        }
         
         // 봉투 감지 (간단한 키워드 기반)
         const hasEnvelope = detectEnvelope(extractedText)
