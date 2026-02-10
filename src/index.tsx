@@ -6899,7 +6899,25 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
                 
-                container.innerHTML = items.map(item => {
+                // 일괄 배당 버튼 표시 (items 렌더링 전에 추가)
+                let headerHTML = ''
+                if (selectedMailItems.length > 0) {
+                    headerHTML = \`
+                        <div class="mb-4 bg-blue-50 p-3 rounded flex justify-between items-center">
+                            <span>\${selectedMailItems.length}개 우편물 선택됨</span>
+                            <div class="flex gap-2">
+                                <button onclick="deleteSelectedMail()" class="btn btn-danger btn-sm" data-permission="admin">
+                                    <i class="fas fa-trash mr-1"></i>선택 삭제
+                                </button>
+                                <button onclick="assignSelectedMail()" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-share mr-1"></i>일괄 배당
+                                </button>
+                            </div>
+                        </div>
+                    \`
+                }
+                
+                const itemsHTML = items.map(item => {
                     const ocrData = item.ocr_result ? JSON.parse(item.ocr_result) : {}
                     const ocrResults = ocrData.results || []
                     const hasEnvelope = ocrData.has_envelope || false
@@ -6933,17 +6951,8 @@ console.log('권한 관리 함수 로드 완료')
                     \`
                 }).join('')
                 
-                // 일괄 배당 버튼 표시
-                if (selectedMailItems.length > 0) {
-                    container.insertAdjacentHTML('beforebegin', \`
-                        <div class="mb-4 bg-blue-50 p-3 rounded flex justify-between items-center">
-                            <span>\${selectedMailItems.length}개 우편물 선택됨</span>
-                            <button onclick="assignSelectedMail()" class="btn btn-primary btn-sm">
-                                <i class="fas fa-share mr-1"></i>일괄 배당
-                            </button>
-                        </div>
-                    \`)
-                }
+                container.innerHTML = headerHTML + itemsHTML
+                
             } catch (error) {
                 console.error('처리 완료 우편물 로드 오류:', error)
             }
@@ -7098,59 +7107,140 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
         
-        // 선택된 우편물 일괄 배당
+        // 선택된 우편물 일괄 배당 (직원 선택 모달)
         async function assignSelectedMail() {
             if (selectedMailItems.length === 0) {
                 alert('선택된 우편물이 없습니다.')
                 return
             }
             
-            // 회원 선택 모달 표시
-            const memberName = prompt(\`회원 이름 또는 회원번호를 입력하세요:\n\n\${selectedMailItems.length}개 우편물을 일괄 배당하고 티켓을 자동 생성합니다.\`)
-            if (!memberName) return
-            
             try {
-                // 회원 검색
-                const membersRes = await axios.get(\`\${API_BASE}/members?search=\${memberName}\`)
-                const members = membersRes.data.members || []
+                // 직원 목록 조회
+                const staffRes = await axios.get(\`\${API_BASE}/staff\`)
+                const staffList = staffRes.data.staff || []
                 
-                if (members.length === 0) {
-                    alert('해당 회원을 찾을 수 없습니다.')
+                if (staffList.length === 0) {
+                    alert('담당자를 찾을 수 없습니다.')
                     return
                 }
                 
-                const member = members[0]
-                const confirmMsg = \`\${selectedMailItems.length}개 우편물을 다음 회원에게 배당하시겠습니까?\n\n` +
-                    `회원: \${member.name} (\${member.member_number})\n` +
-                    `기관: \${member.institution}\n` +
-                    `수감번호: \${member.inmate_number || '-'}\n\n` +
-                    `✅ 자동으로 티켓이 생성됩니다.\`
+                // 직원 선택 HTML 생성
+                const staffOptions = staffList.map(s => 
+                    \`<option value="\${s.id}">\${s.name} (\${s.role === 'admin' ? '관리자' : s.role === 'staff' ? '직원' : '뷰어'})</option>\`
+                ).join('')
                 
-                if (!confirm(confirmMsg)) return
+                // 직원 선택 모달 생성
+                const modalHTML = \`
+                    <div id="staff-select-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                        <div class="bg-white rounded-lg max-w-md w-full p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold">
+                                    <i class="fas fa-user-check mr-2"></i>담당자 선택
+                                </h3>
+                                <button onclick="closeStaffSelectModal()" class="text-gray-500 hover:text-gray-700">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
+                            
+                            <p class="text-gray-600 mb-4">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                선택된 <strong>\${selectedMailItems.length}개</strong> 우편물을 담당자에게 배당합니다.
+                            </p>
+                            
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-2">담당자</label>
+                                <select id="selected-staff-id" class="w-full px-3 py-2 border rounded">
+                                    <option value="">-- 담당자 선택 --</option>
+                                    \${staffOptions}
+                                </select>
+                            </div>
+                            
+                            <div class="flex gap-2">
+                                <button onclick="closeStaffSelectModal()" class="btn btn-secondary flex-1">
+                                    취소
+                                </button>
+                                <button onclick="confirmStaffAssign()" class="btn btn-primary flex-1">
+                                    <i class="fas fa-check mr-1"></i>배당
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                \`
                 
-                // 일괄 배당 및 티켓 생성 API 호출
-                const response = await axios.post(\`\${API_BASE}/mailroom/batch-assign\`, {
+                // 모달 추가
+                document.body.insertAdjacentHTML('beforeend', modalHTML)
+                
+            } catch (error) {
+                console.error('직원 목록 조회 오류:', error)
+                alert('직원 목록을 불러올 수 없습니다.')
+            }
+        }
+        
+        // 직원 선택 모달 닫기
+        function closeStaffSelectModal() {
+            const modal = document.getElementById('staff-select-modal')
+            if (modal) modal.remove()
+        }
+        
+        // 직원 배당 확인
+        async function confirmStaffAssign() {
+            const staffId = document.getElementById('selected-staff-id').value
+            
+            if (!staffId) {
+                alert('담당자를 선택해주세요.')
+                return
+            }
+            
+            try {
+                // 일괄 배당 API 호출
+                const response = await axios.post(\`\${API_BASE}/mailroom/bulk-dispatch\`, {
                     mailroom_ids: selectedMailItems,
-                    member_id: member.id,
-                    staff_id: currentStaff.id
+                    assigned_to: parseInt(staffId)
                 })
                 
-                const { tickets, count } = response.data
+                const { count } = response.data
                 
-                alert(\`✅ 배당 완료!\n\n` +
-                    `- 우편물: \${count}개\n` +
-                    `- 회원: \${member.name}\n` +
-                    `- 생성된 티켓: \${count}개\n\n` +
-                    `티켓 번호: \${tickets.map(t => t.ticket_number).join(', ')}\`)
+                alert(\`✅ 배당 완료!\\n\\n- 우편물: \${count}개\\n- 담당자에게 배당되었습니다.\`)
                 
                 selectedMailItems = []
-                await loadPendingMail()
+                closeStaffSelectModal()
                 await loadProcessedMail()
-                await loadMailHistory()
                 
             } catch (error) {
                 console.error('일괄 배당 오류:', error)
                 alert('배당 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        // 선택된 우편물 삭제
+        async function deleteSelectedMail() {
+            if (!isAdmin()) {
+                alert('우편물 삭제는 관리자만 가능합니다.')
+                return
+            }
+            
+            if (selectedMailItems.length === 0) {
+                alert('선택된 우편물이 없습니다.')
+                return
+            }
+            
+            const confirmMsg = \`선택된 \${selectedMailItems.length}개 우편물을 삭제하시겠습니까?\\n\\n⚠️ 이 작업은 되돌릴 수 없습니다!\`
+            if (!confirm(confirmMsg)) return
+            
+            try {
+                // 각 우편물 삭제
+                for (const mailId of selectedMailItems) {
+                    await axios.delete(\`\${API_BASE}/mailroom/\${mailId}\`)
+                }
+                
+                alert(\`✅ \${selectedMailItems.length}개 우편물이 삭제되었습니다.\`)
+                
+                selectedMailItems = []
+                await loadProcessedMail()
+                
+            } catch (error) {
+                console.error('우편물 삭제 오류:', error)
+                alert('삭제 실패: ' + (error.response?.data?.error || error.message))
             }
         }
         
