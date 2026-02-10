@@ -6018,8 +6018,10 @@ console.log('권한 관리 함수 로드 완료')
             displayImagePreviews()
             
             if (uploadedMailImages.length === 0) {
-                document.getElementById('process-mail-btn').disabled = true
-                document.getElementById('bulk-register-btn').disabled = true
+                const processBtn = document.getElementById('process-mail-btn')
+                const bulkBtn = document.getElementById('bulk-register-btn')
+                if (processBtn) processBtn.disabled = true
+                if (bulkBtn) bulkBtn.disabled = true
             }
         }
 
@@ -6054,7 +6056,8 @@ console.log('권한 관리 함수 로드 완료')
                 uploadedMailImages = []
                 displayImagePreviews()
                 document.getElementById('mail-images').value = ''
-                document.getElementById('process-mail-btn').disabled = true
+                const processBtn = document.getElementById('process-mail-btn')
+                if (processBtn) processBtn.disabled = true
                 
                 // 목록 새로고침
                 await loadPendingMail()
@@ -6154,7 +6157,8 @@ console.log('권한 관리 함수 로드 완료')
                 uploadedMailImages = []
                 displayImagePreviews()
                 document.getElementById('mail-images').value = ''
-                document.getElementById('process-mail-btn').disabled = true
+                const processBtn = document.getElementById('process-mail-btn')
+                if (processBtn) processBtn.disabled = true
                 document.getElementById('bulk-register-btn').disabled = true
                 closeBulkRegisterModal()
 
@@ -6224,7 +6228,7 @@ console.log('권한 관리 함수 로드 완료')
                         <div class="card">
                             <div class="flex gap-4">
                                 \${firstImage ? \`
-                                    <img src="https://pub-YOUR_BUCKET.r2.dev/\${firstImage}" 
+                                    <img src="${API_BASE}/mailroom/image/\${firstImage}" 
                                          class="w-24 h-24 object-cover rounded cursor-pointer"
                                          onclick="viewMailImages(\${item.id})">
                                 \` : \`
@@ -6339,7 +6343,7 @@ console.log('권한 관리 함수 로드 완료')
                     return \`
                         <div class="card cursor-pointer hover:shadow-lg transition-shadow" onclick="showInspectionDetail(\${item.id})">
                             \${firstImage ? \`
-                                <img src="https://pub-YOUR_BUCKET.r2.dev/\${firstImage}" 
+                                <img src="${API_BASE}/mailroom/image/\${firstImage}" 
                                      class="w-full h-48 object-cover rounded-t mb-3">
                             \` : \`
                                 <div class="w-full h-48 bg-gray-200 rounded-t mb-3 flex items-center justify-center">
@@ -6856,7 +6860,8 @@ console.log('권한 관리 함수 로드 완료')
             
             // 이미지가 없으면 처리 버튼 비활성화
             if (uploadedImageKeys.length === 0) {
-                document.getElementById('process-mail-btn').disabled = true
+                const processBtn = document.getElementById('process-mail-btn')
+                if (processBtn) processBtn.disabled = true
             }
         }
         
@@ -6889,7 +6894,8 @@ console.log('권한 관리 함수 로드 완료')
                     // 초기화
                     uploadedImageKeys = []
                     document.getElementById('uploaded-images-preview').innerHTML = ''
-                    document.getElementById('process-mail-btn').disabled = true
+                    const processBtn = document.getElementById('process-mail-btn')
+                    if (processBtn) processBtn.disabled = true
                     
                     // 목록 새로고침
                     await loadPendingMail()
@@ -6951,8 +6957,9 @@ console.log('권한 관리 함수 로드 완료')
                 }
                 
                 container.innerHTML = items.map(item => {
-                    const ocrResult = item.ocr_result ? JSON.parse(item.ocr_result) : []
-                    const hasEnvelope = ocrResult.some(r => r.has_envelope)
+                    const ocrData = item.ocr_result ? JSON.parse(item.ocr_result) : {}
+                    const ocrResults = ocrData.results || []
+                    const hasEnvelope = ocrData.has_envelope || false
                     
                     return \`
                         <div class="border rounded p-4 \${selectedMailItems.includes(item.id) ? 'bg-blue-50 border-blue-500' : ''}">

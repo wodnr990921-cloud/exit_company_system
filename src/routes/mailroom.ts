@@ -658,4 +658,29 @@ mailroom.post('/batch-assign', async (c) => {
   }
 })
 
+// 이미지 조회 API
+mailroom.get('/image/:key', async (c) => {
+  try {
+    const key = c.req.param('key')
+    
+    // R2에서 이미지 조회
+    const object = await c.env.R2.get(key)
+    
+    if (!object) {
+      return c.json({ error: '이미지를 찾을 수 없습니다.' }, 404)
+    }
+    
+    // 이미지 반환
+    return new Response(object.body, {
+      headers: {
+        'Content-Type': object.httpMetadata?.contentType || 'image/jpeg',
+        'Cache-Control': 'public, max-age=31536000'
+      }
+    })
+  } catch (error: any) {
+    console.error('이미지 조회 오류:', error)
+    return c.json({ error: '이미지 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 export default mailroom
