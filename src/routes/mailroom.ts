@@ -252,7 +252,16 @@ mailroom.post('/ocr-simple', async (c) => {
         prompt: "agree",
         messages: [{
           role: "user",
-          content: "이 이미지는 편지 봉투입니다. 수신자 이름, 번호, 기관명을 추출해주세요. 모든 텍스트를 그대로 출력해주세요."
+          content: `이 이미지를 분석하여 다음 정보를 추출해주세요:
+
+1. 이것이 편지 봉투인지 확인 ([ENVELOPE: YES/NO])
+2. 수신자 이름
+3. 수신자 번호 (전화번호, 수감번호 등)
+4. 기관명 (교도소, 구치소 등)
+5. 주소 (있는 경우)
+6. 기타 텍스트
+
+모든 텍스트를 정확하게 추출하고 구조화하여 제공해주세요.`
         }]
       })
       
@@ -331,7 +340,32 @@ mailroom.post('/:id/ocr', async (c) => {
             prompt: "agree",
             messages: [{
               role: "user",
-              content: "이 이미지의 모든 텍스트를 정확하게 추출해주세요. 한글, 영어, 숫자를 모두 인식하고, 발신자, 수신자, 주소, 우편번호 등의 정보도 구분해서 추출해주세요."
+              content: `당신은 우편물 분석 전문가입니다. 이 이미지를 분석하여 다음 정보를 제공해주세요:
+
+1. **봉투 여부 판단** (매우 중요!)
+   - 이것이 편지 봉투인지 확인하세요
+   - 봉투의 특징: 발신자/수신자 정보, 우표, 우편번호, 주소 등
+   - 판단 결과를 반드시 "[ENVELOPE: YES]" 또는 "[ENVELOPE: NO]"로 시작하세요
+
+2. **텍스트 추출**
+   - 이미지의 모든 텍스트를 정확하게 추출
+   - 한글, 영어, 숫자 모두 인식
+   - 발신자, 수신자, 주소, 우편번호를 구분하여 추출
+
+3. **구조화된 정보**
+   - 발신자 (보내는 사람)
+   - 수신자 (받는 사람)  
+   - 주소
+   - 우편번호
+   - 기타 텍스트
+
+응답 형식:
+[ENVELOPE: YES/NO]
+발신자: ...
+수신자: ...
+주소: ...
+우편번호: ...
+기타: ...`
             }],
             max_tokens: 512
           })
@@ -420,14 +454,30 @@ mailroom.post('/:id/ocr', async (c) => {
 
 // 봉투 감지 헬퍼 함수
 function detectEnvelope(text: string): boolean {
+  // 1. AI가 명시적으로 판단한 결과 확인
+  if (text.includes('[ENVELOPE: YES]')) {
+    return true
+  }
+  if (text.includes('[ENVELOPE: NO]')) {
+    return false
+  }
+  
+  // 2. 키워드 기반 감지 (폴백)
   const envelopeKeywords = [
     '발신', '수신', '우편번호', '주소', '보내는 사람', '받는 사람',
     '우표', '등기', '소인', 'sender', 'receiver', 'address', 'zip code',
-    '보낸이', '받는이', '주소:', '우편', '번지', '도로', '시', '구', '동'
+    '보낸이', '받는이', '주소:', '우편', '번지', '도로', '시', '구', '동',
+    '발신자', '수신자', '우편물', '우체국', '배달', '봉투'
   ]
   
   const lowerText = text.toLowerCase()
-  return envelopeKeywords.some(keyword => lowerText.includes(keyword.toLowerCase()))
+  
+  // 3. 강한 봉투 신호 (2개 이상 키워드)
+  const matchCount = envelopeKeywords.filter(keyword => 
+    lowerText.includes(keyword.toLowerCase())
+  ).length
+  
+  return matchCount >= 2
 }
 
 // 주소 정보 추출 헬퍼 함수
