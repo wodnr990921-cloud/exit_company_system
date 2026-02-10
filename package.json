@@ -7,7 +7,7 @@
     "dev:sandbox": "wrangler pages dev dist --d1=exit-system-production --local --ip 0.0.0.0 --port 3000",
     "build": "vite build",
     "preview": "wrangler pages dev",
-    "deploy": "npm run build && wrangler pages deploy dist --project-name exit-system",
+    "deploy": "wrangler pages deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:migrate:local": "wrangler d1 migrations apply exit-system-production --local",
     "db:migrate:prod": "wrangler d1 migrations apply exit-system-production",
