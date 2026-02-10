@@ -5761,9 +5761,32 @@ console.log('권한 관리 함수 로드 완료')
             const files = Array.from(event.target.files)
             if (files.length === 0) return
 
-            const uploadArea = document.querySelector('#mail-images').parentElement.parentElement
-            const originalHTML = uploadArea.innerHTML
-            uploadArea.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-4"></i><p class="text-gray-600">업로드 및 OCR 처리 중...</p><p class="text-sm text-gray-500 mt-2" id="upload-progress">0 / ' + files.length + '</p></div>'
+            // 업로드 영역 찾기
+            const fileInput = document.getElementById('mail-images')
+            if (!fileInput) {
+                alert('파일 입력 요소를 찾을 수 없습니다.')
+                return
+            }
+            
+            const uploadCard = fileInput.closest('.card')
+            if (!uploadCard) {
+                alert('업로드 카드를 찾을 수 없습니다.')
+                return
+            }
+            
+            const originalHTML = uploadCard.innerHTML
+            
+            // 로딩 표시
+            uploadCard.innerHTML = \`
+                <div class="text-center py-12">
+                    <i class="fas fa-spinner fa-spin text-5xl text-blue-500 mb-4"></i>
+                    <p class="text-lg text-gray-700 font-medium">업로드 및 OCR 처리 중...</p>
+                    <p class="text-sm text-gray-500 mt-2" id="upload-progress">0 / \${files.length}</p>
+                    <div class="mt-4 max-w-md mx-auto bg-gray-200 rounded-full h-2">
+                        <div id="upload-progress-bar" class="bg-blue-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                </div>
+            \`
 
             try {
                 for (let i = 0; i < files.length; i++) {
@@ -5771,7 +5794,11 @@ console.log('권한 관리 함수 로드 완료')
                     
                     // 진행 상황 표시
                     const progressEl = document.getElementById('upload-progress')
+                    const progressBar = document.getElementById('upload-progress-bar')
+                    const percent = Math.round(((i + 1) / files.length) * 100)
+                    
                     if (progressEl) progressEl.textContent = \`\${i + 1} / \${files.length}\`
+                    if (progressBar) progressBar.style.width = \`\${percent}%\`
                     
                     // 이미지 압축
                     const compressedFile = await compressImage(file)
@@ -5798,15 +5825,18 @@ console.log('권한 관리 함수 로드 완료')
                 
                 // 초기화
                 uploadedMailImages = []
-                document.getElementById('mail-images').value = ''
-                uploadArea.innerHTML = originalHTML
+                uploadCard.innerHTML = originalHTML
+                
+                // 파일 입력 초기화
+                const newFileInput = document.getElementById('mail-images')
+                if (newFileInput) newFileInput.value = ''
                 
                 // 검수 탭으로 이동
                 showMailroomTab('inspection')
             } catch (error) {
                 console.error('이미지 업로드 오류:', error)
                 alert('이미지 업로드 실패: ' + (error.response?.data?.error || error.message))
-                uploadArea.innerHTML = originalHTML
+                uploadCard.innerHTML = originalHTML
             }
         }
 
