@@ -252,16 +252,30 @@ mailroom.post('/ocr-simple', async (c) => {
         prompt: "agree",
         messages: [{
           role: "user",
-          content: `이 이미지를 분석하여 다음 정보를 추출해주세요:
+          content: `이 이미지에서 편지 봉투 정보를 추출하세요.
 
-1. 이것이 편지 봉투인지 확인 ([ENVELOPE: YES/NO])
-2. 수신자 이름
-3. 수신자 번호 (전화번호, 수감번호 등)
-4. 기관명 (교도소, 구치소 등)
-5. 주소 (있는 경우)
-6. 기타 텍스트
+**핵심 규칙**:
+1. 편지봉투는 반드시 이미지 상단(위쪽 1/3 영역)에만 위치합니다
+2. 이미지 중간이나 하단의 텍스트는 편지 내용이므로 무시하세요
+3. 발신자 정보만 추출하세요 (수신자 정보는 무시)
 
-모든 텍스트를 정확하게 추출하고 구조화하여 제공해주세요.`
+**추출할 정보** (이미지 상단에서만):
+- 발신자 성명
+- 수용기관: "OO 사서함"에서 앞의 OO 부분 (예: 서울, 안양, 의정부, 수원 등)
+- 수용번호: 5-6자리 숫자
+- 전체 주소
+
+**주소 형식 예시**:
+- "서울 사서함 123-12345"
+- "안양 사서함 456 (수용번호: 123456)"
+- "의정부 사서함 789-654321"
+
+**응답 형식** (정확히 따라주세요):
+[ENVELOPE: YES] (또는 [ENVELOPE: NO])
+발신자: 홍길동
+수용기관: 서울
+수용번호: 12345
+주소: 서울 사서함 123-12345`
         }]
       })
       
@@ -340,32 +354,36 @@ mailroom.post('/:id/ocr', async (c) => {
             prompt: "agree",
             messages: [{
               role: "user",
-              content: `당신은 우편물 분석 전문가입니다. 이 이미지를 분석하여 다음 정보를 제공해주세요:
+              content: `이 이미지에서 편지 봉투 정보를 추출하세요.
 
-1. **봉투 여부 판단** (매우 중요!)
-   - 이것이 편지 봉투인지 확인하세요
-   - 봉투의 특징: 발신자/수신자 정보, 우표, 우편번호, 주소 등
-   - 판단 결과를 반드시 "[ENVELOPE: YES]" 또는 "[ENVELOPE: NO]"로 시작하세요
+**핵심 규칙**:
+1. 편지봉투는 반드시 이미지 상단(위쪽 1/3 영역)에만 위치합니다
+2. 이미지 중간이나 하단의 텍스트는 편지 내용이므로 무시하세요
+3. 발신자 정보만 추출하세요 (수신자 정보는 무시)
 
-2. **텍스트 추출**
-   - 이미지의 모든 텍스트를 정확하게 추출
-   - 한글, 영어, 숫자 모두 인식
-   - 발신자, 수신자, 주소, 우편번호를 구분하여 추출
+**추출할 정보** (이미지 상단에서만):
+- 발신자 성명
+- 수용기관: "OO 사서함"에서 앞의 OO 부분 (예: 서울, 안양, 의정부, 수원 등)
+- 수용번호: 5-6자리 숫자
+- 전체 주소
 
-3. **구조화된 정보**
-   - 발신자 (보내는 사람)
-   - 수신자 (받는 사람)  
-   - 주소
-   - 우편번호
-   - 기타 텍스트
+**주소 형식 예시**:
+- "서울 사서함 123-12345"
+- "안양 사서함 456 (수용번호: 123456)"
+- "의정부 사서함 789-654321"
 
-응답 형식:
-[ENVELOPE: YES/NO]
-발신자: ...
-수신자: ...
-주소: ...
-우편번호: ...
-기타: ...`
+**응답 형식** (정확히 따라주세요):
+[ENVELOPE: YES] (또는 [ENVELOPE: NO])
+발신자: 홍길동
+수용기관: 서울
+수용번호: 12345
+주소: 서울 사서함 123-12345
+
+**판단 기준**:
+- 이미지 상단에 "사서함" 키워드가 있고
+- 발신자 성명이 있고  
+- 5-6자리 수용번호가 있으면 → [ENVELOPE: YES]
+- 그 외의 경우 → [ENVELOPE: NO]`
             }],
             max_tokens: 512
           })
@@ -380,11 +398,15 @@ mailroom.post('/:id/ocr', async (c) => {
         // 봉투 감지 (간단한 키워드 기반)
         const hasEnvelope = detectEnvelope(extractedText)
         
+        // 발신자 정보 추출
+        const senderInfo = hasEnvelope ? extractSenderInfo(extractedText) : null
+        
         ocrResults.push({
           image_key: key,
           text: extractedText,
           confidence: 0.90, // Llama 3.2 Vision은 고정밀 모델
           has_envelope: hasEnvelope,
+          sender_info: senderInfo,  // 발신자 정보 추가
           raw_response: aiResponse
         })
         
@@ -462,25 +484,110 @@ function detectEnvelope(text: string): boolean {
     return false
   }
   
-  // 2. 키워드 기반 감지 (폴백)
-  const envelopeKeywords = [
-    '발신', '수신', '우편번호', '주소', '보내는 사람', '받는 사람',
-    '우표', '등기', '소인', 'sender', 'receiver', 'address', 'zip code',
-    '보낸이', '받는이', '주소:', '우편', '번지', '도로', '시', '구', '동',
-    '발신자', '수신자', '우편물', '우체국', '배달', '봉투'
-  ]
-  
   const lowerText = text.toLowerCase()
   
-  // 3. 강한 봉투 신호 (2개 이상 키워드)
-  const matchCount = envelopeKeywords.filter(keyword => 
-    lowerText.includes(keyword.toLowerCase())
-  ).length
+  // 2. 사서함 주소 확인 (필수)
+  const hasMailbox = lowerText.includes('사서함') || 
+                     lowerText.includes('사 서') || 
+                     lowerText.includes('p.o. box')
   
-  return matchCount >= 2
+  // 3. 발신자 정보 확인
+  const hasSenderInfo = lowerText.includes('발신') || 
+                        lowerText.includes('보내는') ||
+                        lowerText.includes('sender') ||
+                        lowerText.includes('from')
+  
+  // 4. 수용번호 패턴 (5-6자리 숫자)
+  const hasInmateNumber = /\b\d{5,6}\b/.test(text)
+  
+  // 5. 강한 봉투 신호: 사서함 + (발신자 정보 또는 수용번호)
+  if (hasMailbox && (hasSenderInfo || hasInmateNumber)) {
+    return true
+  }
+  
+  // 6. 약한 신호: 수용기관 이름 + 사서함
+  const institutionKeywords = [
+    '교도소', '구치소', '교정', '수용',
+    '서울', '안양', '의정부', '수원', '청주', '대전', '대구', '부산'
+  ]
+  
+  const hasInstitution = institutionKeywords.some(keyword => 
+    lowerText.includes(keyword.toLowerCase())
+  )
+  
+  return hasMailbox && hasInstitution
 }
 
-// 주소 정보 추출 헬퍼 함수
+// 발신자 정보 추출 헬퍼 함수
+function extractSenderInfo(text: string): any {
+  const senderInfo: any = {}
+  
+  // 1. 발신자 이름 추출
+  const senderPatterns = [
+    /발신자:\s*([가-힣\s]+)/,
+    /발신:\s*([가-힣\s]+)/,
+    /보내는\s*사람:\s*([가-힣\s]+)/,
+    /보낸\s*사람:\s*([가-힣\s]+)/
+  ]
+  
+  for (const pattern of senderPatterns) {
+    const match = text.match(pattern)
+    if (match) {
+      senderInfo.sender_name = match[1].trim()
+      break
+    }
+  }
+  
+  // 2. 수용기관 추출 (사서함 앞의 지역명/기관명)
+  // "서울 사서함", "안양 사서함", "의정부 사서함" 등
+  const institutionPatterns = [
+    /수용기관:\s*([가-힣]+)/,              // 수용기관: 서울
+    /([가-힣]{2,4})\s*사서함/,              // 서울 사서함
+    /([가-힣]{2,4})\s*사\s*서/               // 서울 사 서 (띄어쓰기 오류 대응)
+  ]
+  
+  for (const pattern of institutionPatterns) {
+    const match = text.match(pattern)
+    if (match) {
+      senderInfo.institution = match[1].trim()
+      break
+    }
+  }
+  
+  // 3. 수용번호 추출 (5-6자리 숫자)
+  const inmateNumberPatterns = [
+    /수용번호:\s*(\d{5,6})/,                // 수용번호: 12345
+    /사서함\s*\d+\s*[-\(]\s*(\d{5,6})/,    // 사서함 123-12345 또는 사서함 123 (12345)
+    /[-\(]\s*(\d{5,6})\s*\)/,               // -12345) 또는 (12345)
+    /\((\d{5,6})\)/                         // (12345)
+  ]
+  
+  for (const pattern of inmateNumberPatterns) {
+    const match = text.match(pattern)
+    if (match) {
+      senderInfo.inmate_number = match[1]
+      break
+    }
+  }
+  
+  // 4. 전체 주소 추출
+  const addressPatterns = [
+    /주소:\s*([^\n]+)/,                     // 주소: 서울 사서함 123-12345
+    /([가-힣]{2,4}\s*사서함\s*[^\n]+)/      // 서울 사서함 123-12345 (라벨 없이)
+  ]
+  
+  for (const pattern of addressPatterns) {
+    const match = text.match(pattern)
+    if (match) {
+      senderInfo.address = match[1].trim()
+      break
+    }
+  }
+  
+  return Object.keys(senderInfo).length > 0 ? senderInfo : null
+}
+
+// 주소 정보 추출 헬퍼 함수 (구 버전, 하위 호환성 유지)
 function extractAddress(text: string): any {
   const addressInfo: any = {}
   
