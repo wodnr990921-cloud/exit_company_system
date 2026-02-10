@@ -1085,24 +1085,53 @@ app.get('/', (c) => {
                     <!-- 우측: OCR 결과 및 편집 -->
                     <div class="w-1/2 p-6 overflow-y-auto">
                         <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">수신자 이름</label>
-                                <input type="text" id="inspection-name" class="w-full px-3 py-2 border rounded">
+                            <!-- 회원 매칭 상태 -->
+                            <div id="member-match-status"></div>
+                            
+                            <div class="relative">
+                                <label class="block text-sm font-medium mb-2">
+                                    발신자 이름 (회원명)
+                                    <span class="text-xs text-gray-500 ml-1">(입력 시 자동완성)</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="inspection-name" 
+                                    class="w-full px-3 py-2 border rounded"
+                                    oninput="handleMemberNameInput(event)"
+                                    autocomplete="off"
+                                >
+                                <div id="member-search-dropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-60 overflow-y-auto"></div>
                             </div>
                             
                             <div>
-                                <label class="block text-sm font-medium mb-2">번호</label>
-                                <input type="text" id="inspection-number" class="w-full px-3 py-2 border rounded">
+                                <label class="block text-sm font-medium mb-2">수용번호</label>
+                                <input type="text" id="inspection-number" class="w-full px-3 py-2 border rounded" placeholder="예: 1234">
                             </div>
                             
                             <div>
-                                <label class="block text-sm font-medium mb-2">기관명</label>
-                                <input type="text" id="inspection-institution" class="w-full px-3 py-2 border rounded">
+                                <label class="block text-sm font-medium mb-2">수용기관</label>
+                                <input type="text" id="inspection-institution" class="w-full px-3 py-2 border rounded" placeholder="예: 서울">
                             </div>
                             
                             <div>
-                                <label class="block text-sm font-medium mb-2">OCR 원문</label>
-                                <textarea id="inspection-ocr-text" class="w-full px-3 py-2 border rounded h-32" readonly></textarea>
+                                <label class="block text-sm font-medium mb-2">사서함 주소</label>
+                                <input type="text" id="inspection-address" class="w-full px-3 py-2 border rounded" placeholder="예: 서울 사서함 123-1234">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">
+                                    편지 내용
+                                    <span class="text-xs text-gray-500 ml-1">(AI 추출)</span>
+                                </label>
+                                <textarea id="inspection-letter-content" class="w-full px-3 py-2 border rounded h-32" readonly></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">
+                                    OCR 원문 (편집 가능)
+                                    <span class="text-xs text-gray-500 ml-1">(오타 수정 가능)</span>
+                                </label>
+                                <textarea id="inspection-ocr-text" class="w-full px-3 py-2 border rounded h-32"></textarea>
                             </div>
                             
                             <div>
@@ -7009,20 +7038,48 @@ console.log('권한 관리 함수 로드 완료')
                 const imageKeys = item.image_keys ? JSON.parse(item.image_keys) : []
                 const imagesContainer = document.getElementById('inspection-images')
                 imagesContainer.innerHTML = imageKeys.map(key => \`
-                    <img src="/api/mailroom/image/\${key}" class="w-full rounded border">
+                    <img src="/api/mailroom/image/\${key}" class="w-full rounded border mb-2">
                 \`).join('')
                 
                 // OCR 결과 파싱
                 const ocrData = item.ocr_result ? JSON.parse(item.ocr_result) : {}
                 const ocrResults = ocrData.results || []
+                
+                // 발신자 정보 추출 (봉투가 있는 이미지에서)
+                const envelopeResult = ocrResults.find(r => r.has_envelope && r.sender_info)
+                const senderInfo = envelopeResult?.sender_info || null
+                
+                // 편지 내용 추출 (모든 이미지에서)
+                const letterContents = ocrResults
+                    .map(r => r.letter_content)
+                    .filter(c => c)
+                    .join('\\n\\n')
+                
+                // OCR 원문 (전체)
                 const ocrText = ocrResults.map(r => r.text).join('\\n\\n')
                 
-                // 폼 채우기
-                document.getElementById('inspection-name').value = item.member_name || ''
-                document.getElementById('inspection-number').value = item.member_number || ''
-                document.getElementById('inspection-institution').value = item.institution || ''
+                // 폼 채우기 - 발신자 정보가 있으면 자동 입력
+                if (senderInfo) {
+                    document.getElementById('inspection-name').value = senderInfo.sender_name || ''
+                    document.getElementById('inspection-number').value = senderInfo.inmate_number || ''
+                    document.getElementById('inspection-institution').value = senderInfo.institution || ''
+                    document.getElementById('inspection-address').value = senderInfo.address || ''
+                } else {
+                    // OCR 실패 시 기존 정보 표시
+                    document.getElementById('inspection-name').value = item.member_name || ''
+                    document.getElementById('inspection-number').value = item.member_number || ''
+                    document.getElementById('inspection-institution').value = item.institution || ''
+                    document.getElementById('inspection-address').value = item.mailbox_address || ''
+                }
+                
                 document.getElementById('inspection-ocr-text').value = ocrText
+                document.getElementById('inspection-letter-content').value = letterContents
                 document.getElementById('inspection-notes').value = item.notes || ''
+                
+                // 회원 자동 매칭 (수용번호 기반)
+                if (senderInfo && senderInfo.inmate_number) {
+                    await searchAndMatchMember(senderInfo.inmate_number)
+                }
                 
                 // 모달 표시
                 document.getElementById('inspection-detail-modal').classList.remove('hidden')
@@ -7030,6 +7087,92 @@ console.log('권한 관리 함수 로드 완료')
                 console.error('검수 상세 조회 오류:', error)
                 alert('우편물 정보를 불러올 수 없습니다.')
             }
+        }
+        
+        // 회원 자동 매칭 (수용번호 기반)
+        async function searchAndMatchMember(inmateNumber) {
+            try {
+                const res = await axios.get(\`\${API_BASE}/members?search=\${inmateNumber}\`)
+                const members = res.data.members || []
+                
+                if (members.length > 0) {
+                    // 회원 찾음
+                    const member = members[0]
+                    document.getElementById('member-match-status').innerHTML = \`
+                        <div class="bg-green-50 border border-green-200 rounded p-2 text-sm">
+                            <i class="fas fa-check-circle text-green-600 mr-1"></i>
+                            <strong>기존 회원 매칭:</strong> \${member.name} (수용번호: \${member.inmate_number})
+                        </div>
+                    \`
+                } else {
+                    // 신규 회원
+                    document.getElementById('member-match-status').innerHTML = \`
+                        <div class="bg-yellow-50 border border-yellow-200 rounded p-2 text-sm">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-1"></i>
+                            <strong>신규 회원:</strong> 티켓 생성 시 자동 등록됩니다.
+                        </div>
+                    \`
+                }
+            } catch (error) {
+                console.error('회원 검색 오류:', error)
+            }
+        }
+        
+        // 회원명 자동완성 (드롭다운)
+        let memberSearchTimeout = null
+        let memberSearchResults = []
+        
+        async function handleMemberNameInput(event) {
+            const query = event.target.value.trim()
+            
+            clearTimeout(memberSearchTimeout)
+            
+            if (query.length < 1) {
+                document.getElementById('member-search-dropdown').classList.add('hidden')
+                return
+            }
+            
+            memberSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await axios.get(\`\${API_BASE}/members?search=\${query}\`)
+                    memberSearchResults = res.data.members || []
+                    
+                    const dropdown = document.getElementById('member-search-dropdown')
+                    
+                    if (memberSearchResults.length === 0) {
+                        dropdown.classList.add('hidden')
+                        return
+                    }
+                    
+                    dropdown.innerHTML = memberSearchResults.map(m => \`
+                        <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b" 
+                             onclick="selectMember(\${m.id}, '\${m.name}', '\${m.inmate_number}', '\${m.institution}', '\${m.mailbox_address || ''}')">
+                            <p class="font-medium text-sm">\${m.name}</p>
+                            <p class="text-xs text-gray-600">수용번호: \${m.inmate_number} | \${m.institution}</p>
+                        </div>
+                    \`).join('')
+                    
+                    dropdown.classList.remove('hidden')
+                } catch (error) {
+                    console.error('회원 검색 오류:', error)
+                }
+            }, 300)
+        }
+        
+        function selectMember(id, name, inmateNumber, institution, address) {
+            document.getElementById('inspection-name').value = name
+            document.getElementById('inspection-number').value = inmateNumber
+            document.getElementById('inspection-institution').value = institution
+            document.getElementById('inspection-address').value = address
+            document.getElementById('member-search-dropdown').classList.add('hidden')
+            
+            // 매칭 상태 표시
+            document.getElementById('member-match-status').innerHTML = \`
+                <div class="bg-green-50 border border-green-200 rounded p-2 text-sm">
+                    <i class="fas fa-check-circle text-green-600 mr-1"></i>
+                    <strong>기존 회원 선택됨:</strong> \${name} (수용번호: \${inmateNumber})
+                </div>
+            \`
         }
         
         // 검수 모달 닫기
