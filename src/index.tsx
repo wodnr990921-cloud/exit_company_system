@@ -6306,6 +6306,11 @@ console.log('권한 관리 함수 로드 완료')
                     const firstImage = imageKeys[0] || null
                     const ocrData = item.ocr_result ? JSON.parse(item.ocr_result) : {}
                     const ocrResults = ocrData.results || []
+                    
+                    // 발신자 정보 추출 (첫 번째 봉투 이미지에서)
+                    const envelopeResult = ocrResults.find(r => r.has_envelope && r.sender_info)
+                    const senderInfo = envelopeResult?.sender_info || null
+                    
                     const ocrText = ocrResults.length > 0 && ocrResults[0].text ? ocrResults[0].text.substring(0, 100) : '없음'
                     
                     return \`
@@ -6326,6 +6331,18 @@ console.log('권한 관리 함수 로드 완료')
                                         <i class="fas fa-images mr-1"></i>\${imageKeys.length}
                                     </span>
                                 </div>
+                                
+                                \${senderInfo ? \`
+                                    <div class="bg-green-50 border border-green-200 rounded p-2 mb-2 text-xs">
+                                        <div class="flex items-center text-green-800 font-medium mb-1">
+                                            <i class="fas fa-envelope mr-1"></i>봉투 정보
+                                        </div>
+                                        \${senderInfo.sender_name ? \`<p class="text-gray-700"><strong>발신자:</strong> \${senderInfo.sender_name}</p>\` : ''}
+                                        \${senderInfo.institution ? \`<p class="text-gray-700"><strong>수용기관:</strong> \${senderInfo.institution}</p>\` : ''}
+                                        \${senderInfo.inmate_number ? \`<p class="text-gray-700"><strong>수용번호:</strong> \${senderInfo.inmate_number}</p>\` : ''}
+                                        \${senderInfo.address ? \`<p class="text-gray-700 text-xs">\${senderInfo.address}</p>\` : ''}
+                                    </div>
+                                \` : ''}
                                 
                                 <p class="text-xs text-gray-600 mb-2">\${item.member_name || '미배정'}</p>
                                 
