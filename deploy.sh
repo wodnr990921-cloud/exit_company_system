@@ -39,7 +39,7 @@ echo ""
 
 # 3. Cloudflare 배포
 echo "☁️  Step 3/4: Cloudflare Pages 배포..."
-CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" npx wrangler pages deploy dist --project-name exit-company-system
+CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" npx wrangler pages deploy dist --project-name exit-company
 
 echo ""
 echo "✅ Cloudflare 배포 완료!"
@@ -48,7 +48,7 @@ echo ""
 # 4. 배포 URL 표시
 echo "🎉 배포 성공!"
 echo ""
-echo "📍 프로덕션 URL: https://exit-system.pages.dev"
+echo "📍 프로덕션 URL: https://exit-company-system.pages.dev"
 echo "📍 GitHub: https://github.com/wodnr990921-cloud/exit_company_system"
 echo ""
 echo "✨ 모든 작업 완료!"

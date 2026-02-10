@@ -215,7 +215,7 @@ app.get('/', (c) => {
         </div>
 
         <!-- 네비게이션 (데스크톱 항상 표시, 모바일은 햄버거 메뉴만) -->
-        <nav class="hidden md:block bg-white shadow-sm border-t border-gray-200">
+        <nav class="block bg-white shadow-sm border-t border-gray-200">
             <div class="max-w-7xl mx-auto px-4">
                 <div class="flex space-x-2 overflow-x-auto">
                     <button onclick="showView('dashboard')" class="nav-item px-4 py-3 rounded-t-lg">
