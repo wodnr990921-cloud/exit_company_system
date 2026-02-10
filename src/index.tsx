@@ -1139,12 +1139,21 @@ app.get('/', (c) => {
                                 <textarea id="inspection-notes" class="w-full px-3 py-2 border rounded h-24"></textarea>
                             </div>
                             
-                            <div class="flex gap-2">
-                                <button onclick="saveInspectionEdit()" class="btn btn-primary flex-1">
-                                    <i class="fas fa-save mr-2"></i>저장
+                            <div class="border-t pt-4 mt-4">
+                                <label class="block text-sm font-medium mb-2 text-blue-700">
+                                    <i class="fas fa-user-tie mr-1"></i>담당자 선택 (필수)
+                                </label>
+                                <select id="inspection-staff" class="w-full px-3 py-2 border rounded bg-white">
+                                    <option value="">-- 담당자를 선택하세요 --</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex gap-2 mt-4">
+                                <button onclick="saveInspectionEdit()" class="btn btn-secondary flex-1">
+                                    <i class="fas fa-save mr-2"></i>임시 저장
                                 </button>
-                                <button onclick="createTicketFromInspection()" class="btn btn-success flex-1">
-                                    <i class="fas fa-check mr-2"></i>티켓 생성
+                                <button onclick="assignStaffAndConfirmTicket()" class="btn btn-success flex-1">
+                                    <i class="fas fa-user-check mr-2"></i>담당자 배정
                                 </button>
                             </div>
                         </div>
@@ -7081,11 +7090,30 @@ console.log('권한 관리 함수 로드 완료')
                     await searchAndMatchMember(senderInfo.inmate_number)
                 }
                 
+                // 담당자 목록 로드
+                await loadStaffList()
+                
                 // 모달 표시
                 document.getElementById('inspection-detail-modal').classList.remove('hidden')
             } catch (error) {
                 console.error('검수 상세 조회 오류:', error)
                 alert('우편물 정보를 불러올 수 없습니다.')
+            }
+        }
+        
+        // 담당자 목록 로드
+        async function loadStaffList() {
+            try {
+                const res = await axios.get(\`\${API_BASE}/staff\`)
+                const staffList = res.data.staff || []
+                
+                const staffSelect = document.getElementById('inspection-staff')
+                staffSelect.innerHTML = '<option value="">-- 담당자를 선택하세요 --</option>' +
+                    staffList.map(staff => \`
+                        <option value="\${staff.id}">\${staff.name} (\${staff.role === 'admin' ? '관리자' : staff.role === 'manager' ? '매니저' : '직원'})</option>
+                    \`).join('')
+            } catch (error) {
+                console.error('담당자 목록 로드 오류:', error)
             }
         }
         
@@ -7181,7 +7209,98 @@ console.log('권한 관리 함수 로드 완료')
             currentInspectionId = null
         }
         
-        // 검수 정보 저장
+        // 담당자 배정 및 티켓 확정
+        async function assignStaffAndConfirmTicket() {
+            if (!currentInspectionId) return
+            
+            const staffId = document.getElementById('inspection-staff').value
+            
+            if (!staffId) {
+                alert('담당자를 선택해주세요.')
+                return
+            }
+            
+            const name = document.getElementById('inspection-name').value
+            const number = document.getElementById('inspection-number').value
+            const institution = document.getElementById('inspection-institution').value
+            const mailboxAddress = document.getElementById('inspection-address').value
+            const notes = document.getElementById('inspection-notes').value
+            
+            if (!name || !number) {
+                alert('발신자 이름과 수용번호를 입력해주세요.')
+                return
+            }
+            
+            try {
+                // 1. 회원 검색 또는 생성
+                const membersRes = await axios.get(\`\${API_BASE}/members?search=\${number}\`)
+                const members = membersRes.data.members || []
+                
+                let memberId
+                
+                if (members.length === 0) {
+                    // 신규 회원 등록
+                    const confirmCreate = window.confirm(\`수용번호 "\${number}"를 찾을 수 없습니다.\\n\\n신규 회원으로 등록하시겠습니까?\`)
+                    if (!confirmCreate) return
+                    
+                    const newMemberRes = await axios.post(\`\${API_BASE}/members\`, {
+                        name,
+                        member_number: number,
+                        inmate_number: number,
+                        institution: institution || '미지정',
+                        mailbox_address: mailboxAddress || '',
+                        depositor_name: name,
+                        status: 'active',
+                        notes: '우편물 검수에서 자동 등록'
+                    })
+                    
+                    memberId = newMemberRes.data.member.id
+                    alert(\`신규 회원이 등록되었습니다: \${name}\`)
+                } else {
+                    memberId = members[0].id
+                }
+                
+                // 2. 우편물 정보 업데이트
+                await axios.put(\`\${API_BASE}/mailroom/\${currentInspectionId}\`, {
+                    member_id: memberId,
+                    member_name: name,
+                    member_number: number,
+                    institution: institution,
+                    notes: notes,
+                    status: 'assigned'
+                })
+                
+                // 3. 티켓 생성 및 확정
+                const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
+                    member_id: memberId,
+                    staff_id: parseInt(staffId),
+                    ticket_type: 'mailroom',
+                    priority: 'normal',
+                    title: \`우편물 처리: \${name}\`,
+                    description: \`우편물 검수 완료\\n발신자: \${name}\\n수용번호: \${number}\\n기관: \${institution}\`,
+                    status: 'in_progress'
+                })
+                
+                const ticketNumber = ticketRes.data.ticket.ticket_number
+                
+                // 4. 우편물에 티켓 연결
+                await axios.patch(\`\${API_BASE}/mailroom/\${currentInspectionId}/status\`, {
+                    status: 'assigned',
+                    ticket_id: ticketRes.data.ticket.id
+                })
+                
+                alert(\`담당자 배정 완료!\\n\\n티켓 번호: \${ticketNumber}\\n담당자가 배정되었습니다.\`)
+                
+                closeInspectionDetail()
+                await loadProcessedMail()
+                await loadPendingMail()
+            } catch (error) {
+                console.error('담당자 배정 오류:', error)
+                alert('담당자 배정 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        // 검수 정보 임시 저장
         async function saveInspectionEdit() {
             if (!currentInspectionId) return
             
@@ -7198,7 +7317,7 @@ console.log('권한 관리 함수 로드 완료')
                     institution
                 })
                 
-                alert('저장되었습니다.')
+                alert('임시 저장되었습니다.')
                 closeInspectionDetail()
                 await loadProcessedMail()
             } catch (error) {
