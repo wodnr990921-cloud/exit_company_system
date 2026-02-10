@@ -319,13 +319,14 @@ mailroom.post('/:id/ocr', async (c) => {
         // Cloudflare AI Workers로 OCR 실행
         // 모델: @cf/meta/llama-3.2-11b-vision-instruct (최신 Vision 모델)
         let extractedText = ''
+        let aiResponse: any = null
         
         try {
           if (!c.env.AI) {
             throw new Error('AI binding is not configured. Please set up Workers AI in wrangler.toml')
           }
           
-          const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
+          aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
             image: Array.from(new Uint8Array(imageBuffer)),
             prompt: "agree",
             messages: [{

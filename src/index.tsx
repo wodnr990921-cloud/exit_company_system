@@ -6703,11 +6703,83 @@ console.log('권한 관리 함수 로드 완료')
             const files = event.target.files
             if (files.length === 0) return
             
-            const processBtn = document.getElementById('process-mail-btn')
-            
             try {
+                // 업로드 확인 모달 생성
+                const confirmModal = createConfirmModal(
+                    '우편물 업로드',
+                    \`\${files.length}개의 이미지를 업로드하시겠습니까?\\n\\n자동으로 봉투를 감지하여 우편물을 분리합니다.\`,
+                    '업로드',
+                    '취소'
+                )
+                
+                document.body.appendChild(confirmModal)
+                
+                const result = await new Promise((resolve) => {
+                    const confirmBtn = confirmModal.querySelector('.confirm-btn')
+                    const cancelBtn = confirmModal.querySelector('.cancel-btn')
+                    
+                    confirmBtn.addEventListener('click', () => {
+                        confirmModal.remove()
+                        resolve(true)
+                    })
+                    
+                    cancelBtn.addEventListener('click', () => {
+                        confirmModal.remove()
+                        resolve(false)
+                    })
+                })
+                
+                if (!result) {
+                    event.target.value = ''
+                    return
+                }
+                
+                // 메모 입력 모달
+                const notesModal = createInputModal(
+                    '메모 입력',
+                    '우편물에 대한 메모를 입력하세요 (선택사항)',
+                    '확인',
+                    '건너뛰기'
+                )
+                
+                document.body.appendChild(notesModal)
+                
+                const notes = await new Promise((resolve) => {
+                    const confirmBtn = notesModal.querySelector('.confirm-btn')
+                    const cancelBtn = notesModal.querySelector('.cancel-btn')
+                    const input = notesModal.querySelector('input')
+                    
+                    confirmBtn.addEventListener('click', () => {
+                        const value = input.value.trim()
+                        notesModal.remove()
+                        resolve(value)
+                    })
+                    
+                    cancelBtn.addEventListener('click', () => {
+                        notesModal.remove()
+                        resolve('')
+                    })
+                    
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            const value = input.value.trim()
+                            notesModal.remove()
+                            resolve(value)
+                        }
+                    })
+                })
+                
+                // 로딩 모달 생성
+                const loadingModal = createLoadingModal('이미지 업로드 중...', files.length)
+                document.body.appendChild(loadingModal)
+                
                 // 각 파일을 R2에 업로드
-                for (const file of files) {
+                const uploadedKeys = []
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i]
+                    
+                    updateLoadingModal(loadingModal, i + 1, files.length)
+                    
                     const formData = new FormData()
                     formData.append('file', file)
                     
@@ -6716,53 +6788,147 @@ console.log('권한 관리 함수 로드 완료')
                     })
                     
                     if (response.data.success) {
-                        uploadedImageKeys.push(response.data.key)
+                        uploadedKeys.push(response.data.key)
                     }
                 }
                 
-                // 업로드 완료 후 자동으로 우편물 등록 및 대기 탭 표시
-                if (uploadedImageKeys.length > 0) {
-                    const notes = prompt('메모를 입력하세요 (선택사항):')
+                // 우편물 등록 (모든 이미지를 하나로)
+                updateLoadingModal(loadingModal, files.length, files.length, '우편물 등록 중...')
+                
+                const response = await axios.post(\`\${API_BASE}/mailroom\`, {
+                    member_id: null,
+                    image_keys: uploadedKeys,
+                    notes: notes || '',
+                    created_by: currentStaff.id
+                })
+                
+                if (response.data.success) {
+                    const mailroomId = response.data.mailroom_id
+                    const mailNumber = response.data.mail_number
                     
-                    // 우편물 등록
-                    const response = await axios.post(\`\${API_BASE}/mailroom\`, {
-                        member_id: null,
-                        image_keys: uploadedImageKeys,
-                        notes: notes || '',
-                        created_by: currentStaff.id
+                    // OCR 처리 시작 (비동기)
+                    updateLoadingModal(loadingModal, files.length, files.length, 'OCR 처리 시작 중...')
+                    
+                    axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
+                        .then(() => console.log('OCR 시작됨:', mailroomId))
+                        .catch(err => console.error('OCR 시작 실패:', err))
+                    
+                    // 로딩 모달 제거
+                    loadingModal.remove()
+                    
+                    // 성공 모달
+                    const successModal = createAlertModal(
+                        '업로드 완료',
+                        \`우편물이 등록되었습니다.\\n우편물 번호: \${mailNumber}\\n\\nOCR 처리가 시작되었습니다.\\n우측 대기 목록에서 확인하세요.\`,
+                        '확인'
+                    )
+                    document.body.appendChild(successModal)
+                    
+                    successModal.querySelector('.confirm-btn').addEventListener('click', () => {
+                        successModal.remove()
                     })
                     
-                    if (response.data.success) {
-                        const mailroomId = response.data.mailroom_id
-                        const mailNumber = response.data.mail_number
-                        
-                        alert(\`우편물이 등록되었습니다.\\n우편물 번호: \${mailNumber}\\n\\nOCR 처리를 시작합니다...\`)
-                        
-                        // OCR 처리 시작 (비동기)
-                        axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
-                            .then(() => console.log('OCR 시작됨:', mailroomId))
-                            .catch(err => console.error('OCR 시작 실패:', err))
-                        
-                        // 초기화
-                        uploadedImageKeys = []
-                        if (processBtn) processBtn.disabled = true
-                        
-                        // 대기 탭으로 전환
-                        showMailroomTab('receive')
-                        
-                        // 대기 목록 새로고침
-                        await loadPendingMail()
-                        
-                        // 자동 새로고침 시작
-                        startAutoRefresh()
-                    }
+                    // 초기화
+                    uploadedImageKeys = []
+                    event.target.value = ''
+                    
+                    // 대기 탭으로 전환
+                    showMailroomTab('receive')
+                    
+                    // 목록 새로고침
+                    await loadPendingMail()
+                    
+                    // 자동 새로고침 시작
+                    startAutoRefresh()
                 }
-                
-                // 파일 입력 초기화
-                event.target.value = ''
-                
             } catch (error) {
-                alert('이미지 업로드 실패: ' + (error.response?.data?.error || error.message))
+                const errorModal = createAlertModal(
+                    '업로드 실패',
+                    \`이미지 업로드에 실패했습니다.\\n\\n오류: \${error.response?.data?.error || error.message}\`,
+                    '확인'
+                )
+                document.body.appendChild(errorModal)
+                errorModal.querySelector('.confirm-btn').addEventListener('click', () => {
+                    errorModal.remove()
+                })
+            }
+        }
+        
+        // 모달 생성 함수들
+        function createConfirmModal(title, message, confirmText, cancelText) {
+            const modal = document.createElement('div')
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'
+            modal.innerHTML = \`
+                <div class="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">\${title}</h3>
+                    <p class="text-gray-600 mb-6 whitespace-pre-line">\${message}</p>
+                    <div class="flex gap-3">
+                        <button class="cancel-btn btn btn-secondary flex-1">\${cancelText}</button>
+                        <button class="confirm-btn btn btn-primary flex-1">\${confirmText}</button>
+                    </div>
+                </div>
+            \`
+            return modal
+        }
+        
+        function createInputModal(title, placeholder, confirmText, cancelText) {
+            const modal = document.createElement('div')
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'
+            modal.innerHTML = \`
+                <div class="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">\${title}</h3>
+                    <input type="text" 
+                           placeholder="\${placeholder}" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-6"
+                           autofocus>
+                    <div class="flex gap-3">
+                        <button class="cancel-btn btn btn-secondary flex-1">\${cancelText}</button>
+                        <button class="confirm-btn btn btn-primary flex-1">\${confirmText}</button>
+                    </div>
+                </div>
+            \`
+            return modal
+        }
+        
+        function createAlertModal(title, message, confirmText) {
+            const modal = document.createElement('div')
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'
+            modal.innerHTML = \`
+                <div class="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">\${title}</h3>
+                    <p class="text-gray-600 mb-6 whitespace-pre-line">\${message}</p>
+                    <button class="confirm-btn btn btn-primary w-full">\${confirmText}</button>
+                </div>
+            \`
+            return modal
+        }
+        
+        function createLoadingModal(message, total) {
+            const modal = document.createElement('div')
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'
+            modal.innerHTML = \`
+                <div class="bg-white rounded-lg max-w-md w-full p-8 shadow-xl text-center">
+                    <i class="fas fa-spinner fa-spin text-5xl text-blue-500 mb-4"></i>
+                    <p class="text-lg font-medium text-gray-800 mb-2 loading-message">\${message}</p>
+                    <p class="text-sm text-gray-600 loading-progress">0 / \${total}</p>
+                    <div class="mt-4 bg-gray-200 rounded-full h-2">
+                        <div class="loading-bar bg-blue-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                </div>
+            \`
+            return modal
+        }
+        
+        function updateLoadingModal(modal, current, total, message) {
+            const messageEl = modal.querySelector('.loading-message')
+            const progressEl = modal.querySelector('.loading-progress')
+            const barEl = modal.querySelector('.loading-bar')
+            
+            if (message && messageEl) messageEl.textContent = message
+            if (progressEl) progressEl.textContent = \`\${current} / \${total}\`
+            if (barEl) {
+                const percent = Math.round((current / total) * 100)
+                barEl.style.width = \`\${percent}%\`
             }
         }
         
