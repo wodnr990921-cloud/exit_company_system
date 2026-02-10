@@ -6159,7 +6159,8 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('mail-images').value = ''
                 const processBtn = document.getElementById('process-mail-btn')
                 if (processBtn) processBtn.disabled = true
-                document.getElementById('bulk-register-btn').disabled = true
+                const bulkBtn = document.getElementById('bulk-register-btn')
+                if (bulkBtn) bulkBtn.disabled = true
                 closeBulkRegisterModal()
 
                 // 목록 새로고침
@@ -6767,7 +6768,7 @@ console.log('권한 관리 함수 로드 완료')
                 
                 // 업로드된 이미지가 있으면 처리 버튼 활성화
                 if (uploadedImageKeys.length > 0) {
-                    processBtn.disabled = false
+                    if (processBtn) processBtn.disabled = false
                 }
                 
                 // 파일 입력 초기화
@@ -6924,7 +6925,7 @@ console.log('권한 관리 함수 로드 완료')
                             <div class="bg-gray-50 p-3 rounded text-sm">
                                 <p class="font-medium mb-2">OCR 결과:</p>
                                 <div class="space-y-1 text-gray-600">
-                                    \${ocrResult.map(r => \`<p>• \${r.text.substring(0, 100)}...\</p>\`).join('')}
+                                    \${ocrResults.map(r => \`<p>• \${r.text ? r.text.substring(0, 100) : '[텍스트 없음]'}...\</p>\`).join('')}
                                 </div>
                             </div>
                         </div>
