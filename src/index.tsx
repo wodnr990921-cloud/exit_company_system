@@ -963,19 +963,28 @@ app.get('/', (c) => {
                     <div class="card">
                         <h3 class="text-lg font-bold mb-4"><i class="fas fa-cloud-upload-alt mr-2"></i>우편물 사진 업로드</h3>
                         <div class="space-y-4">
-                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
                                 <input type="file" id="mail-images" accept="image/*" multiple class="hidden" onchange="handleMailImages(event)">
                                 <label for="mail-images" class="cursor-pointer">
-                                    <i class="fas fa-camera text-5xl text-gray-400 mb-4"></i>
-                                    <p class="text-gray-600">클릭하여 사진 선택</p>
-                                    <p class="text-sm text-gray-400 mt-2">여러 장 선택 가능 (PNG, JPG)</p>
+                                    <i class="fas fa-camera text-5xl text-blue-400 mb-4"></i>
+                                    <p class="text-gray-800 font-medium text-lg">클릭하여 사진 선택</p>
+                                    <p class="text-sm text-gray-500 mt-2">여러 장 선택 가능 (PNG, JPG, JPEG)</p>
                                 </label>
                             </div>
-                            <div id="uploaded-images-preview" class="grid grid-cols-3 gap-2"></div>
                             
-                            <div class="text-sm text-gray-600 mt-2">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                이미지를 선택하면 자동으로 OCR 처리 후 검수 탭으로 이동합니다.
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div class="flex items-start gap-2">
+                                    <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+                                    <div class="text-sm text-blue-800">
+                                        <p class="font-medium mb-1">자동 처리 흐름</p>
+                                        <ol class="list-decimal list-inside space-y-1 text-blue-700">
+                                            <li>이미지 선택 시 자동으로 우편물 등록</li>
+                                            <li>우측 대기 목록에 임시 티켓 생성</li>
+                                            <li>OCR 자동 시작 (5초마다 상태 확인)</li>
+                                            <li>완료 후 "검수하기" 버튼 표시</li>
+                                        </ol>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -6781,7 +6790,6 @@ console.log('권한 관리 함수 로드 완료')
             const files = event.target.files
             if (files.length === 0) return
             
-            const previewContainer = document.getElementById('uploaded-images-preview')
             const processBtn = document.getElementById('process-mail-btn')
             
             try {
@@ -6796,24 +6804,45 @@ console.log('권한 관리 함수 로드 완료')
                     
                     if (response.data.success) {
                         uploadedImageKeys.push(response.data.key)
-                        
-                        // 미리보기 추가
-                        const previewDiv = document.createElement('div')
-                        previewDiv.className = 'relative'
-                        previewDiv.innerHTML = \`
-                            <img src="\${response.data.url}" class="w-full h-24 object-cover rounded border" />
-                            <button onclick="removeUploadedImage('\${response.data.key}')" 
-                                class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
-                                <i class="fas fa-times text-xs"></i>
-                            </button>
-                        \`
-                        previewContainer.appendChild(previewDiv)
                     }
                 }
                 
-                // 업로드된 이미지가 있으면 처리 버튼 활성화
+                // 업로드 완료 후 자동으로 우편물 등록 및 대기 탭 표시
                 if (uploadedImageKeys.length > 0) {
-                    if (processBtn) processBtn.disabled = false
+                    const notes = prompt('메모를 입력하세요 (선택사항):')
+                    
+                    // 우편물 등록
+                    const response = await axios.post(\`\${API_BASE}/mailroom\`, {
+                        member_id: null,
+                        image_keys: uploadedImageKeys,
+                        notes: notes || '',
+                        created_by: currentStaff.id
+                    })
+                    
+                    if (response.data.success) {
+                        const mailroomId = response.data.mailroom_id
+                        const mailNumber = response.data.mail_number
+                        
+                        alert(\`우편물이 등록되었습니다.\\n우편물 번호: \${mailNumber}\\n\\nOCR 처리를 시작합니다...\`)
+                        
+                        // OCR 처리 시작 (비동기)
+                        axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
+                            .then(() => console.log('OCR 시작됨:', mailroomId))
+                            .catch(err => console.error('OCR 시작 실패:', err))
+                        
+                        // 초기화
+                        uploadedImageKeys = []
+                        if (processBtn) processBtn.disabled = true
+                        
+                        // 대기 탭으로 전환
+                        showMailroomTab('receive')
+                        
+                        // 대기 목록 새로고침
+                        await loadPendingMail()
+                        
+                        // 자동 새로고침 시작
+                        startAutoRefresh()
+                    }
                 }
                 
                 // 파일 입력 초기화
@@ -6824,85 +6853,9 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
         
-        // 업로드된 이미지 제거
+        // 업로드된 이미지 제거 (제거됨 - 더 이상 필요 없음)
         function removeUploadedImage(key) {
-            uploadedImageKeys = uploadedImageKeys.filter(k => k !== key)
-            
-            // 미리보기 UI 갱신
-            const previewContainer = document.getElementById('uploaded-images-preview')
-            previewContainer.innerHTML = ''
-            
-            uploadedImageKeys.forEach(k => {
-                const previewDiv = document.createElement('div')
-                previewDiv.className = 'relative'
-                previewDiv.innerHTML = \`
-                    <img src="\${API_BASE}/mailroom/image/\${k}" class="w-full h-24 object-cover rounded border" />
-                    <button onclick="removeUploadedImage('\${k}')" 
-                        class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
-                        <i class="fas fa-times text-xs"></i>
-                    </button>
-                \`
-                previewContainer.appendChild(previewDiv)
-            })
-            
-            // 이미지가 없으면 처리 버튼 비활성화
-            if (uploadedImageKeys.length === 0) {
-                const processBtn = document.getElementById('process-mail-btn')
-                if (processBtn) processBtn.disabled = true
-            }
-        }
-        
-        // OCR 처리 및 우편물 등록
-        async function processMailImages() {
-            if (uploadedImageKeys.length === 0) {
-                alert('업로드된 이미지가 없습니다.')
-                return
-            }
-            
-            const notes = prompt('메모를 입력하세요 (선택사항):')
-            
-            try {
-                // 우편물 등록
-                const response = await axios.post(\`\${API_BASE}/mailroom\`, {
-                    member_id: null, // 나중에 연결
-                    image_keys: uploadedImageKeys,
-                    notes: notes || '',
-                    created_by: currentStaff.id
-                })
-                
-                if (response.data.success) {
-                    const mailroomId = response.data.mailroom_id
-                    const mailNumber = response.data.mail_number
-                    
-                    alert(\`우편물이 등록되었습니다.\\n우편물 번호: \${mailNumber}\\n\\nOCR 처리를 시작합니다...\`)
-                    
-                    // OCR 처리 시작 (비동기)
-                    axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
-                        .then(() => {
-                            console.log('OCR 처리 시작됨:', mailroomId)
-                        })
-                        .catch(err => {
-                            console.error('OCR 시작 실패:', err)
-                        })
-                    
-                    // 초기화
-                    uploadedImageKeys = []
-                    document.getElementById('uploaded-images-preview').innerHTML = ''
-                    const processBtn = document.getElementById('process-mail-btn')
-                    if (processBtn) processBtn.disabled = true
-                    
-                    // 대기 탭으로 전환
-                    showMailroomTab('receive')
-                    
-                    // 목록 새로고침
-                    await loadPendingMail()
-                    
-                    // 5초마다 자동 새로고침 시작 (OCR 처리 상태 확인)
-                    startAutoRefresh()
-                }
-            } catch (error) {
-                alert('우편물 등록 실패: ' + (error.response?.data?.error || error.message))
-            }
+            // 이제 사용하지 않음
         }
         
         // 자동 새로고침 (OCR 상태 폴링)
