@@ -6959,6 +6959,145 @@ console.log('권한 관리 함수 로드 완료')
             loadProcessedMail()
         }
         
+        // 검수 상세 모달 표시
+        let currentInspectionId = null
+        
+        async function showInspectionDetail(mailId) {
+            try {
+                currentInspectionId = mailId
+                
+                // 우편물 상세 정보 조회
+                const response = await axios.get(\`\${API_BASE}/mailroom/\${mailId}\`)
+                const item = response.data.mailroom_item
+                
+                // 이미지 표시
+                const imageKeys = item.image_keys ? JSON.parse(item.image_keys) : []
+                const imagesContainer = document.getElementById('inspection-images')
+                imagesContainer.innerHTML = imageKeys.map(key => \`
+                    <img src="/api/mailroom/image/\${key}" class="w-full rounded border">
+                \`).join('')
+                
+                // OCR 결과 파싱
+                const ocrData = item.ocr_result ? JSON.parse(item.ocr_result) : {}
+                const ocrResults = ocrData.results || []
+                const ocrText = ocrResults.map(r => r.text).join('\\n\\n')
+                
+                // 폼 채우기
+                document.getElementById('inspection-name').value = item.member_name || ''
+                document.getElementById('inspection-number').value = item.member_number || ''
+                document.getElementById('inspection-institution').value = item.institution || ''
+                document.getElementById('inspection-ocr-text').value = ocrText
+                document.getElementById('inspection-notes').value = item.notes || ''
+                
+                // 모달 표시
+                document.getElementById('inspection-detail-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('검수 상세 조회 오류:', error)
+                alert('우편물 정보를 불러올 수 없습니다.')
+            }
+        }
+        
+        // 검수 모달 닫기
+        function closeInspectionDetail() {
+            document.getElementById('inspection-detail-modal').classList.add('hidden')
+            currentInspectionId = null
+        }
+        
+        // 검수 정보 저장
+        async function saveInspectionEdit() {
+            if (!currentInspectionId) return
+            
+            const name = document.getElementById('inspection-name').value
+            const number = document.getElementById('inspection-number').value
+            const institution = document.getElementById('inspection-institution').value
+            const notes = document.getElementById('inspection-notes').value
+            
+            try {
+                await axios.put(\`\${API_BASE}/mailroom/\${currentInspectionId}\`, {
+                    notes,
+                    member_name: name,
+                    member_number: number,
+                    institution
+                })
+                
+                alert('저장되었습니다.')
+                closeInspectionDetail()
+                await loadProcessedMail()
+            } catch (error) {
+                console.error('저장 오류:', error)
+                alert('저장 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        // 검수 후 티켓 생성
+        async function createTicketFromInspection() {
+            if (!currentInspectionId) return
+            
+            const name = document.getElementById('inspection-name').value
+            const number = document.getElementById('inspection-number').value
+            const institution = document.getElementById('inspection-institution').value
+            
+            if (!name || !number) {
+                alert('수신자 이름과 번호를 입력해주세요.')
+                return
+            }
+            
+            try {
+                // 회원 검색
+                const membersRes = await axios.get(\`\${API_BASE}/members?search=\${number}\`)
+                const members = membersRes.data.members || []
+                
+                let memberId
+                
+                if (members.length === 0) {
+                    // 신규 회원 등록
+                    const confirm = window.confirm(\`회원번호 "\${number}"를 찾을 수 없습니다.\\n\\n신규 회원으로 등록하시겠습니까?\`)
+                    if (!confirm) return
+                    
+                    const newMemberRes = await axios.post(\`\${API_BASE}/members\`, {
+                        name,
+                        member_number: number,
+                        institution: institution || '미지정',
+                        mailbox_address: '',
+                        depositor_name: name,
+                        status: 'active',
+                        notes: '우편물 검수에서 자동 등록'
+                    })
+                    
+                    memberId = newMemberRes.data.id
+                    alert('신규 회원이 등록되었습니다.')
+                } else {
+                    memberId = members[0].id
+                }
+                
+                // 티켓 생성
+                const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
+                    member_id: memberId,
+                    title: \`우편물: \${name}\`,
+                    description: \`우편물 검수를 통해 생성된 티켓\\n수신자: \${name}\\n번호: \${number}\\n기관: \${institution || '미지정'}\`,
+                    priority: 'normal',
+                    status: 'open',
+                    assigned_to: currentStaff.id
+                })
+                
+                const ticketId = ticketRes.data.id
+                
+                // 우편물에 티켓 연결
+                await axios.put(\`\${API_BASE}/mailroom/\${currentInspectionId}\`, {
+                    member_id: memberId,
+                    ticket_id: ticketId,
+                    status: 'assigned'
+                })
+                
+                alert(\`티켓이 생성되었습니다.\\n티켓 번호: \${ticketRes.data.ticket_number}\`)
+                closeInspectionDetail()
+                await loadProcessedMail()
+            } catch (error) {
+                console.error('티켓 생성 오류:', error)
+                alert('티켓 생성 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
         // 선택된 우편물 일괄 배당
         async function assignSelectedMail() {
             if (selectedMailItems.length === 0) {

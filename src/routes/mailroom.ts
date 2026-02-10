@@ -249,6 +249,7 @@ mailroom.post('/ocr-simple', async (c) => {
       
       const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
         image: Array.from(new Uint8Array(imageBuffer)),
+        prompt: "agree",
         messages: [{
           role: "user",
           content: "이 이미지는 편지 봉투입니다. 수신자 이름, 번호, 기관명을 추출해주세요. 모든 텍스트를 그대로 출력해주세요."
@@ -326,6 +327,7 @@ mailroom.post('/:id/ocr', async (c) => {
           
           const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
             image: Array.from(new Uint8Array(imageBuffer)),
+            prompt: "agree",
             messages: [{
               role: "user",
               content: "이 이미지의 모든 텍스트를 정확하게 추출해주세요. 한글, 영어, 숫자를 모두 인식하고, 발신자, 수신자, 주소, 우편번호 등의 정보도 구분해서 추출해주세요."
