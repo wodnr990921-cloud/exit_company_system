@@ -253,7 +253,6 @@ mailroom.post('/ocr-simple', async (c) => {
 
 **STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)
 - 상단에 "OO 사서함 XX-YYYY" 형태의 주소가 있으면 → [ENVELOPE: YES]
-- 상단에 발신자 이름 + 사서함 주소가 있으면 → [ENVELOPE: YES]  
 - 그 외 → [ENVELOPE: NO]
 
 **STEP 2: 정보 추출**
@@ -261,13 +260,15 @@ mailroom.post('/ocr-simple', async (c) => {
 [봉투가 있으면 (상단에서)]
 발신자: 홍길동
 수용기관: 서울 (사서함 앞의 지역명)
-수용번호: 1234 (사서함 주소의 "-" 뒤 숫자, 예: 서울 사서함 123-1234 → 1234)
-주소: 서울 사서함 123-1234
+사서함주소: 서울 사서함 211 (하이픈 앞까지)
+수용번호: 1111 (하이픈 뒤 숫자, 1-9999)
+주소: 서울 사서함 211-1111 (전체)
 
 **주소 형식 예시:**
-- "서울 사서함 123-1234" → 수용번호: 1234
-- "안양 사서함 456-89" → 수용번호: 89
-- "의정부 사서함 789-9999" → 수용번호: 9999
+"서울 사서함 211-1111"
+  → 수용기관: 서울
+  → 사서함주소: 서울 사서함 211
+  → 수용번호: 1111
 
 [편지 내용 (중간~하단에서)]
 내용: (여기에 편지 본문 텍스트 전부 추출)
@@ -276,6 +277,7 @@ mailroom.post('/ocr-simple', async (c) => {
 [ENVELOPE: YES/NO]
 발신자: 
 수용기관: 
+사서함주소: 
 수용번호: 
 주소: 
 내용: (편지 본문)`
@@ -357,7 +359,6 @@ mailroom.post('/:id/ocr', async (c) => {
 
 **STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)
 - 상단에 "OO 사서함 XX-YYYY" 형태의 주소가 있으면 → [ENVELOPE: YES]
-- 상단에 발신자 이름 + 사서함 주소가 있으면 → [ENVELOPE: YES]  
 - 그 외 → [ENVELOPE: NO]
 
 **STEP 2: 정보 추출**
@@ -365,13 +366,20 @@ mailroom.post('/:id/ocr', async (c) => {
 [봉투가 있으면 (상단에서)]
 발신자: 홍길동
 수용기관: 서울 (사서함 앞의 지역명)
-수용번호: 1234 (사서함 주소의 "-" 뒤 숫자, 예: 서울 사서함 123-1234 → 1234)
-주소: 서울 사서함 123-1234
+사서함주소: 서울 사서함 211 (하이픈 앞까지)
+수용번호: 1111 (하이픈 뒤 숫자, 1-9999)
+주소: 서울 사서함 211-1111 (전체)
 
 **주소 형식 예시:**
-- "서울 사서함 123-1234" → 수용번호: 1234
-- "안양 사서함 456-89" → 수용번호: 89
-- "의정부 사서함 789-9999" → 수용번호: 9999
+"서울 사서함 211-1111"
+  → 수용기관: 서울
+  → 사서함주소: 서울 사서함 211
+  → 수용번호: 1111
+
+"안양 사서함 456-89"
+  → 수용기관: 안양
+  → 사서함주소: 안양 사서함 456
+  → 수용번호: 89
 
 [편지 내용 (중간~하단에서)]
 내용: (여기에 편지 본문 텍스트 전부 추출)
@@ -380,6 +388,7 @@ mailroom.post('/:id/ocr', async (c) => {
 [ENVELOPE: YES/NO]
 발신자: 
 수용기관: 
+사서함주소: 
 수용번호: 
 주소: 
 내용: (편지 본문)`
@@ -543,48 +552,82 @@ function extractMailInfo(text: string, hasEnvelope: boolean): any {
       }
     }
     
-    // 수용기관
-    const institutionPatterns = [
-      /수용기관:\s*([가-힣]+)/,
-      /([가-힣]{2,4})\s*사서함/,
-      /([가-힣]{2,4})\s*사\s*서/
-    ]
+    // 사서함 주소 + 수용번호 추출
+    // 형식: "서울 사서함 211-1111"
+    // → 수용기관: 서울
+    // → 사서함주소: 서울 사서함 211
+    // → 수용번호: 1111
     
-    for (const pattern of institutionPatterns) {
-      const match = text.match(pattern)
-      if (match) {
-        senderInfo.institution = match[1].trim()
-        break
+    const fullAddressPattern = /([가-힣]{2,4})\s*사서함\s*(\d+)\s*-\s*(\d{1,4})/
+    const fullMatch = text.match(fullAddressPattern)
+    
+    if (fullMatch) {
+      senderInfo.institution = fullMatch[1].trim()  // 서울
+      senderInfo.mailbox_address = `${fullMatch[1]} 사서함 ${fullMatch[2]}`  // 서울 사서함 211
+      senderInfo.inmate_number = fullMatch[3]  // 1111
+    } else {
+      // 패턴 매칭 실패 시 개별 추출
+      
+      // 수용기관 (라벨 또는 사서함 앞)
+      if (!senderInfo.institution) {
+        const institutionPatterns = [
+          /수용기관:\s*([가-힣]+)/,
+          /([가-힣]{2,4})\s*사서함/
+        ]
+        
+        for (const pattern of institutionPatterns) {
+          const match = text.match(pattern)
+          if (match) {
+            senderInfo.institution = match[1].trim()
+            break
+          }
+        }
+      }
+      
+      // 수용번호 (라벨 또는 하이픈 뒤)
+      if (!senderInfo.inmate_number) {
+        const inmateNumberPatterns = [
+          /수용번호:\s*(\d{1,4})/,
+          /사서함\s*\d+\s*-\s*(\d{1,4})/,
+          /\((\d{1,4})\)/
+        ]
+        
+        for (const pattern of inmateNumberPatterns) {
+          const match = text.match(pattern)
+          if (match) {
+            senderInfo.inmate_number = match[1]
+            break
+          }
+        }
+      }
+      
+      // 사서함주소 (라벨 또는 패턴)
+      if (!senderInfo.mailbox_address) {
+        const mailboxPatterns = [
+          /주소:\s*([가-힣]{2,4}\s*사서함\s*\d+)/,
+          /([가-힣]{2,4}\s*사서함\s*\d+)/
+        ]
+        
+        for (const pattern of mailboxPatterns) {
+          const match = text.match(pattern)
+          if (match) {
+            senderInfo.mailbox_address = match[1].trim()
+            break
+          }
+        }
       }
     }
     
-    // 수용번호 (1-9999, 사서함 주소에서 추출)
-    // 형식: "서울 사서함 123-1234" → 수용번호: 1234
-    const inmateNumberPatterns = [
-      /수용번호:\s*(\d{1,4})/,                    // 수용번호: 1234
-      /사서함\s*\d+\s*-\s*(\d{1,4})/,             // 사서함 123-1234
-      /사서함\s*\d+\s*\(\s*(\d{1,4})\s*\)/,       // 사서함 123 (1234)
-      /\((\d{1,4})\)/                             // (1234)
-    ]
-    
-    for (const pattern of inmateNumberPatterns) {
-      const match = text.match(pattern)
-      if (match) {
-        senderInfo.inmate_number = match[1]
-        break
-      }
-    }
-    
-    // 주소
-    const addressPatterns = [
+    // 전체 주소 (참고용)
+    const fullAddressPatterns = [
       /주소:\s*([^\n]+)/,
-      /([가-힣]{2,4}\s*사서함\s*[^\n]+)/
+      /([가-힣]{2,4}\s*사서함\s*\d+\s*-\s*\d{1,4})/
     ]
     
-    for (const pattern of addressPatterns) {
+    for (const pattern of fullAddressPatterns) {
       const match = text.match(pattern)
       if (match) {
-        senderInfo.address = match[1].trim()
+        senderInfo.full_address = match[1].trim()
         break
       }
     }
@@ -634,50 +677,76 @@ function extractSenderInfo(text: string): any {
     }
   }
   
-  // 2. 수용기관 추출 (사서함 앞의 지역명/기관명)
-  // "서울 사서함", "안양 사서함", "의정부 사서함" 등
-  const institutionPatterns = [
-    /수용기관:\s*([가-힣]+)/,              // 수용기관: 서울
-    /([가-힣]{2,4})\s*사서함/,              // 서울 사서함
-    /([가-힣]{2,4})\s*사\s*서/               // 서울 사 서 (띄어쓰기 오류 대응)
-  ]
+  // 2. 사서함 주소 + 수용번호 추출 (통합 패턴)
+  // 형식: "서울 사서함 211-1111"
+  // → 수용기관: 서울, 사서함주소: 서울 사서함 211, 수용번호: 1111
   
-  for (const pattern of institutionPatterns) {
-    const match = text.match(pattern)
-    if (match) {
-      senderInfo.institution = match[1].trim()
-      break
+  const fullPattern = /([가-힣]{2,4})\s*사서함\s*(\d+)\s*-\s*(\d{1,4})/
+  const fullMatch = text.match(fullPattern)
+  
+  if (fullMatch) {
+    senderInfo.institution = fullMatch[1].trim()
+    senderInfo.mailbox_address = `${fullMatch[1]} 사서함 ${fullMatch[2]}`
+    senderInfo.inmate_number = fullMatch[3]
+    senderInfo.full_address = fullMatch[0].trim()
+  } else {
+    // 개별 추출
+    
+    // 수용기관
+    const institutionPatterns = [
+      /수용기관:\s*([가-힣]+)/,
+      /([가-힣]{2,4})\s*사서함/
+    ]
+    
+    for (const pattern of institutionPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        senderInfo.institution = match[1].trim()
+        break
+      }
     }
-  }
-  
-  // 3. 수용번호 추출 (1-9999, 사서함 주소에서)
-  // 형식: "서울 사서함 123-1234" → 수용번호: 1234
-  const inmateNumberPatterns = [
-    /수용번호:\s*(\d{1,4})/,                    // 수용번호: 1234
-    /사서함\s*\d+\s*-\s*(\d{1,4})/,             // 사서함 123-1234
-    /사서함\s*\d+\s*\(\s*(\d{1,4})\s*\)/,       // 사서함 123 (1234)
-    /\((\d{1,4})\)/                             // (1234)
-  ]
-  
-  for (const pattern of inmateNumberPatterns) {
-    const match = text.match(pattern)
-    if (match) {
-      senderInfo.inmate_number = match[1]
-      break
+    
+    // 수용번호
+    const inmateNumberPatterns = [
+      /수용번호:\s*(\d{1,4})/,
+      /사서함\s*\d+\s*-\s*(\d{1,4})/,
+      /\((\d{1,4})\)/
+    ]
+    
+    for (const pattern of inmateNumberPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        senderInfo.inmate_number = match[1]
+        break
+      }
     }
-  }
-  
-  // 4. 전체 주소 추출
-  const addressPatterns = [
-    /주소:\s*([^\n]+)/,                     // 주소: 서울 사서함 123-12345
-    /([가-힣]{2,4}\s*사서함\s*[^\n]+)/      // 서울 사서함 123-12345 (라벨 없이)
-  ]
-  
-  for (const pattern of addressPatterns) {
-    const match = text.match(pattern)
-    if (match) {
-      senderInfo.address = match[1].trim()
-      break
+    
+    // 사서함주소
+    const mailboxPatterns = [
+      /주소:\s*([가-힣]{2,4}\s*사서함\s*\d+)/,
+      /([가-힣]{2,4}\s*사서함\s*\d+)/
+    ]
+    
+    for (const pattern of mailboxPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        senderInfo.mailbox_address = match[1].trim()
+        break
+      }
+    }
+    
+    // 전체 주소
+    const addressPatterns = [
+      /주소:\s*([^\n]+)/,
+      /([가-힣]{2,4}\s*사서함\s*\d+\s*-\s*\d{1,4})/
+    ]
+    
+    for (const pattern of addressPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        senderInfo.full_address = match[1].trim()
+        break
+      }
     }
   }
   

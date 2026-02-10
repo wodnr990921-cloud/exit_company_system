@@ -7063,7 +7063,7 @@ console.log('권한 관리 함수 로드 완료')
                     document.getElementById('inspection-name').value = senderInfo.sender_name || ''
                     document.getElementById('inspection-number').value = senderInfo.inmate_number || ''
                     document.getElementById('inspection-institution').value = senderInfo.institution || ''
-                    document.getElementById('inspection-address').value = senderInfo.address || ''
+                    document.getElementById('inspection-address').value = senderInfo.mailbox_address || senderInfo.full_address || ''
                 } else {
                     // OCR 실패 시 기존 정보 표시
                     document.getElementById('inspection-name').value = item.member_name || ''
