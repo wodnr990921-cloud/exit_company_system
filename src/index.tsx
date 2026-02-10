@@ -501,29 +501,36 @@ app.get('/', (c) => {
 
                 <!-- 배팅 목록 탭 -->
                 <div id="betting-management-tab" class="betting-tab-content">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <!-- 고객 배팅 목록 -->
-                    <div class="card">
+                    <!-- 경기 일정 (상단) -->
+                    <div class="card mb-6">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold"><i class="fas fa-wallet mr-2"></i>고객 배팅 목록</h3>
+                            <h3 class="text-lg font-bold"><i class="fas fa-calendar mr-2"></i>경기 일정</h3>
                             <button onclick="showMatchManagementModal()" class="btn btn-primary btn-sm">
                                 <i class="fas fa-cog mr-2"></i>경기 관리
                             </button>
                         </div>
-                        <div id="betting-folders-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                        <p class="text-sm text-gray-600 mb-4">경기 종료 후 하루까지 표시됩니다</p>
+                        <div id="match-schedule-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
                     </div>
 
-                    <!-- 경기 정산 시스템 -->
+                    <!-- 고객 베팅 목록 (하단) -->
                     <div class="card">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold"><i class="fas fa-check-circle mr-2"></i>경기 정산</h3>
-                            <button onclick="showMatchSettlementModal()" class="btn btn-success btn-sm">
-                                <i class="fas fa-check mr-2"></i>경기 정산
-                            </button>
+                            <h3 class="text-lg font-bold"><i class="fas fa-wallet mr-2"></i>고객 베팅 목록</h3>
                         </div>
-                        <div id="match-settlement-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                        
+                        <!-- 기간 필터 -->
+                        <div class="mb-4 flex items-center gap-2 flex-wrap">
+                            <button onclick="setBettingPeriod('1day')" class="btn btn-sm" id="period-1day">최근 1일</button>
+                            <button onclick="setBettingPeriod('7days')" class="btn btn-sm" id="period-7days">최근 7일</button>
+                            <button onclick="setBettingPeriod('30days')" class="btn btn-sm" id="period-30days">최근 30일</button>
+                            <button onclick="showCustomDateModal()" class="btn btn-sm">특정 날짜</button>
+                            <button onclick="loadAllBettings()" class="btn btn-sm btn-success">전체 조회</button>
+                            <span class="text-sm text-gray-600 ml-auto" id="betting-period-label"></span>
+                        </div>
+                        
+                        <div id="betting-folders-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
                     </div>
-                </div>
                 </div>
 
                 <!-- 통계 탭 -->
@@ -965,9 +972,15 @@ app.get('/', (c) => {
                                 </label>
                             </div>
                             <div id="uploaded-images-preview" class="grid grid-cols-3 gap-2"></div>
-                            <button onclick="processMailImages()" class="btn btn-primary w-full" id="process-mail-btn" disabled>
-                                <i class="fas fa-magic mr-2"></i>OCR 처리 시작
-                            </button>
+                            
+                            <div class="space-y-2">
+                                <button onclick="showBulkRegisterModal()" class="btn btn-success w-full" id="bulk-register-btn" disabled>
+                                    <i class="fas fa-users mr-2"></i>대량 등록 (회원별 분류)
+                                </button>
+                                <button onclick="processMailImages()" class="btn btn-primary w-full" id="process-mail-btn" disabled>
+                                    <i class="fas fa-magic mr-2"></i>단일 등록 (회원 미지정)
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -997,6 +1010,36 @@ app.get('/', (c) => {
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-history mr-2"></i>우편물 처리 내역</h3>
                     <div id="mail-history-list" class="space-y-2">
                         <p class="text-gray-500 text-center py-8">처리 내역이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 대량 우편물 등록 모달 -->
+        <div id="bulk-register-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-users mr-2"></i>대량 우편물 등록</h3>
+                        <button onclick="closeBulkRegisterModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4 p-3 bg-blue-50 rounded">
+                        <p class="text-sm text-blue-700">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            각 이미지마다 회원을 선택하면 자동으로 우편물과 티켓이 생성됩니다.
+                        </p>
+                    </div>
+                    
+                    <div id="bulk-register-items" class="space-y-4"></div>
+                    
+                    <div class="mt-6 flex justify-end space-x-2">
+                        <button onclick="closeBulkRegisterModal()" class="btn btn-secondary">취소</button>
+                        <button onclick="submitBulkRegister()" class="btn btn-success">
+                            <i class="fas fa-check mr-2"></i>등록 완료
+                        </button>
                     </div>
                 </div>
             </div>
@@ -5690,13 +5733,14 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 미리보기 표시
                 displayImagePreviews()
-                processBtn.disabled = false
-                processBtn.innerHTML = '<i class="fas fa-magic mr-2"></i>OCR 처리 시작'
+                document.getElementById('process-mail-btn').disabled = false
+                document.getElementById('bulk-register-btn').disabled = false
+                processBtn.innerHTML = '<i class="fas fa-magic mr-2"></i>단일 등록 (회원 미지정)'
             } catch (error) {
                 console.error('이미지 업로드 오류:', error)
                 alert('이미지 업로드 실패: ' + (error.response?.data?.error || error.message))
                 processBtn.disabled = false
-                processBtn.innerHTML = '<i class="fas fa-magic mr-2"></i>OCR 처리 시작'
+                processBtn.innerHTML = '<i class="fas fa-magic mr-2"></i>단일 등록 (회원 미지정)'
             }
         }
 
@@ -5718,6 +5762,7 @@ console.log('권한 관리 함수 로드 완료')
             
             if (uploadedMailImages.length === 0) {
                 document.getElementById('process-mail-btn').disabled = true
+                document.getElementById('bulk-register-btn').disabled = true
             }
         }
 
@@ -5760,6 +5805,110 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('우편물 처리 오류:', error)
                 alert('우편물 처리 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        let allMembers = [] // 전체 회원 목록 캐시
+
+        async function showBulkRegisterModal() {
+            if (uploadedMailImages.length === 0) {
+                alert('업로드된 이미지가 없습니다.')
+                return
+            }
+
+            try {
+                // 회원 목록 로드
+                const res = await axios.get(\`\${API_BASE}/members\`)
+                allMembers = res.data.members || []
+
+                // 모달에 이미지별 회원 선택 UI 생성
+                const container = document.getElementById('bulk-register-items')
+                container.innerHTML = uploadedMailImages.map((img, index) => {
+                    const memberOptions = allMembers.map(m => 
+                        \`<option value="\${m.id}">\${m.name} (\${m.member_number}) - \${m.institution}</option>\`
+                    ).join('')
+                    
+                    return \`
+                    <div class="border rounded p-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <img src="\${img.url}" alt="\${img.name}" class="w-full h-32 object-cover rounded">
+                                <p class="text-xs text-gray-500 mt-1">\${img.name}</p>
+                            </div>
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">회원 선택 *</label>
+                                    <select id="member-select-\${index}" class="w-full px-3 py-2 border rounded text-sm">
+                                        <option value="">회원을 선택하세요</option>
+                                        \${memberOptions}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">비고</label>
+                                    <input type="text" id="notes-\${index}" class="w-full px-3 py-2 border rounded text-sm" placeholder="특이사항 입력">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    \`
+                }).join('')
+
+                document.getElementById('bulk-register-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('회원 목록 로드 오류:', error)
+                alert('회원 목록을 불러올 수 없습니다.')
+            }
+        }
+
+        function closeBulkRegisterModal() {
+            document.getElementById('bulk-register-modal').classList.add('hidden')
+        }
+
+        async function submitBulkRegister() {
+            try {
+                const items = []
+
+                for (let i = 0; i < uploadedMailImages.length; i++) {
+                    const memberSelect = document.getElementById(\`member-select-\${i}\`)
+                    const notesInput = document.getElementById(\`notes-\${i}\`)
+
+                    const memberId = memberSelect.value
+                    if (!memberId) {
+                        alert(\`\${i + 1}번째 이미지의 회원을 선택해주세요.\`)
+                        return
+                    }
+
+                    items.push({
+                        member_id: parseInt(memberId),
+                        image_key: uploadedMailImages[i].key,
+                        notes: notesInput.value || ''
+                    })
+                }
+
+                // 대량 등록 API 호출
+                const res = await axios.post(\`\${API_BASE}/mailroom/bulk\`, {
+                    items,
+                    created_by: currentStaff.id
+                })
+
+                alert(\`총 \${res.data.count}건의 우편물과 티켓이 생성되었습니다.\`)
+
+                // 초기화
+                uploadedMailImages = []
+                displayImagePreviews()
+                document.getElementById('mail-images').value = ''
+                document.getElementById('process-mail-btn').disabled = true
+                document.getElementById('bulk-register-btn').disabled = true
+                closeBulkRegisterModal()
+
+                // 목록 새로고침
+                await loadPendingMail()
+                if (currentView === 'tickets') {
+                    await loadTickets()
+                }
+            } catch (error) {
+                console.error('대량 등록 오류:', error)
+                alert('대량 등록 실패: ' + (error.response?.data?.error || error.response?.data?.details || error.message))
             }
         }
 

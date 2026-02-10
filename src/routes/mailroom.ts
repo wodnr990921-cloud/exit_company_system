@@ -155,8 +155,8 @@ mailroom.post('/', async (c) => {
   try {
     const { member_id, image_keys, notes, created_by } = await c.req.json()
     
-    if (!member_id || !image_keys || image_keys.length === 0) {
-      return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
+    if (!image_keys || image_keys.length === 0) {
+      return c.json({ error: '이미지를 업로드해주세요.' }, 400)
     }
     
     // 우편물 번호 생성 (MAIL + 타임스탬프)
@@ -183,7 +183,10 @@ mailroom.post('/', async (c) => {
     })
   } catch (error: any) {
     console.error('우편물 등록 오류:', error)
-    return c.json({ error: '우편물 등록 중 오류가 발생했습니다.' }, 500)
+    return c.json({ 
+      error: '우편물 등록 중 오류가 발생했습니다.',
+      details: error?.message || String(error)
+    }, 500)
   }
 })
 
@@ -416,6 +419,105 @@ mailroom.delete('/:id', async (c) => {
   } catch (error: any) {
     console.error('우편물 삭제 오류:', error)
     return c.json({ error: '우편물 삭제 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 대량 우편물 등록 API (각 이미지별 회원 지정 + 티켓 자동 생성)
+mailroom.post('/bulk', async (c) => {
+  try {
+    const { items, created_by } = await c.req.json()
+    
+    // items 형식: [{ member_id, image_key, notes }]
+    if (!items || items.length === 0) {
+      return c.json({ error: '등록할 우편물이 없습니다.' }, 400)
+    }
+    
+    const createdItems = []
+    
+    for (const item of items) {
+      const { member_id, image_key, notes } = item
+      
+      if (!member_id || !image_key) {
+        continue // 필수 정보 없으면 건너뛰기
+      }
+      
+      // 우편물 번호 생성
+      const mailNumber = `MAIL${Date.now()}-${Math.random().toString(36).substr(2, 4)}`
+      
+      // 우편물 등록
+      const mailResult = await c.env.DB.prepare(`
+        INSERT INTO mailroom_items (
+          mail_number, member_id, image_keys, status, notes, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `).bind(
+        mailNumber,
+        member_id,
+        JSON.stringify([image_key]),
+        'received',
+        notes || '',
+        created_by
+      ).run()
+      
+      const mailroomId = mailResult.meta.last_row_id
+      
+      // 회원 정보 조회
+      const { results: members } = await c.env.DB.prepare(`
+        SELECT name, member_number, institution FROM members WHERE id = ?
+      `).bind(member_id).all()
+      
+      if (members.length === 0) continue
+      
+      const member = members[0] as any
+      
+      // 티켓 번호 생성
+      const ticketNumber = `MAIL-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`
+      
+      // 티켓 자동 생성
+      const ticketResult = await c.env.DB.prepare(`
+        INSERT INTO tickets (
+          ticket_number, title, description, member_id, ticket_type,
+          status, priority, created_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `).bind(
+        ticketNumber,
+        `우편물 수령 - ${member.name}(${member.member_number})`,
+        `우편물 번호: ${mailNumber}\n기관: ${member.institution}\n비고: ${notes || '없음'}`,
+        member_id,
+        'MAIL_INSPECTION',
+        'open',
+        'normal',
+        created_by
+      ).run()
+      
+      const ticketId = ticketResult.meta.last_row_id
+      
+      // 우편물에 티켓 ID 연결
+      await c.env.DB.prepare(`
+        UPDATE mailroom_items 
+        SET ticket_id = ?, status = 'assigned'
+        WHERE id = ?
+      `).bind(ticketId, mailroomId).run()
+      
+      createdItems.push({
+        mailroom_id: mailroomId,
+        mail_number: mailNumber,
+        ticket_id: ticketId,
+        ticket_number: ticketNumber,
+        member_name: member.name
+      })
+    }
+    
+    return c.json({
+      success: true,
+      created: createdItems,
+      count: createdItems.length
+    })
+  } catch (error: any) {
+    console.error('대량 우편물 등록 오류:', error)
+    return c.json({ 
+      error: '대량 등록 중 오류가 발생했습니다.',
+      details: error?.message || String(error)
+    }, 500)
   }
 })
 
