@@ -221,6 +221,49 @@ mailroom.patch('/:id/status', async (c) => {
   }
 })
 
+// 간단한 OCR 처리 (단일 이미지)
+mailroom.post('/ocr-simple', async (c) => {
+  try {
+    const { image_key } = await c.req.json()
+    
+    if (!image_key) {
+      return c.json({ error: '이미지 키가 필요합니다.' }, 400)
+    }
+    
+    // R2에서 이미지 가져오기
+    const object = await c.env.R2.get(image_key)
+    if (!object) {
+      return c.json({ error: '이미지를 찾을 수 없습니다.' }, 404)
+    }
+    
+    // 이미지를 ArrayBuffer로 변환
+    const imageBuffer = await object.arrayBuffer()
+    
+    // Cloudflare AI Workers로 OCR 실행
+    const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
+      image: Array.from(new Uint8Array(imageBuffer)),
+      messages: [{
+        role: "user",
+        content: "이 이미지는 편지 봉투입니다. 수신자 이름, 번호, 기관명을 추출해주세요. 모든 텍스트를 그대로 출력해주세요."
+      }]
+    })
+    
+    const text = aiResponse?.response || ''
+    
+    return c.json({ 
+      success: true,
+      text: text,
+      image_key: image_key
+    })
+  } catch (error: any) {
+    console.error('간단 OCR 오류:', error)
+    return c.json({ 
+      error: 'OCR 처리 중 오류가 발생했습니다.',
+      details: error?.message || String(error)
+    }, 500)
+  }
+})
+
 // OCR 처리 (Cloudflare AI Workers 사용)
 mailroom.post('/:id/ocr', async (c) => {
   try {

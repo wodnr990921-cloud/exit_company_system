@@ -973,13 +973,9 @@ app.get('/', (c) => {
                             </div>
                             <div id="uploaded-images-preview" class="grid grid-cols-3 gap-2"></div>
                             
-                            <div class="space-y-2">
-                                <button onclick="showBulkRegisterModal()" class="btn btn-success w-full" id="bulk-register-btn" disabled>
-                                    <i class="fas fa-users mr-2"></i>대량 등록 (회원별 분류)
-                                </button>
-                                <button onclick="processMailImages()" class="btn btn-primary w-full" id="process-mail-btn" disabled>
-                                    <i class="fas fa-magic mr-2"></i>단일 등록 (회원 미지정)
-                                </button>
+                            <div class="text-sm text-gray-600 mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                이미지를 선택하면 자동으로 OCR 처리 후 검수 탭으로 이동합니다.
                             </div>
                         </div>
                     </div>
@@ -997,7 +993,23 @@ app.get('/', (c) => {
             <!-- 검수 및 배당 탭 -->
             <div id="mailroom-inspection-tab" class="mailroom-tab-content hidden">
                 <div class="card">
-                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-search mr-2"></i>OCR 처리 완료 우편물</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold"><i class="fas fa-search mr-2"></i>임시 티켓 검수</h3>
+                        <div class="text-sm text-gray-600">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            체크박스로 선택 후 합치기/분리 가능
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4 flex gap-2">
+                        <button onclick="mergeTempTickets()" class="btn btn-sm btn-primary" id="merge-tickets-btn" disabled>
+                            <i class="fas fa-compress mr-1"></i>선택 항목 합치기
+                        </button>
+                        <button onclick="confirmAllTempTickets()" class="btn btn-sm btn-success">
+                            <i class="fas fa-check-double mr-1"></i>전체 확정
+                        </button>
+                    </div>
+                    
                     <div id="processed-mail-list" class="space-y-4">
                         <p class="text-gray-500 text-center py-8">처리 완료된 우편물이 없습니다.</p>
                     </div>
@@ -5707,18 +5719,65 @@ console.log('권한 관리 함수 로드 완료')
             if (tab === 'history') loadMailHistory()
         }
 
+        // 이미지 압축 함수
+        async function compressImage(file, maxWidth = 1920, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = (e) => {
+                    const img = new Image()
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas')
+                        let width = img.width
+                        let height = img.height
+
+                        // 최대 너비 제한
+                        if (width > maxWidth) {
+                            height = (height * maxWidth) / width
+                            width = maxWidth
+                        }
+
+                        canvas.width = width
+                        canvas.height = height
+
+                        const ctx = canvas.getContext('2d')
+                        ctx.drawImage(img, 0, 0, width, height)
+
+                        canvas.toBlob((blob) => {
+                            resolve(new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            }))
+                        }, 'image/jpeg', quality)
+                    }
+                    img.onerror = reject
+                    img.src = e.target.result
+                }
+                reader.onerror = reject
+                reader.readAsDataURL(file)
+            })
+        }
+
         async function handleMailImages(event) {
             const files = Array.from(event.target.files)
             if (files.length === 0) return
 
-            const processBtn = document.getElementById('process-mail-btn')
-            processBtn.disabled = true
-            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>업로드 중...'
+            const uploadArea = document.querySelector('#mail-images').parentElement.parentElement
+            const originalHTML = uploadArea.innerHTML
+            uploadArea.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-4"></i><p class="text-gray-600">업로드 및 OCR 처리 중...</p><p class="text-sm text-gray-500 mt-2" id="upload-progress">0 / ' + files.length + '</p></div>'
 
             try {
-                for (const file of files) {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i]
+                    
+                    // 진행 상황 표시
+                    const progressEl = document.getElementById('upload-progress')
+                    if (progressEl) progressEl.textContent = \`\${i + 1} / \${files.length}\`
+                    
+                    // 이미지 압축
+                    const compressedFile = await compressImage(file)
+                    
                     const formData = new FormData()
-                    formData.append('file', file)
+                    formData.append('file', compressedFile)
 
                     const res = await axios.post(\`\${API_BASE}/mailroom/upload\`, formData, {
                         headers: { 'Content-Type': 'multipart/form-data' }
@@ -5729,18 +5788,25 @@ console.log('권한 관리 함수 로드 완료')
                         url: res.data.url,
                         name: file.name
                     })
+                    
+                    // 즉시 OCR 처리 및 임시 티켓 생성
+                    await processImageToTempTicket(res.data.key, res.data.url)
                 }
 
-                // 미리보기 표시
-                displayImagePreviews()
-                document.getElementById('process-mail-btn').disabled = false
-                document.getElementById('bulk-register-btn').disabled = false
-                processBtn.innerHTML = '<i class="fas fa-magic mr-2"></i>단일 등록 (회원 미지정)'
+                // 완료
+                alert(\`\${files.length}개 이미지 업로드 및 OCR 처리 완료!\`)
+                
+                // 초기화
+                uploadedMailImages = []
+                document.getElementById('mail-images').value = ''
+                uploadArea.innerHTML = originalHTML
+                
+                // 검수 탭으로 이동
+                showMailroomTab('inspection')
             } catch (error) {
                 console.error('이미지 업로드 오류:', error)
                 alert('이미지 업로드 실패: ' + (error.response?.data?.error || error.message))
-                processBtn.disabled = false
-                processBtn.innerHTML = '<i class="fas fa-magic mr-2"></i>단일 등록 (회원 미지정)'
+                uploadArea.innerHTML = originalHTML
             }
         }
 
@@ -5754,6 +5820,74 @@ console.log('권한 관리 함수 로드 완료')
                     </button>
                 </div>
             \`).join('')
+        }
+
+        // OCR 처리 및 임시 티켓 생성
+        async function processImageToTempTicket(imageKey, imageUrl) {
+            try {
+                // 1. Cloudflare AI로 OCR 처리 (간단하게 텍스트 추출)
+                const ocrRes = await axios.post(\`\${API_BASE}/mailroom/ocr-simple\`, {
+                    image_key: imageKey
+                })
+                
+                const ocrText = ocrRes.data.text || ''
+                
+                // 2. 수신자 정보 추출 (간단한 패턴 매칭)
+                const receiverInfo = extractReceiverInfo(ocrText)
+                
+                // 3. 임시 티켓 생성
+                const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
+                    ticket_number: \`TEMP-\${Date.now()}-\${Math.random().toString(36).substr(2, 4)}\`,
+                    title: \`[임시] 우편물 - \${receiverInfo.name || '미인식'}\`,
+                    description: \`수신자: \${receiverInfo.name || '미인식'}\\n번호: \${receiverInfo.number || '미인식'}\\n기관: \${receiverInfo.institution || '미인식'}\\n\\nOCR 텍스트:\\n\${ocrText}\`,
+                    member_id: null,
+                    ticket_type: 'MAIL_INSPECTION',
+                    status: 'open',
+                    priority: 'normal',
+                    created_by: currentStaff.id,
+                    image_keys: JSON.stringify([imageKey])
+                })
+                
+                return ticketRes.data
+            } catch (error) {
+                console.error('OCR 처리 오류:', error)
+                // 오류 발생해도 일단 빈 티켓 생성
+                const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
+                    ticket_number: \`TEMP-\${Date.now()}-\${Math.random().toString(36).substr(2, 4)}\`,
+                    title: '[임시] 우편물 - OCR 실패',
+                    description: 'OCR 처리 실패. 수동으로 정보를 입력해주세요.',
+                    member_id: null,
+                    ticket_type: 'MAIL_INSPECTION',
+                    status: 'open',
+                    priority: 'high',
+                    created_by: currentStaff.id,
+                    image_keys: JSON.stringify([imageKey])
+                })
+                return ticketRes.data
+            }
+        }
+
+        // 수신자 정보 추출 (간단한 패턴 매칭)
+        function extractReceiverInfo(text) {
+            const info = {
+                name: null,
+                number: null,
+                institution: null
+            }
+            
+            // 이름 추출 (한글 2-4자)
+            const nameMatch = text.match(/[가-힣]{2,4}/)
+            if (nameMatch) info.name = nameMatch[0]
+            
+            // 번호 추출 (숫자 4-8자리)
+            const numberMatch = text.match(/\\d{4,8}/)
+            if (numberMatch) info.number = numberMatch[0]
+            
+            // 기관명 추출 (교도소, 구치소 등)
+            const institutionMatch = text.match(/([가-힣]+교도소|[가-힣]+구치소|[가-힣]+교정소)/)
+            if (institutionMatch) info.institution = institutionMatch[0]
+            
+            return info
         }
 
         function removeImage(index) {
@@ -5947,10 +6081,13 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
 
+        let selectedTempTickets = [] // 선택된 임시 티켓 ID들
+
         async function loadProcessedMail() {
             try {
-                const res = await axios.get(\`\${API_BASE}/mailroom?status=ocr_completed\`)
-                const items = res.data.mailroom_items || []
+                // 임시 티켓 목록 조회 (TEMP- 로 시작하는 티켓)
+                const res = await axios.get(\`\${API_BASE}/tickets?status=open&type=MAIL_INSPECTION\`)
+                const tickets = (res.data.tickets || []).filter(t => t.ticket_number.startsWith('TEMP-'))
 
                 const container = document.getElementById('processed-mail-list')
                 if (items.length === 0) {
