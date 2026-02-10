@@ -6182,14 +6182,21 @@ console.log('권한 관리 함수 로드 완료')
                 const container = document.getElementById('pending-mail-list')
                 if (items.length === 0) {
                     container.innerHTML = '<p class="text-gray-500 text-center py-8">업로드된 우편물이 없습니다.</p>'
+                    stopAutoRefresh()
                     return
                 }
 
-                // 상태별 정렬 (received -> ocr_processing -> ocr_completed)
+                // 상태별 정렬 (received -> ocr_processing -> ocr_completed -> ocr_failed)
                 const sortedItems = items.sort((a, b) => {
                     const statusOrder = { 'received': 0, 'ocr_processing': 1, 'ocr_completed': 2, 'ocr_failed': 3 }
                     return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99)
                 })
+                
+                // OCR 처리 중인 항목이 있으면 자동 새로고침 유지
+                const hasProcessing = sortedItems.some(item => item.status === 'ocr_processing' || item.status === 'received')
+                if (!hasProcessing) {
+                    stopAutoRefresh()
+                }
 
                 container.innerHTML = sortedItems.map(item => {
                     const imageKeys = item.image_keys ? JSON.parse(item.image_keys) : []
@@ -6197,10 +6204,14 @@ console.log('권한 관리 함수 로드 완료')
                     
                     // 상태별 표시
                     let statusBadge = ''
+                    let statusIcon = ''
                     let actionButtons = ''
+                    let cardStyle = 'border-l-4 border-gray-300'
                     
                     if (item.status === 'received') {
-                        statusBadge = '<span class="status-badge bg-gray-100 text-gray-800"><i class="fas fa-clock mr-1"></i>대기중</span>'
+                        statusBadge = '<span class="status-badge bg-yellow-100 text-yellow-800"><i class="fas fa-clock mr-1"></i>대기중</span>'
+                        statusIcon = '<i class="fas fa-hourglass-half text-yellow-500 text-2xl"></i>'
+                        cardStyle = 'border-l-4 border-yellow-400'
                         actionButtons = \`
                             <button onclick="startOCR(\${item.id})" class="btn btn-sm btn-primary">
                                 <i class="fas fa-magic mr-1"></i>OCR 시작
@@ -6208,16 +6219,26 @@ console.log('권한 관리 함수 로드 완료')
                         \`
                     } else if (item.status === 'ocr_processing') {
                         statusBadge = '<span class="status-badge bg-blue-100 text-blue-800"><i class="fas fa-spinner fa-spin mr-1"></i>처리중</span>'
-                        actionButtons = \`<button class="btn btn-sm" disabled>처리중...</button>\`
+                        statusIcon = '<i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i>'
+                        cardStyle = 'border-l-4 border-blue-400 bg-blue-50'
+                        actionButtons = \`
+                            <button class="btn btn-sm" disabled>
+                                <i class="fas fa-spinner fa-spin mr-1"></i>처리중...
+                            </button>
+                        \`
                     } else if (item.status === 'ocr_completed') {
-                        statusBadge = '<span class="status-badge bg-green-100 text-green-800"><i class="fas fa-check mr-1"></i>완료</span>'
+                        statusBadge = '<span class="status-badge bg-green-100 text-green-800"><i class="fas fa-check-circle mr-1"></i>완료</span>'
+                        statusIcon = '<i class="fas fa-check-circle text-green-500 text-2xl"></i>'
+                        cardStyle = 'border-l-4 border-green-400 bg-green-50'
                         actionButtons = \`
                             <button onclick="moveToInspection(\${item.id})" class="btn btn-sm btn-success">
                                 <i class="fas fa-arrow-right mr-1"></i>검수하기
                             </button>
                         \`
                     } else if (item.status === 'ocr_failed') {
-                        statusBadge = '<span class="status-badge bg-red-100 text-red-800"><i class="fas fa-exclamation mr-1"></i>실패</span>'
+                        statusBadge = '<span class="status-badge bg-red-100 text-red-800"><i class="fas fa-exclamation-triangle mr-1"></i>실패</span>'
+                        statusIcon = '<i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>'
+                        cardStyle = 'border-l-4 border-red-400'
                         actionButtons = \`
                             <button onclick="retryOCR(\${item.id})" class="btn btn-sm btn-danger">
                                 <i class="fas fa-redo mr-1"></i>재시도
@@ -6226,38 +6247,61 @@ console.log('권한 관리 함수 로드 완료')
                     }
                     
                     return \`
-                        <div class="card">
+                        <div class="card \${cardStyle} hover:shadow-lg transition-all">
                             <div class="flex gap-4">
+                                <!-- 상태 아이콘 -->
+                                <div class="flex items-center justify-center w-16">
+                                    \${statusIcon}
+                                </div>
+                                
+                                <!-- 이미지 썸네일 -->
                                 \${firstImage ? \`
                                     <img src="/api/mailroom/image/\${firstImage}" 
-                                         class="w-24 h-24 object-cover rounded cursor-pointer"
+                                         class="w-32 h-32 object-cover rounded border-2 border-gray-200 cursor-pointer hover:border-blue-400 transition-colors"
                                          onclick="viewMailImages(\${item.id})">
                                 \` : \`
-                                    <div class="w-24 h-24 bg-gray-200 rounded flex items-center justify-center">
-                                        <i class="fas fa-image text-gray-400 text-2xl"></i>
+                                    <div class="w-32 h-32 bg-gray-200 rounded flex items-center justify-center border-2 border-gray-300">
+                                        <i class="fas fa-image text-gray-400 text-3xl"></i>
                                     </div>
                                 \`}
                                 
+                                <!-- 우편물 정보 -->
                                 <div class="flex-1">
                                     <div class="flex justify-between items-start mb-2">
                                         <div>
-                                            <p class="font-medium">\${item.mail_number}</p>
-                                            <p class="text-sm text-gray-600">\${item.member_name || '미배정'}</p>
+                                            <div class="flex items-center gap-2">
+                                                <p class="font-mono font-bold text-lg text-blue-600">\${item.mail_number}</p>
+                                                \${statusBadge}
+                                            </div>
+                                            <p class="text-sm text-gray-600 mt-1">\${item.member_name || '수신자 미지정'}</p>
                                         </div>
-                                        \${statusBadge}
                                     </div>
                                     
-                                    \${item.notes ? \`<p class="text-xs text-gray-500 mb-2">\${item.notes}</p>\` : ''}
+                                    \${item.notes ? \`<p class="text-sm text-gray-700 mb-2 bg-gray-50 p-2 rounded"><i class="fas fa-sticky-note mr-1 text-gray-400"></i>\${item.notes}</p>\` : ''}
                                     
-                                    <div class="flex items-center gap-2 text-xs text-gray-500 mb-3">
-                                        <span><i class="fas fa-images mr-1"></i>\${imageKeys.length}장</span>
-                                        <span><i class="fas fa-clock mr-1"></i>\${new Date(item.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                    <div class="flex items-center gap-3 text-sm text-gray-500 mb-3">
+                                        <span class="flex items-center gap-1">
+                                            <i class="fas fa-images"></i>
+                                            <strong>\${imageKeys.length}</strong>장
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <i class="fas fa-clock"></i>
+                                            \${new Date(item.created_at).toLocaleString('ko-KR', { 
+                                                month: 'short', 
+                                                day: 'numeric', 
+                                                hour: '2-digit', 
+                                                minute: '2-digit' 
+                                            })}
+                                        </span>
                                     </div>
                                     
                                     <div class="flex gap-2">
                                         \${actionButtons}
-                                        <button onclick="deleteMailItem(\${item.id})" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i>
+                                        <button onclick="viewMailImages(\${item.id})" class="btn btn-sm btn-secondary">
+                                            <i class="fas fa-images mr-1"></i>이미지 보기
+                                        </button>
+                                        <button onclick="deleteMailItem(\${item.id})" class="btn btn-sm btn-danger" data-permission="admin">
+                                            <i class="fas fa-trash mr-1"></i>삭제
                                         </button>
                                     </div>
                                 </div>
@@ -6276,8 +6320,8 @@ console.log('권한 관리 함수 로드 완료')
                 alert('OCR 처리가 시작되었습니다.')
                 await loadPendingMail()
                 
-                // 5초 후 자동 새로고침
-                setTimeout(() => loadPendingMail(), 5000)
+                // 자동 새로고침 시작
+                startAutoRefresh()
             } catch (error) {
                 console.error('OCR 시작 오류:', error)
                 alert('OCR 시작 실패: ' + (error.response?.data?.error || error.message))
@@ -6828,11 +6872,18 @@ console.log('권한 관리 함수 로드 완료')
                 
                 if (response.data.success) {
                     const mailroomId = response.data.mailroom_id
+                    const mailNumber = response.data.mail_number
                     
-                    // OCR 처리 시작
-                    await axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
+                    alert(\`우편물이 등록되었습니다.\\n우편물 번호: \${mailNumber}\\n\\nOCR 처리를 시작합니다...\`)
                     
-                    alert(\`우편물 등록 및 OCR 처리가 완료되었습니다.\\n우편물 번호: \${response.data.mail_number}\`)
+                    // OCR 처리 시작 (비동기)
+                    axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
+                        .then(() => {
+                            console.log('OCR 처리 시작됨:', mailroomId)
+                        })
+                        .catch(err => {
+                            console.error('OCR 시작 실패:', err)
+                        })
                     
                     // 초기화
                     uploadedImageKeys = []
@@ -6840,12 +6891,47 @@ console.log('권한 관리 함수 로드 완료')
                     const processBtn = document.getElementById('process-mail-btn')
                     if (processBtn) processBtn.disabled = true
                     
+                    // 대기 탭으로 전환
+                    showMailroomTab('receive')
+                    
                     // 목록 새로고침
                     await loadPendingMail()
-                    await loadProcessedMail()
+                    
+                    // 5초마다 자동 새로고침 시작 (OCR 처리 상태 확인)
+                    startAutoRefresh()
                 }
             } catch (error) {
                 alert('우편물 등록 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        // 자동 새로고침 (OCR 상태 폴링)
+        let autoRefreshInterval = null
+        
+        function startAutoRefresh() {
+            // 기존 인터벌 제거
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval)
+            }
+            
+            // 5초마다 새로고침
+            autoRefreshInterval = setInterval(async () => {
+                await loadPendingMail()
+            }, 5000)
+            
+            // 2분 후 자동 새로고침 중지
+            setTimeout(() => {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval)
+                    autoRefreshInterval = null
+                }
+            }, 120000)
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval)
+                autoRefreshInterval = null
             }
         }
         
