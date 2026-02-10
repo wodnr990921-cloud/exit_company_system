@@ -249,34 +249,31 @@ mailroom.post('/ocr-simple', async (c) => {
       
       const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
         image: Array.from(new Uint8Array(imageBuffer)),
-        prompt: "agree",
-        messages: [{
-          role: "user",
-          content: `이 이미지에서 편지 봉투 정보를 추출하세요.
+        prompt: `이 편지 이미지를 분석하세요.
 
-**핵심 규칙**:
-1. 편지봉투는 반드시 이미지 상단(위쪽 1/3 영역)에만 위치합니다
-2. 이미지 중간이나 하단의 텍스트는 편지 내용이므로 무시하세요
-3. 발신자 정보만 추출하세요 (수신자 정보는 무시)
+**STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)
+- 상단에 "OO 사서함" 형태의 주소가 있으면 → [ENVELOPE: YES]
+- 상단에 발신자 이름 + 수용번호(5-6자리)가 있으면 → [ENVELOPE: YES]  
+- 그 외 → [ENVELOPE: NO]
 
-**추출할 정보** (이미지 상단에서만):
-- 발신자 성명
-- 수용기관: "OO 사서함"에서 앞의 OO 부분 (예: 서울, 안양, 의정부, 수원 등)
-- 수용번호: 5-6자리 숫자
-- 전체 주소
+**STEP 2: 정보 추출**
 
-**주소 형식 예시**:
-- "서울 사서함 123-12345"
-- "안양 사서함 456 (수용번호: 123456)"
-- "의정부 사서함 789-654321"
-
-**응답 형식** (정확히 따라주세요):
-[ENVELOPE: YES] (또는 [ENVELOPE: NO])
+[봉투가 있으면 (상단에서)]
 발신자: 홍길동
-수용기관: 서울
-수용번호: 12345
-주소: 서울 사서함 123-12345`
-        }]
+수용기관: 서울 (사서함 앞의 지역명)
+수용번호: 12345 (5-6자리 숫자)
+주소: 서울 사서함 123-12345
+
+[편지 내용 (중간~하단에서)]
+내용: (여기에 편지 본문 텍스트 전부 추출)
+
+**응답 형식:**
+[ENVELOPE: YES/NO]
+발신자: 
+수용기관: 
+수용번호: 
+주소: 
+내용: (편지 본문)`
       })
       
       text = aiResponse?.response || ''
@@ -351,41 +348,31 @@ mailroom.post('/:id/ocr', async (c) => {
           
           aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
             image: Array.from(new Uint8Array(imageBuffer)),
-            prompt: "agree",
-            messages: [{
-              role: "user",
-              content: `이 이미지에서 편지 봉투 정보를 추출하세요.
+            prompt: `이 편지 이미지를 분석하세요.
 
-**핵심 규칙**:
-1. 편지봉투는 반드시 이미지 상단(위쪽 1/3 영역)에만 위치합니다
-2. 이미지 중간이나 하단의 텍스트는 편지 내용이므로 무시하세요
-3. 발신자 정보만 추출하세요 (수신자 정보는 무시)
+**STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)
+- 상단에 "OO 사서함" 형태의 주소가 있으면 → [ENVELOPE: YES]
+- 상단에 발신자 이름 + 수용번호(5-6자리)가 있으면 → [ENVELOPE: YES]  
+- 그 외 → [ENVELOPE: NO]
 
-**추출할 정보** (이미지 상단에서만):
-- 발신자 성명
-- 수용기관: "OO 사서함"에서 앞의 OO 부분 (예: 서울, 안양, 의정부, 수원 등)
-- 수용번호: 5-6자리 숫자
-- 전체 주소
+**STEP 2: 정보 추출**
 
-**주소 형식 예시**:
-- "서울 사서함 123-12345"
-- "안양 사서함 456 (수용번호: 123456)"
-- "의정부 사서함 789-654321"
-
-**응답 형식** (정확히 따라주세요):
-[ENVELOPE: YES] (또는 [ENVELOPE: NO])
+[봉투가 있으면 (상단에서)]
 발신자: 홍길동
-수용기관: 서울
-수용번호: 12345
+수용기관: 서울 (사서함 앞의 지역명)
+수용번호: 12345 (5-6자리 숫자)
 주소: 서울 사서함 123-12345
 
-**판단 기준**:
-- 이미지 상단에 "사서함" 키워드가 있고
-- 발신자 성명이 있고  
-- 5-6자리 수용번호가 있으면 → [ENVELOPE: YES]
-- 그 외의 경우 → [ENVELOPE: NO]`
-            }],
-            max_tokens: 512
+[편지 내용 (중간~하단에서)]
+내용: (여기에 편지 본문 텍스트 전부 추출)
+
+**응답 형식:**
+[ENVELOPE: YES/NO]
+발신자: 
+수용기관: 
+수용번호: 
+주소: 
+내용: (편지 본문)`
           })
           
           // OCR 결과 파싱
@@ -398,15 +385,16 @@ mailroom.post('/:id/ocr', async (c) => {
         // 봉투 감지 (간단한 키워드 기반)
         const hasEnvelope = detectEnvelope(extractedText)
         
-        // 발신자 정보 추출
-        const senderInfo = hasEnvelope ? extractSenderInfo(extractedText) : null
+        // 우편물 정보 추출 (발신자 정보 + 편지 내용)
+        const mailInfo = extractMailInfo(extractedText, hasEnvelope)
         
         ocrResults.push({
           image_key: key,
           text: extractedText,
           confidence: 0.90, // Llama 3.2 Vision은 고정밀 모델
           has_envelope: hasEnvelope,
-          sender_info: senderInfo,  // 발신자 정보 추가
+          sender_info: mailInfo.sender_info,  // 발신자 정보
+          letter_content: mailInfo.letter_content,  // 편지 내용
           raw_response: aiResponse
         })
         
@@ -518,7 +506,104 @@ function detectEnvelope(text: string): boolean {
   return hasMailbox && hasInstitution
 }
 
-// 발신자 정보 추출 헬퍼 함수
+// 우편물 정보 추출 헬퍼 함수 (발신자 정보 + 편지 내용)
+function extractMailInfo(text: string, hasEnvelope: boolean): any {
+  const result: any = {
+    sender_info: null,
+    letter_content: null
+  }
+  
+  // 1. 발신자 정보 추출 (봉투가 있을 때만)
+  if (hasEnvelope) {
+    const senderInfo: any = {}
+    
+    // 발신자 이름
+    const senderPatterns = [
+      /발신자:\s*([가-힣\s]+)/,
+      /발신:\s*([가-힣\s]+)/,
+      /보내는\s*사람:\s*([가-힣\s]+)/,
+      /보낸\s*사람:\s*([가-힣\s]+)/
+    ]
+    
+    for (const pattern of senderPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        senderInfo.sender_name = match[1].trim()
+        break
+      }
+    }
+    
+    // 수용기관
+    const institutionPatterns = [
+      /수용기관:\s*([가-힣]+)/,
+      /([가-힣]{2,4})\s*사서함/,
+      /([가-힣]{2,4})\s*사\s*서/
+    ]
+    
+    for (const pattern of institutionPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        senderInfo.institution = match[1].trim()
+        break
+      }
+    }
+    
+    // 수용번호 (5-6자리)
+    const inmateNumberPatterns = [
+      /수용번호:\s*(\d{5,6})/,
+      /사서함\s*\d+\s*[-\(]\s*(\d{5,6})/,
+      /[-\(]\s*(\d{5,6})\s*\)/,
+      /\((\d{5,6})\)/
+    ]
+    
+    for (const pattern of inmateNumberPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        senderInfo.inmate_number = match[1]
+        break
+      }
+    }
+    
+    // 주소
+    const addressPatterns = [
+      /주소:\s*([^\n]+)/,
+      /([가-힣]{2,4}\s*사서함\s*[^\n]+)/
+    ]
+    
+    for (const pattern of addressPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        senderInfo.address = match[1].trim()
+        break
+      }
+    }
+    
+    result.sender_info = Object.keys(senderInfo).length > 0 ? senderInfo : null
+  }
+  
+  // 2. 편지 내용 추출
+  const contentPatterns = [
+    /내용:\s*([\s\S]+)/,  // "내용:" 라벨 이후 모든 텍스트
+    /\[ENVELOPE: (?:YES|NO)\][\s\S]*?(?:주소:[^\n]+\n)([\s\S]+)/  // 봉투 정보 이후 모든 텍스트
+  ]
+  
+  for (const pattern of contentPatterns) {
+    const match = text.match(pattern)
+    if (match) {
+      result.letter_content = match[1].trim()
+      break
+    }
+  }
+  
+  // 내용 라벨이 없으면 전체 텍스트를 내용으로 간주 (봉투가 없을 때)
+  if (!result.letter_content && !hasEnvelope) {
+    result.letter_content = text.trim()
+  }
+  
+  return result
+}
+
+// 발신자 정보 추출 헬퍼 함수 (하위 호환성 유지)
 function extractSenderInfo(text: string): any {
   const senderInfo: any = {}
   
