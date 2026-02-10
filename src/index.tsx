@@ -1057,6 +1057,94 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 검수 상세 모달 -->
+        <div id="inspection-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] flex flex-col">
+                <div class="p-6 border-b flex justify-between items-center">
+                    <h3 class="text-xl font-bold"><i class="fas fa-search mr-2"></i>우편물 검수</h3>
+                    <button onclick="closeInspectionDetail()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                
+                <div class="flex-1 overflow-hidden flex">
+                    <!-- 좌측: 이미지 -->
+                    <div class="w-1/2 border-r p-6 overflow-y-auto">
+                        <div id="inspection-images" class="space-y-4"></div>
+                    </div>
+                    
+                    <!-- 우측: OCR 결과 및 편집 -->
+                    <div class="w-1/2 p-6 overflow-y-auto">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">수신자 이름</label>
+                                <input type="text" id="inspection-name" class="w-full px-3 py-2 border rounded">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">번호</label>
+                                <input type="text" id="inspection-number" class="w-full px-3 py-2 border rounded">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">기관명</label>
+                                <input type="text" id="inspection-institution" class="w-full px-3 py-2 border rounded">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">OCR 원문</label>
+                                <textarea id="inspection-ocr-text" class="w-full px-3 py-2 border rounded h-32" readonly></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">비고</label>
+                                <textarea id="inspection-notes" class="w-full px-3 py-2 border rounded h-24"></textarea>
+                            </div>
+                            
+                            <div class="flex gap-2">
+                                <button onclick="saveInspectionEdit()" class="btn btn-primary flex-1">
+                                    <i class="fas fa-save mr-2"></i>저장
+                                </button>
+                                <button onclick="createTicketFromInspection()" class="btn btn-success flex-1">
+                                    <i class="fas fa-check mr-2"></i>티켓 생성
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 경기 결과 입력 모달 -->
+        <div id="bulk-register-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-users mr-2"></i>대량 우편물 등록</h3>
+                        <button onclick="closeBulkRegisterModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4 p-3 bg-blue-50 rounded">
+                        <p class="text-sm text-blue-700">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            각 이미지마다 회원을 선택하면 자동으로 우편물과 티켓이 생성됩니다.
+                        </p>
+                    </div>
+                    
+                    <div id="bulk-register-items" class="space-y-4"></div>
+                    
+                    <div class="mt-6 flex justify-end space-x-2">
+                        <button onclick="closeBulkRegisterModal()" class="btn btn-secondary">취소</button>
+                        <button onclick="submitBulkRegister()" class="btn btn-success">
+                            <i class="fas fa-check mr-2"></i>등록 완료
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 경기 결과 입력 모달 -->
         <div id="match-result-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-md w-full p-6">
@@ -5816,14 +5904,16 @@ console.log('권한 관리 함수 로드 완료')
                         name: file.name
                     })
                     
-                    // 즉시 OCR 처리 및 임시 티켓 생성
-                    await processImageToTempTicket(res.data.key, res.data.url)
+                    // 우편물 아이템 생성 (OCR 대기 상태)
+                    await axios.post(\`\${API_BASE}/mailroom\`, {
+                        member_id: null,
+                        image_keys: [res.data.key],
+                        notes: \`파일명: \${file.name}\`,
+                        created_by: currentStaff.id
+                    })
                 }
 
                 // 완료
-                alert(\`\${files.length}개 이미지 업로드 및 OCR 처리 완료!\`)
-                
-                // 초기화
                 uploadedMailImages = []
                 uploadCard.innerHTML = originalHTML
                 
@@ -5831,8 +5921,11 @@ console.log('권한 관리 함수 로드 완료')
                 const newFileInput = document.getElementById('mail-images')
                 if (newFileInput) newFileInput.value = ''
                 
-                // 검수 탭으로 이동
-                showMailroomTab('inspection')
+                alert(\`\${files.length}개 이미지 업로드 완료!\`)
+                
+                // 대기 탭 새로고침
+                await loadPendingMail()
+                
             } catch (error) {
                 console.error('이미지 업로드 오류:', error)
                 alert('이미지 업로드 실패: ' + (error.response?.data?.error || error.message))
@@ -6078,7 +6171,7 @@ console.log('권한 관리 함수 로드 완료')
 
         async function loadPendingMail() {
             try {
-                const res = await axios.get(\`\${API_BASE}/mailroom?status=received\`)
+                const res = await axios.get(\`\${API_BASE}/mailroom\`)
                 const items = res.data.mailroom_items || []
 
                 const container = document.getElementById('pending-mail-list')
@@ -6087,27 +6180,138 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
 
-                container.innerHTML = items.map(item => \`
-                    <div class="border rounded p-3 hover:bg-gray-50">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="font-medium">\${item.mail_number}</p>
-                                <p class="text-sm text-gray-600">\${item.member_name || '미배정'}</p>
-                                <p class="text-xs text-gray-500">\${new Date(item.created_at).toLocaleString()}</p>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button onclick="viewMailImages(\${item.id})" class="text-blue-500 hover:text-blue-700">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button onclick="deleteMailItem(\${item.id})" class="text-red-500 hover:text-red-700" data-permission="admin">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                // 상태별 정렬 (received -> ocr_processing -> ocr_completed)
+                const sortedItems = items.sort((a, b) => {
+                    const statusOrder = { 'received': 0, 'ocr_processing': 1, 'ocr_completed': 2, 'ocr_failed': 3 }
+                    return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99)
+                })
+
+                container.innerHTML = sortedItems.map(item => {
+                    const imageKeys = item.image_keys ? JSON.parse(item.image_keys) : []
+                    const firstImage = imageKeys[0] || null
+                    
+                    // 상태별 표시
+                    let statusBadge = ''
+                    let actionButtons = ''
+                    
+                    if (item.status === 'received') {
+                        statusBadge = '<span class="status-badge bg-gray-100 text-gray-800"><i class="fas fa-clock mr-1"></i>대기중</span>'
+                        actionButtons = \`
+                            <button onclick="startOCR(\${item.id})" class="btn btn-sm btn-primary">
+                                <i class="fas fa-magic mr-1"></i>OCR 시작
+                            </button>
+                        \`
+                    } else if (item.status === 'ocr_processing') {
+                        statusBadge = '<span class="status-badge bg-blue-100 text-blue-800"><i class="fas fa-spinner fa-spin mr-1"></i>처리중</span>'
+                        actionButtons = \`<button class="btn btn-sm" disabled>처리중...</button>\`
+                    } else if (item.status === 'ocr_completed') {
+                        statusBadge = '<span class="status-badge bg-green-100 text-green-800"><i class="fas fa-check mr-1"></i>완료</span>'
+                        actionButtons = \`
+                            <button onclick="moveToInspection(\${item.id})" class="btn btn-sm btn-success">
+                                <i class="fas fa-arrow-right mr-1"></i>검수하기
+                            </button>
+                        \`
+                    } else if (item.status === 'ocr_failed') {
+                        statusBadge = '<span class="status-badge bg-red-100 text-red-800"><i class="fas fa-exclamation mr-1"></i>실패</span>'
+                        actionButtons = \`
+                            <button onclick="retryOCR(\${item.id})" class="btn btn-sm btn-danger">
+                                <i class="fas fa-redo mr-1"></i>재시도
+                            </button>
+                        \`
+                    }
+                    
+                    return \`
+                        <div class="card">
+                            <div class="flex gap-4">
+                                \${firstImage ? \`
+                                    <img src="https://pub-YOUR_BUCKET.r2.dev/\${firstImage}" 
+                                         class="w-24 h-24 object-cover rounded cursor-pointer"
+                                         onclick="viewMailImages(\${item.id})">
+                                \` : \`
+                                    <div class="w-24 h-24 bg-gray-200 rounded flex items-center justify-center">
+                                        <i class="fas fa-image text-gray-400 text-2xl"></i>
+                                    </div>
+                                \`}
+                                
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <p class="font-medium">\${item.mail_number}</p>
+                                            <p class="text-sm text-gray-600">\${item.member_name || '미배정'}</p>
+                                        </div>
+                                        \${statusBadge}
+                                    </div>
+                                    
+                                    \${item.notes ? \`<p class="text-xs text-gray-500 mb-2">\${item.notes}</p>\` : ''}
+                                    
+                                    <div class="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                                        <span><i class="fas fa-images mr-1"></i>\${imageKeys.length}장</span>
+                                        <span><i class="fas fa-clock mr-1"></i>\${new Date(item.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                    
+                                    <div class="flex gap-2">
+                                        \${actionButtons}
+                                        <button onclick="deleteMailItem(\${item.id})" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                \`).join('')
+                    \`
+                }).join('')
             } catch (error) {
                 console.error('대기 우편물 로드 오류:', error)
+            }
+        }
+
+        async function startOCR(mailroomId) {
+            try {
+                await axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
+                alert('OCR 처리가 시작되었습니다.')
+                await loadPendingMail()
+                
+                // 5초 후 자동 새로고침
+                setTimeout(() => loadPendingMail(), 5000)
+            } catch (error) {
+                console.error('OCR 시작 오류:', error)
+                alert('OCR 시작 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        async function retryOCR(mailroomId) {
+            if (!confirm('OCR을 다시 시도하시겠습니까?')) return
+            await startOCR(mailroomId)
+        }
+
+        async function moveToInspection(mailroomId) {
+            try {
+                // 상태를 inspection으로 변경
+                await axios.patch(\`\${API_BASE}/mailroom/\${mailroomId}/status\`, {
+                    status: 'inspection'
+                })
+                
+                await loadPendingMail()
+                
+                // 검수 탭으로 이동
+                showMailroomTab('inspection')
+                await loadProcessedMail()
+            } catch (error) {
+                console.error('검수 이동 오류:', error)
+                alert('검수 이동 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        async function deleteMailItem(mailroomId) {
+            if (!confirm('이 우편물을 삭제하시겠습니까?')) return
+            
+            try {
+                await axios.delete(\`\${API_BASE}/mailroom/\${mailroomId}\`)
+                alert('삭제되었습니다.')
+                await loadPendingMail()
+            } catch (error) {
+                console.error('삭제 오류:', error)
+                alert('삭제 실패: ' + (error.response?.data?.error || error.message))
             }
         }
 
@@ -6115,9 +6319,60 @@ console.log('권한 관리 함수 로드 완료')
 
         async function loadProcessedMail() {
             try {
-                // 임시 티켓 목록 조회 (TEMP- 로 시작하는 티켓)
-                const res = await axios.get(\`\${API_BASE}/tickets?status=open&type=MAIL_INSPECTION\`)
-                const tickets = (res.data.tickets || []).filter(t => t.ticket_number.startsWith('TEMP-'))
+                // inspection 상태의 우편물 조회
+                const res = await axios.get(\`\${API_BASE}/mailroom?status=inspection\`)
+                const items = res.data.mailroom_items || []
+
+                const container = document.getElementById('processed-mail-list')
+                if (items.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">검수할 우편물이 없습니다.</p>'
+                    return
+                }
+
+                container.innerHTML = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">' + 
+                items.map(item => {
+                    const imageKeys = item.image_keys ? JSON.parse(item.image_keys) : []
+                    const firstImage = imageKeys[0] || null
+                    const ocrResult = item.ocr_result ? JSON.parse(item.ocr_result) : {}
+                    const ocrText = ocrResult.text || '없음'
+                    
+                    return \`
+                        <div class="card cursor-pointer hover:shadow-lg transition-shadow" onclick="showInspectionDetail(\${item.id})">
+                            \${firstImage ? \`
+                                <img src="https://pub-YOUR_BUCKET.r2.dev/\${firstImage}" 
+                                     class="w-full h-48 object-cover rounded-t mb-3">
+                            \` : \`
+                                <div class="w-full h-48 bg-gray-200 rounded-t mb-3 flex items-center justify-center">
+                                    <i class="fas fa-image text-gray-400 text-4xl"></i>
+                                </div>
+                            \`}
+                            
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <p class="font-medium text-sm">\${item.mail_number}</p>
+                                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                        <i class="fas fa-images mr-1"></i>\${imageKeys.length}
+                                    </span>
+                                </div>
+                                
+                                <p class="text-xs text-gray-600 mb-2">\${item.member_name || '미배정'}</p>
+                                
+                                <div class="bg-gray-50 p-2 rounded text-xs max-h-20 overflow-hidden">
+                                    <p class="text-gray-700 line-clamp-3">\${ocrText.substring(0, 100)}...</p>
+                                </div>
+                                
+                                <p class="text-xs text-gray-400 mt-2">
+                                    <i class="fas fa-clock mr-1"></i>\${new Date(item.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            </div>
+                        </div>
+                    \`
+                }).join('') + '</div>'
+                
+            } catch (error) {
+                console.error('검수 우편물 로드 오류:', error)
+            }
+        }
 
                 const container = document.getElementById('processed-mail-list')
                 if (items.length === 0) {
