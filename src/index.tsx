@@ -1162,6 +1162,45 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 회원 변경 모달 -->
+        <div id="change-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col">
+                <div class="p-6 border-b">
+                    <h3 class="text-xl font-bold"><i class="fas fa-user-edit mr-2"></i>회원 변경</h3>
+                    <p class="text-sm text-gray-600 mt-1">기존 회원을 검색하거나 신규 회원을 등록하세요</p>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <!-- 회원 검색 -->
+                    <div class="relative">
+                        <label class="block text-sm font-medium mb-2">회원 검색</label>
+                        <input 
+                            type="text" 
+                            id="change-member-search" 
+                            class="w-full px-3 py-2 border rounded"
+                            placeholder="이름 또는 수용번호로 검색..."
+                            oninput="searchMembersForChange(event)"
+                            autocomplete="off"
+                        >
+                        <div id="change-member-dropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-60 overflow-y-auto mt-1"></div>
+                    </div>
+                    
+                    <!-- 신규 회원 등록 버튼 -->
+                    <div class="pt-4 border-t">
+                        <button onclick="openNewMemberForm()" class="btn btn-success w-full">
+                            <i class="fas fa-user-plus mr-2"></i>신규 회원 등록
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6 border-t flex gap-2">
+                    <button onclick="closeChangeMemberModal()" class="btn btn-secondary flex-1">
+                        취소
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- 경기 결과 입력 모달 -->
         <div id="bulk-register-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -2196,6 +2235,27 @@ app.get('/', (c) => {
                                                 <p id="detail-ticket-description" class="text-gray-800"></p>
                                             </div>
                                         </div>
+                                    </div>
+                                    
+                                    <!-- 회원 변경 -->
+                                    <div class="card">
+                                        <h4 class="font-bold mb-3"><i class="fas fa-user-edit mr-2"></i>회원 관리</h4>
+                                        
+                                        <!-- 미지정 회원 알림 (조건부 표시) -->
+                                        <div id="unassigned-member-alert" class="hidden mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
+                                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-1"></i>
+                                            <strong>미지정 회원:</strong> 회원 정보가 없습니다.
+                                        </div>
+                                        
+                                        <!-- 현재 회원 정보 -->
+                                        <div class="mb-3 p-3 bg-gray-50 rounded text-sm">
+                                            <p class="text-gray-600 mb-1">현재 회원:</p>
+                                            <p id="current-member-display" class="font-medium">-</p>
+                                        </div>
+                                        
+                                        <button onclick="openChangeMemberModal()" class="btn btn-primary w-full mb-2">
+                                            <i class="fas fa-exchange-alt mr-2"></i>회원 변경
+                                        </button>
                                     </div>
 
                                     <!-- 상태 변경 -->
