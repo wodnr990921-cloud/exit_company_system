@@ -6849,115 +6849,6 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
         
-        // 대기 중인 우편물 목록 로드
-        async function loadPendingMail() {
-            try {
-                const response = await axios.get(\`\${API_BASE}/mailroom?status=received\`)
-                const items = response.data.mailroom_items || []
-                
-                const container = document.getElementById('pending-mail-list')
-                
-                if (items.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-8">업로드된 우편물이 없습니다.</p>'
-                    return
-                }
-                
-                container.innerHTML = items.map(item => \`
-                    <div class="border rounded p-3 hover:bg-gray-50">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="font-mono font-bold text-blue-600">\${item.mail_number}</span>
-                                <p class="text-sm text-gray-600 mt-1">\${item.notes || '메모 없음'}</p>
-                                <p class="text-xs text-gray-400 mt-1">\${new Date(item.created_at).toLocaleString()}</p>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button onclick="viewMailImages('\${item.id}')" class="btn btn-sm btn-secondary">
-                                    <i class="fas fa-images"></i>
-                                </button>
-                                <button onclick="deleteMailItem('\${item.id}')" class="btn btn-sm btn-danger" data-permission="admin">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                \`).join('')
-            } catch (error) {
-                console.error('대기 우편물 로드 오류:', error)
-            }
-        }
-        
-        // OCR 처리 완료 우편물 목록 로드
-        async function loadProcessedMail() {
-            try {
-                const response = await axios.get(\`\${API_BASE}/mailroom?status=ocr_completed\`)
-                const items = response.data.mailroom_items || []
-                
-                const container = document.getElementById('processed-mail-list')
-                
-                if (items.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-8">처리 완료된 우편물이 없습니다.</p>'
-                    return
-                }
-                
-                // 일괄 배당 버튼 표시 (items 렌더링 전에 추가)
-                let headerHTML = ''
-                if (selectedMailItems.length > 0) {
-                    headerHTML = \`
-                        <div class="mb-4 bg-blue-50 p-3 rounded flex justify-between items-center">
-                            <span>\${selectedMailItems.length}개 우편물 선택됨</span>
-                            <div class="flex gap-2">
-                                <button onclick="deleteSelectedMail()" class="btn btn-danger btn-sm" data-permission="admin">
-                                    <i class="fas fa-trash mr-1"></i>선택 삭제
-                                </button>
-                                <button onclick="assignSelectedMail()" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-share mr-1"></i>일괄 배당
-                                </button>
-                            </div>
-                        </div>
-                    \`
-                }
-                
-                const itemsHTML = items.map(item => {
-                    const ocrData = item.ocr_result ? JSON.parse(item.ocr_result) : {}
-                    const ocrResults = ocrData.results || []
-                    const hasEnvelope = ocrData.has_envelope || false
-                    
-                    return \`
-                        <div class="border rounded p-4 \${selectedMailItems.includes(item.id) ? 'bg-blue-50 border-blue-500' : ''}">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="flex items-start space-x-3">
-                                    <input type="checkbox" 
-                                        onchange="toggleMailSelection('\${item.id}')" 
-                                        \${selectedMailItems.includes(item.id) ? 'checked' : ''}
-                                        class="mt-1">
-                                    <div>
-                                        <span class="font-mono font-bold text-blue-600">\${item.mail_number}</span>
-                                        \${hasEnvelope ? '<span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">새 케이스</span>' : ''}
-                                        <p class="text-sm text-gray-600 mt-1">\${item.notes || '메모 없음'}</p>
-                                    </div>
-                                </div>
-                                <button onclick="viewMailImages('\${item.id}')" class="btn btn-sm btn-secondary">
-                                    <i class="fas fa-images mr-1"></i>보기
-                                </button>
-                            </div>
-                            
-                            <div class="bg-gray-50 p-3 rounded text-sm">
-                                <p class="font-medium mb-2">OCR 결과:</p>
-                                <div class="space-y-1 text-gray-600">
-                                    \${ocrResults.map(r => \`<p>• \${r.text ? r.text.substring(0, 100) : '[텍스트 없음]'}...\</p>\`).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    \`
-                }).join('')
-                
-                container.innerHTML = headerHTML + itemsHTML
-                
-            } catch (error) {
-                console.error('처리 완료 우편물 로드 오류:', error)
-            }
-        }
-        
         // 우편물 선택 토글
         function toggleMailSelection(mailId) {
             if (selectedMailItems.includes(mailId)) {
@@ -7193,9 +7084,10 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 일괄 배당 API 호출
-                const response = await axios.post(\`\${API_BASE}/mailroom/bulk-dispatch\`, {
+                const response = await axios.post(\`\${API_BASE}/mailroom/batch-assign\`, {
                     mailroom_ids: selectedMailItems,
-                    assigned_to: parseInt(staffId)
+                    member_id: null,
+                    staff_id: parseInt(staffId)
                 })
                 
                 const { count } = response.data
