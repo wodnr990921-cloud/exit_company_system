@@ -6228,7 +6228,7 @@ console.log('권한 관리 함수 로드 완료')
                         <div class="card">
                             <div class="flex gap-4">
                                 \${firstImage ? \`
-                                    <img src="${API_BASE}/mailroom/image/\${firstImage}" 
+                                    <img src="/api/mailroom/image/\${firstImage}" 
                                          class="w-24 h-24 object-cover rounded cursor-pointer"
                                          onclick="viewMailImages(\${item.id})">
                                 \` : \`
@@ -6343,7 +6343,7 @@ console.log('권한 관리 함수 로드 완료')
                     return \`
                         <div class="card cursor-pointer hover:shadow-lg transition-shadow" onclick="showInspectionDetail(\${item.id})">
                             \${firstImage ? \`
-                                <img src="${API_BASE}/mailroom/image/\${firstImage}" 
+                                <img src="/api/mailroom/image/\${firstImage}" 
                                      class="w-full h-48 object-cover rounded-t mb-3">
                             \` : \`
                                 <div class="w-full h-48 bg-gray-200 rounded-t mb-3 flex items-center justify-center">
