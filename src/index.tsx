@@ -6378,65 +6378,6 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
 
-                const container = document.getElementById('processed-mail-list')
-                if (items.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-8">처리 완료된 우편물이 없습니다.</p>'
-                    return
-                }
-
-                container.innerHTML = items.map(item => {
-                    const ocrData = item.ocr_result ? JSON.parse(item.ocr_result) : {}
-                    const ocrResults = ocrData.results || []
-                    const caseType = ocrData.case_type || 'unknown'
-                    const hasEnvelope = ocrData.has_envelope || false
-                    
-                    const caseTypeLabel = caseType === 'new_case' ? '새 케이스' : '연속 케이스'
-                    const caseTypeBadge = caseType === 'new_case' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-purple-100 text-purple-800'
-                    
-                    return \`
-                        <div class="border rounded p-4">
-                            <div class="flex justify-between items-start mb-3">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <p class="font-medium">\${item.mail_number}</p>
-                                        <span class="text-xs \${caseTypeBadge} px-2 py-1 rounded">
-                                            <i class="fas \${hasEnvelope ? 'fa-envelope' : 'fa-file-alt'} mr-1"></i>
-                                            \${caseTypeLabel}
-                                        </span>
-                                    </div>
-                                    <p class="text-sm text-gray-600">\${item.member_name || '미배정'}</p>
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        이미지 \${ocrData.total_images || 0}장 | 
-                                        성공 \${ocrData.successful_ocr || 0}장
-                                    </p>
-                                </div>
-                                <button onclick="assignToTicket(\${item.id})" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-share mr-1"></i>티켓 배당
-                                </button>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded text-sm">
-                                <p class="font-medium mb-2">OCR 결과:</p>
-                                <div class="space-y-2 max-h-40 overflow-y-auto">
-                                    \${ocrResults.length > 0 
-                                        ? ocrResults.map((r, idx) => \`
-                                            <div class="border-b pb-2 last:border-0">
-                                                <p class="text-xs text-gray-500 mb-1">이미지 \${idx + 1} \${r.has_envelope ? '📧' : '📄'}</p>
-                                                <p class="text-gray-700">\${r.text || '[텍스트 없음]'}</p>
-                                            </div>
-                                        \`).join('') 
-                                        : '<p class="text-gray-500">OCR 결과 없음</p>'}
-                                </div>
-                            </div>
-                        </div>
-                    \`
-                }).join('')
-            } catch (error) {
-                console.error('처리 완료 우편물 로드 오류:', error)
-            }
-        }
-
         async function loadMailHistory() {
             try {
                 const res = await axios.get(\`\${API_BASE}/mailroom?status=assigned\`)
