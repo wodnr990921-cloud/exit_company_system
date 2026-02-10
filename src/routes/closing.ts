@@ -41,11 +41,12 @@ closing.get('/', async (c) => {
     // 3. 배팅 통계
     const bettingStatsQuery = await DB.prepare(`
       SELECT 
-        COUNT(*) as total_bets,
-        SUM(bet_amount) as total_bet_amount,
-        SUM(CASE WHEN status = 'won' THEN win_amount ELSE 0 END) as total_win_amount
-      FROM bet_folders
-      WHERE created_at BETWEEN ? AND ?
+        COUNT(bf.id) as total_bets,
+        SUM(bf.total_bet_amount) as total_bet_amount,
+        COALESCE(SUM(CASE WHEN bs.status = 'approved' THEN bs.settlement_amount ELSE 0 END), 0) as total_win_amount
+      FROM bet_folders bf
+      LEFT JOIN bet_settlements bs ON bf.id = bs.folder_id
+      WHERE bf.created_at BETWEEN ? AND ?
     `).bind(startDate, endDate).first()
 
     // 4. 도서 판매 통계 (티켓 기반)
@@ -127,7 +128,10 @@ closing.get('/', async (c) => {
     })
   } catch (error: any) {
     console.error('일일 마감 데이터 조회 오류:', error)
-    return c.json({ error: '일일 마감 데이터 조회 중 오류가 발생했습니다.' }, 500)
+    return c.json({ 
+      error: '일일 마감 데이터 조회 중 오류가 발생했습니다.',
+      details: error?.message || String(error)
+    }, 500)
   }
 })
 
@@ -175,10 +179,11 @@ closing.post('/', async (c) => {
 
     const bettingStats = await DB.prepare(`
       SELECT 
-        SUM(bet_amount) as total_bet_amount,
-        SUM(CASE WHEN status = 'won' THEN win_amount ELSE 0 END) as total_win_amount
-      FROM bet_folders
-      WHERE created_at BETWEEN ? AND ?
+        SUM(bf.total_bet_amount) as total_bet_amount,
+        COALESCE(SUM(CASE WHEN bs.status = 'approved' THEN bs.settlement_amount ELSE 0 END), 0) as total_win_amount
+      FROM bet_folders bf
+      LEFT JOIN bet_settlements bs ON bf.id = bs.folder_id
+      WHERE bf.created_at BETWEEN ? AND ?
     `).bind(startDate, endDate).first()
 
     const bookSales = await DB.prepare(`
@@ -243,7 +248,10 @@ closing.post('/', async (c) => {
     })
   } catch (error: any) {
     console.error('일일 마감 실행 오류:', error)
-    return c.json({ error: '일일 마감 실행 중 오류가 발생했습니다.' }, 500)
+    return c.json({ 
+      error: '일일 마감 실행 중 오류가 발생했습니다.',
+      details: error?.message || String(error)
+    }, 500)
   }
 })
 
@@ -296,7 +304,10 @@ closing.get('/monthly', async (c) => {
     })
   } catch (error: any) {
     console.error('월간 리포트 조회 오류:', error)
-    return c.json({ error: '월간 리포트 조회 중 오류가 발생했습니다.' }, 500)
+    return c.json({ 
+      error: '월간 리포트 조회 중 오류가 발생했습니다.',
+      details: error?.message || String(error)
+    }, 500)
   }
 })
 
