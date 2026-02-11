@@ -4814,47 +4814,50 @@ console.log('권한 관리 함수 로드 완료')
         // 경기 관리 목록 로드 (엑셀 테이블 형태)
         async function loadMatchManagement() {
             try {
-                const response = await axios.get(\`\${API_BASE}/betting/matches\`)
+                const response = await axios.get(API_BASE + '/betting/matches')
                 const matches = response.data.matches || []
 
                 const tbody = document.getElementById('match-management-list')
-                tbody.innerHTML = matches.map(m => \`
-                    <tr data-match-id="\${m.id}">
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="text" class="w-full px-1 py-1 text-xs" value="\${m.match_name || ''}" data-field="match_name">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="text" class="w-full px-1 py-1 text-xs" value="\${m.home_team || ''}" data-field="home_team">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="text" class="w-full px-1 py-1 text-xs" value="\${m.away_team || ''}" data-field="away_team">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="datetime-local" class="w-full px-1 py-1 text-xs" value="\${m.match_date ? new Date(m.match_date).toISOString().slice(0, 16) : ''}" data-field="match_date">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.home_odds || ''}" data-field="home_odds" placeholder="1.50">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.draw_odds || ''}" data-field="draw_odds" placeholder="3.20">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.away_odds || ''}" data-field="away_odds" placeholder="2.10">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="number" step="0.5" class="w-full px-1 py-1 text-xs" value="\${m.over_line || ''}" data-field="over_line" placeholder="2.5">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.over_odds || ''}" data-field="over_odds" placeholder="1.85">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1">
-                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.under_odds || ''}" data-field="under_odds" placeholder="1.95">
-                        </td>
-                        <td class="border border-gray-300 px-1 py-1 text-center">
-                            \${m.id && isAdmin() ? \`<button onclick="deleteMatch(\${m.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>\` : ''}
-                        </td>
-                    </tr>
-                \`).join('')
+                tbody.innerHTML = matches.map(m => {
+                    const matchDate = m.match_date ? new Date(m.match_date).toISOString().slice(0, 16) : ''
+                    const deleteBtn = m.id && isAdmin() ? '<button onclick="deleteMatch(' + m.id + ')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>' : ''
+                    
+                    return '<tr data-match-id="' + m.id + '">' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="text" class="w-full px-1 py-1 text-xs" value="' + (m.match_name || '') + '" data-field="match_name">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="text" class="w-full px-1 py-1 text-xs" value="' + (m.home_team || '') + '" data-field="home_team">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="text" class="w-full px-1 py-1 text-xs" value="' + (m.away_team || '') + '" data-field="away_team">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="datetime-local" class="w-full px-1 py-1 text-xs" value="' + matchDate + '" data-field="match_date">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="' + (m.home_odds || '') + '" data-field="home_odds" placeholder="1.50">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="' + (m.draw_odds || '') + '" data-field="draw_odds" placeholder="3.20">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="' + (m.away_odds || '') + '" data-field="away_odds" placeholder="2.10">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="number" step="0.5" class="w-full px-1 py-1 text-xs" value="' + (m.over_line || '') + '" data-field="over_line" placeholder="2.5">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="' + (m.over_odds || '') + '" data-field="over_odds" placeholder="1.85">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1">' +
+                            '<input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="' + (m.under_odds || '') + '" data-field="under_odds" placeholder="1.95">' +
+                        '</td>' +
+                        '<td class="border border-gray-300 px-1 py-1 text-center">' +
+                            deleteBtn +
+                        '</td>' +
+                    '</tr>'
+                }).join('')
                 
                 // 완료된 경기 목록도 로드 (우측 패널)
                 await loadCompletedMatchesForResult()
