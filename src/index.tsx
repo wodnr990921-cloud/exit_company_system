@@ -3236,7 +3236,7 @@ console.log('권한 관리 함수 로드 완료')
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
             document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'))
 
-            document.getElementById(\`\${view}-view\`).classList.remove('hidden')
+            document.getElementById('view-view').classList.remove('hidden')
             
             // 데스크톱 네비게이션 활성화
             const desktopNavButtons = document.querySelectorAll('.nav-item')
@@ -4169,12 +4169,12 @@ console.log('권한 관리 함수 로드 완료')
             document.getElementById('betting-tab-statistics').classList.remove('bg-blue-500', 'text-white')
             document.getElementById('betting-tab-statistics').classList.add('bg-gray-200', 'text-gray-700')
             
-            document.getElementById(\`betting-tab-\${tabName}\`).classList.remove('bg-gray-200', 'text-gray-700')
-            document.getElementById(\`betting-tab-\${tabName}\`).classList.add('bg-blue-500', 'text-white')
+            document.getElementById('betting-tab-' + tabName).classList.remove('bg-gray-200', 'text-gray-700')
+            document.getElementById('betting-tab-' + tabName).classList.add('bg-blue-500', 'text-white')
 
             // 탭 콘텐츠 표시
             document.querySelectorAll('.betting-tab-content').forEach(tab => tab.classList.add('hidden'))
-            document.getElementById(\`betting-\${tabName}-tab\`).classList.remove('hidden')
+            document.getElementById('betting-' + tabName + '-tab').classList.remove('hidden')
 
             // 통계 탭이면 데이터 로드
             if (tabName === 'statistics') {
@@ -4305,8 +4305,8 @@ console.log('권한 관리 함수 로드 완료')
                 btn.classList.remove('btn-primary')
                 btn.classList.add('btn-secondary')
             })
-            document.getElementById(\`filter-\${role}\`).classList.remove('btn-secondary')
-            document.getElementById(\`filter-\${role}\`).classList.add('btn-primary')
+            document.getElementById('filter-' + role).classList.remove('btn-secondary')
+            document.getElementById('filter-' + role).classList.add('btn-primary')
             
             renderStaffList()
         }
@@ -4385,7 +4385,7 @@ console.log('권한 관리 함수 로드 완료')
                 // 업무 통계 채우기
                 document.getElementById('stat-assigned-tickets').textContent = stats.assigned_tickets || 0
                 document.getElementById('stat-completed-tickets').textContent = stats.completed_tickets || 0
-                document.getElementById('stat-completion-rate').textContent = \`\${stats.completion_rate || 0}%\`
+                document.getElementById('stat-completion-rate').textContent = (stats.completion_rate || 0) + '%'
                 document.getElementById('stat-attendance-days').textContent = stats.attendance_days || 0
                 
                 // 권한 변경 이력 렌더링
@@ -4574,30 +4574,30 @@ console.log('권한 관리 함수 로드 완료')
                 const data = response.data
 
                 // 티켓 통계
-                document.getElementById('closing-total-tickets').textContent = \`\${data.ticket_stats.total_tickets || 0}건\`
-                document.getElementById('closing-completed-tickets').textContent = \`\${data.ticket_stats.completed_tickets || 0}건\`
+                document.getElementById('closing-total-tickets').textContent = (data.ticket_stats.total_tickets || 0) + '건'
+                document.getElementById('closing-completed-tickets').textContent = (data.ticket_stats.completed_tickets || 0) + '건'
                 const pendingTickets = (data.ticket_stats.total_tickets || 0) - (data.ticket_stats.completed_tickets || 0)
-                document.getElementById('closing-pending-tickets').textContent = \`\${pendingTickets}건\`
+                document.getElementById('closing-pending-tickets').textContent = (pendingTickets) + '건'
 
                 // 포인트 통계
-                document.getElementById('closing-earned-points').textContent = \`\${Number(data.point_stats.earned_points || 0).toLocaleString()}원\`
-                document.getElementById('closing-used-points').textContent = \`\${Number(data.point_stats.used_points || 0).toLocaleString()}원\`
-                document.getElementById('closing-net-points').textContent = \`\${Number(data.point_stats.net_points || 0).toLocaleString()}원\`
+                document.getElementById('closing-earned-points').textContent = (Number(data.point_stats.earned_points || 0).toLocaleString()) + '원'
+                document.getElementById('closing-used-points').textContent = (Number(data.point_stats.used_points || 0).toLocaleString()) + '원'
+                document.getElementById('closing-net-points').textContent = (Number(data.point_stats.net_points || 0).toLocaleString()) + '원'
 
                 // 배팅 통계
-                document.getElementById('closing-bet-amount').textContent = \`\${Number(data.betting_stats.total_bet_amount || 0).toLocaleString()}원\`
-                document.getElementById('closing-win-amount').textContent = \`\${Number(data.betting_stats.total_win_amount || 0).toLocaleString()}원\`
-                document.getElementById('closing-bet-margin').textContent = \`\${Number(data.betting_stats.bet_margin || 0).toLocaleString()}원\`
+                document.getElementById('closing-bet-amount').textContent = (Number(data.betting_stats.total_bet_amount || 0).toLocaleString()) + '원'
+                document.getElementById('closing-win-amount').textContent = (Number(data.betting_stats.total_win_amount || 0).toLocaleString()) + '원'
+                document.getElementById('closing-bet-margin').textContent = (Number(data.betting_stats.bet_margin || 0).toLocaleString()) + '원'
 
                 // 도서 판매 통계
-                document.getElementById('closing-book-orders').textContent = \`\${data.book_stats.book_orders || 0}건\`
-                document.getElementById('closing-book-sales').textContent = \`\${Number(data.book_stats.total_sales || 0).toLocaleString()}원\`
-                document.getElementById('closing-book-shipped').textContent = \`\${data.book_stats.shipped_orders || 0}건\`
-                document.getElementById('closing-book-pending').textContent = \`\${data.book_stats.pending_orders || 0}건\`
+                document.getElementById('closing-book-orders').textContent = (data.book_stats.book_orders || 0) + '건'
+                document.getElementById('closing-book-sales').textContent = (Number(data.book_stats.total_sales || 0).toLocaleString()) + '원'
+                document.getElementById('closing-book-shipped').textContent = (data.book_stats.shipped_orders || 0) + '건'
+                document.getElementById('closing-book-pending').textContent = (data.book_stats.pending_orders || 0) + '건'
 
                 // 종합 요약
-                document.getElementById('closing-total-revenue').textContent = \`\${Number(data.summary.total_revenue || 0).toLocaleString()}원\`
-                document.getElementById('closing-total-margin').textContent = \`\${Number(data.summary.total_margin || 0).toLocaleString()}원\`
+                document.getElementById('closing-total-revenue').textContent = (Number(data.summary.total_revenue || 0).toLocaleString()) + '원'
+                document.getElementById('closing-total-margin').textContent = (Number(data.summary.total_margin || 0).toLocaleString()) + '원'
                 
                 // 마감 상태 표시
                 if (data.is_closed) {
@@ -10180,8 +10180,8 @@ console.log('권한 관리 함수 로드 완료')
                 // 통계 업데이트
                 document.getElementById('settlement-completed-count').textContent = completedMatches.length
                 document.getElementById('settlement-total-bets').textContent = totalBets
-                document.getElementById('settlement-total-amount').textContent = \`\${totalAmount.toLocaleString()}원\`
-                document.getElementById('settlement-net-profit').textContent = \`\${netProfit.toLocaleString()}원\`
+                document.getElementById('settlement-total-amount').textContent = (totalAmount.toLocaleString()) + '원'
+                document.getElementById('settlement-net-profit').textContent = (netProfit.toLocaleString()) + '원'
                 
                 // 완료된 경기 목록 렌더링
                 const matchesHtml = completedMatches.length > 0 ? completedMatches.map(m => \`
@@ -10425,10 +10425,10 @@ console.log('권한 관리 함수 로드 완료')
                 const { responses, stats } = response.data
                 
                 // 통계 업데이트
-                document.getElementById('responses-total').textContent = \`\${stats.total}건\`
-                document.getElementById('responses-printed').textContent = \`\${stats.printed}건\`
-                document.getElementById('responses-pending').textContent = \`\${stats.pending}건\`
-                document.getElementById('responses-error').textContent = \`\${stats.error}건\`
+                document.getElementById('responses-total').textContent = (stats.total) + '건'
+                document.getElementById('responses-printed').textContent = (stats.printed) + '건'
+                document.getElementById('responses-pending').textContent = (stats.pending) + '건'
+                document.getElementById('responses-error').textContent = (stats.error) + '건'
                 
                 // 답변 목록 렌더링
                 const listHtml = responses.length > 0 ? responses.map(r => \`
