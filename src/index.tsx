@@ -10545,63 +10545,77 @@ console.log('권한 관리 함수 로드 완료')
         // 양식 설정 모달 표시
         async function showResponseSettings() {
             try {
-                const response = await axios.get(\`\${API_BASE}/responses/settings\`)
+                const response = await axios.get(API_BASE + '/responses/settings')
                 const settings = response.data.settings
                 
-                const settingsHtml = `
-                    <div id="response-settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div class="p-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>답변 출력 양식 설정</h3>
-                                    <button onclick="closeResponseSettings()" class="text-gray-500 hover:text-gray-700">
-                                        <i class="fas fa-times text-2xl"></i>
-                                    </button>
-                                </div>
-                                
-                                <div class="space-y-4">
-                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <p class="text-sm text-blue-800">
-                                            <i class="fas fa-info-circle mr-2"></i>
-                                            답변 출력 시 자동으로 상단에 <strong>"사서함주소 수용번호 이름"</strong>이 표시됩니다.
-                                        </p>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">공지사항 (상단)</label>
-                                        <textarea id="setting-header-notice" rows="3" class="w-full px-3 py-2 border rounded">${settings.header_notice || ''}</textarea>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">인사말</label>
-                                        <textarea id="setting-greeting" rows="3" class="w-full px-3 py-2 border rounded">${settings.greeting || ''}</textarea>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">맺음말 (하단)</label>
-                                        <textarea id="setting-footer" rows="3" class="w-full px-3 py-2 border rounded">${settings.footer || ''}</textarea>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="flex items-center gap-2">
-                                            <input type="checkbox" id="setting-show-date" ${settings.show_received_date === 'true' ? 'checked' : ''}>
-                                            <span class="text-sm font-medium">편지 받은 날짜 표시</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div class="mt-6 flex justify-end gap-2">
-                                    <button onclick="closeResponseSettings()" class="btn btn-secondary">취소</button>
-                                    <button onclick="saveResponseSettings()" class="btn btn-primary">
-                                        <i class="fas fa-save mr-2"></i>저장
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `
+                // DOM으로 모달 생성
+                const modal = document.createElement('div')
+                modal.id = 'response-settings-modal'
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'
                 
-                document.body.insertAdjacentHTML('beforeend', settingsHtml)
+                const modalContent = document.createElement('div')
+                modalContent.className = 'bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto'
+                
+                const padding = document.createElement('div')
+                padding.className = 'p-6'
+                
+                // 헤더
+                const header = document.createElement('div')
+                header.className = 'flex justify-between items-center mb-4'
+                header.innerHTML = '<h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>답변 출력 양식 설정</h3>' +
+                    '<button onclick="closeResponseSettings()" class="text-gray-500 hover:text-gray-700">' +
+                        '<i class="fas fa-times text-2xl"></i>' +
+                    '</button>'
+                
+                // 폼
+                const form = document.createElement('div')
+                form.className = 'space-y-4'
+                form.innerHTML = '<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">' +
+                        '<p class="text-sm text-blue-800">' +
+                            '<i class="fas fa-info-circle mr-2"></i>' +
+                            '답변 출력 시 자동으로 상단에 <strong>"사서함주소 수용번호 이름"</strong>이 표시됩니다.' +
+                        '</p>' +
+                    '</div>' +
+                    '<div>' +
+                        '<label class="block text-sm font-medium mb-2">공지사항 (상단)</label>' +
+                        '<textarea id="setting-header-notice" rows="3" class="w-full px-3 py-2 border rounded"></textarea>' +
+                    '</div>' +
+                    '<div>' +
+                        '<label class="block text-sm font-medium mb-2">인사말</label>' +
+                        '<textarea id="setting-greeting" rows="3" class="w-full px-3 py-2 border rounded"></textarea>' +
+                    '</div>' +
+                    '<div>' +
+                        '<label class="block text-sm font-medium mb-2">맺음말 (하단)</label>' +
+                        '<textarea id="setting-footer" rows="3" class="w-full px-3 py-2 border rounded"></textarea>' +
+                    '</div>' +
+                    '<div>' +
+                        '<label class="flex items-center gap-2">' +
+                            '<input type="checkbox" id="setting-show-date">' +
+                            '<span class="text-sm font-medium">편지 받은 날짜 표시</span>' +
+                        '</label>' +
+                    '</div>'
+                
+                // 버튼
+                const buttons = document.createElement('div')
+                buttons.className = 'mt-6 flex justify-end gap-2'
+                buttons.innerHTML = '<button onclick="closeResponseSettings()" class="btn btn-secondary">취소</button>' +
+                    '<button onclick="saveResponseSettings()" class="btn btn-primary">' +
+                        '<i class="fas fa-save mr-2"></i>저장' +
+                    '</button>'
+                
+                padding.appendChild(header)
+                padding.appendChild(form)
+                padding.appendChild(buttons)
+                modalContent.appendChild(padding)
+                modal.appendChild(modalContent)
+                document.body.appendChild(modal)
+                
+                // 값 설정
+                document.getElementById('setting-header-notice').value = settings.header_notice || ''
+                document.getElementById('setting-greeting').value = settings.greeting || ''
+                document.getElementById('setting-footer').value = settings.footer || ''
+                document.getElementById('setting-show-date').checked = settings.show_received_date === 'true'
+                
             } catch (error) {
                 console.error('설정 조회 오류:', error)
                 alert('설정을 불러올 수 없습니다.')
@@ -10626,7 +10640,7 @@ console.log('권한 관리 함수 로드 완료')
                     show_received_date: document.getElementById('setting-show-date').checked ? 'true' : 'false'
                 }
                 
-                await axios.put(\`\${API_BASE}/responses/settings\`, {
+                await axios.put(API_BASE + '/responses/settings', {
                     settings,
                     updated_by: currentStaff.id
                 })
