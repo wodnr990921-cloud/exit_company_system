@@ -4083,7 +4083,7 @@ console.log('권한 관리 함수 로드 완료')
         // 배팅 관리 로드
         async function loadBetting() {
             try {
-                const foldersRes = await axios.get(\`\${API_BASE}/betting/folders\`)
+                const foldersRes = await axios.get(API_BASE + '/betting/folders')
 
                 // 배팅 폴더 목록 (고객 배팅) - 더 상세한 정보 표시
                 const folders = foldersRes.data.folders || []
@@ -4135,7 +4135,7 @@ console.log('권한 관리 함수 로드 완료')
         // 경기 정산 목록 로드 (완료된 경기만)
         async function loadMatchSettlementList() {
             try {
-                const response = await axios.get(\`\${API_BASE}/betting/matches?status=completed\`)
+                const response = await axios.get(API_BASE + '/betting/matches?status=completed')
                 const matches = response.data.matches || []
 
                 const html = matches.length > 0 ? matches.map(m => \`
@@ -4209,7 +4209,7 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
 
-                const response = await axios.get(\`\${API_BASE}/betting/statistics?start_date=\${startDate}&end_date=\${endDate}\`)
+                const response = await axios.get(API_BASE + '/betting/statistics?start_date=' + startDate + '&end_date=' + endDate)
                 const stats = response.data
 
                 // 전체 통계
