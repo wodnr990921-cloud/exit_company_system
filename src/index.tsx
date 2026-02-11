@@ -4220,47 +4220,49 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 회원별 통계
                 const memberStats = stats.member_stats || []
-                const memberHtml = memberStats.length > 0 ? memberStats.map(m => \`
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-2">\${m.member_name}</td>
-                        <td class="px-4 py-2 text-right">\${m.bet_count}건</td>
-                        <td class="px-4 py-2 text-right">\${parseInt(m.total_bet_amount || 0).toLocaleString()}원</td>
-                        <td class="px-4 py-2 text-right">
-                            <span class="\${parseFloat(m.win_rate) >= 50 ? 'text-green-600' : 'text-red-600'} font-bold">
-                                \${parseFloat(m.win_rate || 0).toFixed(1)}%
-                            </span>
-                        </td>
-                    </tr>
-                \`).join('') : '<tr><td colspan="4" class="text-center py-4 text-gray-500">데이터 없음</td></tr>'
+                const memberHtml = memberStats.length > 0 ? memberStats.map(m => {
+                    const winRate = parseFloat(m.win_rate || 0)
+                    const winRateClass = winRate >= 50 ? 'text-green-600' : 'text-red-600'
+                    return '<tr class="border-b hover:bg-gray-50">' +
+                        '<td class="px-4 py-2">' + (m.member_name || '') + '</td>' +
+                        '<td class="px-4 py-2 text-right">' + (m.bet_count || 0) + '건</td>' +
+                        '<td class="px-4 py-2 text-right">' + parseInt(m.total_bet_amount || 0).toLocaleString() + '원</td>' +
+                        '<td class="px-4 py-2 text-right">' +
+                            '<span class="' + winRateClass + ' font-bold">' +
+                                winRate.toFixed(1) + '%' +
+                            '</span>' +
+                        '</td>' +
+                    '</tr>'
+                }).join('') : '<tr><td colspan="4" class="text-center py-4 text-gray-500">데이터 없음</td></tr>'
 
                 document.getElementById('member-stats-table').innerHTML = memberHtml
 
                 // 경기별 통계
                 const matchStats = stats.match_stats || []
-                const matchHtml = matchStats.length > 0 ? matchStats.map(m => \`
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-2">\${m.match_name}</td>
-                        <td class="px-4 py-2 text-right">\${m.bet_count}건</td>
-                        <td class="px-4 py-2 text-right">\${parseInt(m.total_bet_amount || 0).toLocaleString()}원</td>
-                    </tr>
-                \`).join('') : '<tr><td colspan="3" class="text-center py-4 text-gray-500">데이터 없음</td></tr>'
+                const matchHtml = matchStats.length > 0 ? matchStats.map(m => 
+                    '<tr class="border-b hover:bg-gray-50">' +
+                        '<td class="px-4 py-2">' + (m.match_name || '') + '</td>' +
+                        '<td class="px-4 py-2 text-right">' + (m.bet_count || 0) + '건</td>' +
+                        '<td class="px-4 py-2 text-right">' + parseInt(m.total_bet_amount || 0).toLocaleString() + '원</td>' +
+                    '</tr>'
+                ).join('') : '<tr><td colspan="3" class="text-center py-4 text-gray-500">데이터 없음</td></tr>'
 
                 document.getElementById('match-stats-table').innerHTML = matchHtml
 
                 // 일별 추이
                 const dailyTrend = stats.daily_trend || []
-                const trendHtml = dailyTrend.length > 0 ? dailyTrend.map(d => \`
-                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-                        <div>
-                            <p class="font-bold">\${new Date(d.date).toLocaleDateString()}</p>
-                            <p class="text-sm text-gray-600">배팅 \${d.bet_count}건</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm">배팅액: <span class="font-bold text-blue-600">\${parseInt(d.total_bet_amount || 0).toLocaleString()}원</span></p>
-                            <p class="text-sm">당첨액: <span class="font-bold text-green-600">\${parseInt(d.total_win_amount || 0).toLocaleString()}원</span></p>
-                        </div>
-                    </div>
-                \`).join('') : '<p class="text-gray-500 text-center py-4">데이터 없음</p>'
+                const trendHtml = dailyTrend.length > 0 ? dailyTrend.map(d => 
+                    '<div class="flex justify-between items-center p-3 bg-gray-50 rounded">' +
+                        '<div>' +
+                            '<p class="font-bold">' + new Date(d.date).toLocaleDateString() + '</p>' +
+                            '<p class="text-sm text-gray-600">배팅 ' + (d.bet_count || 0) + '건</p>' +
+                        '</div>' +
+                        '<div class="text-right">' +
+                            '<p class="text-sm">배팅액: <span class="font-bold text-blue-600">' + parseInt(d.total_bet_amount || 0).toLocaleString() + '원</span></p>' +
+                            '<p class="text-sm">당첨액: <span class="font-bold text-green-600">' + parseInt(d.total_win_amount || 0).toLocaleString() + '원</span></p>' +
+                        '</div>' +
+                    '</div>'
+                ).join('') : '<p class="text-gray-500 text-center py-4">데이터 없음</p>'
 
                 document.getElementById('daily-trend-list').innerHTML = trendHtml
 
