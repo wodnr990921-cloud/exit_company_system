@@ -1050,7 +1050,38 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer): Promise<strin
     uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')
   )
   
-  const promptText = '이 편지 이미지를 분석하세요.\n\n**STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)\n- 상단에 "OO 사서함 XX-YYYY" 형태의 주소가 있으면 → [ENVELOPE: YES]\n- 그 외 → [ENVELOPE: NO]\n\n**STEP 2: 정보 추출**\n\n[봉투가 있으면 (상단에서)]\n발신자: 홍길동\n수용기관: 서울 (사서함 앞의 지역명)\n사서함주소: 서울 사서함 211 (하이픈 앞까지)\n수용번호: 1111 (하이픈 뒤 숫자, 1-9999)\n주소: 서울 사서함 211-1111 (전체)\n\n**주소 형식 예시:**\n"서울 사서함 211-1111"\n  → 수용기관: 서울\n  → 사서함주소: 서울 사서함 211\n  → 수용번호: 1111\n\n[편지 내용 (중간~하단에서)]\n내용: (여기에 편지 본문 텍스트 전부 추출)\n\n**응답 형식:**\n[ENVELOPE: YES/NO]\n발신자: \n수용기관: \n사서함주소: \n수용번호: \n주소: \n내용: (편지 본문)'
+  const promptText = `이 편지 이미지를 분석하세요.
+
+**STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)
+- 상단에 "OO 사서함 XX-YYYY" 형태의 주소가 있으면 → [ENVELOPE: YES]
+- 그 외 → [ENVELOPE: NO]
+
+**STEP 2: 정보 추출**
+
+[봉투가 있으면 (상단에서)]
+발신자: 홍길동
+수용기관: 서울 (사서함 앞의 지역명)
+사서함주소: 서울 사서함 211 (하이픈 앞까지)
+수용번호: 1111 (하이픈 뒤 숫자, 1-9999)
+주소: 서울 사서함 211-1111 (전체)
+
+**주소 형식 예시:**
+"서울 사서함 211-1111"
+  → 수용기관: 서울
+  → 사서함주소: 서울 사서함 211
+  → 수용번호: 1111
+
+[편지 내용 (중간~하단에서)]
+내용: (여기에 편지 본문 텍스트 전부 추출)
+
+**응답 형식:**
+[ENVELOPE: YES/NO]
+발신자: 
+수용기관: 
+사서함주소: 
+수용번호: 
+주소: 
+내용: (편지 본문)`
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
