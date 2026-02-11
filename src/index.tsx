@@ -7181,7 +7181,7 @@ console.log('권한 관리 함수 로드 완료')
                 // 업로드 확인 모달 생성
                 const confirmModal = createConfirmModal(
                     '우편물 업로드',
-                    \`\${files.length}개의 이미지를 업로드하시겠습니까?\\n\\n자동으로 봉투를 감지하여 우편물을 분리합니다.\`,
+                    \`\${files.length}개의 이미지를 업로드하시겠습니까?\`,
                     '업로드',
                     '취소'
                 )
@@ -7207,41 +7207,6 @@ console.log('권한 관리 함수 로드 완료')
                     event.target.value = ''
                     return
                 }
-                
-                // 메모 입력 모달
-                const notesModal = createInputModal(
-                    '메모 입력',
-                    '우편물에 대한 메모를 입력하세요 (선택사항)',
-                    '확인',
-                    '건너뛰기'
-                )
-                
-                document.body.appendChild(notesModal)
-                
-                const notes = await new Promise((resolve) => {
-                    const confirmBtn = notesModal.querySelector('.confirm-btn')
-                    const cancelBtn = notesModal.querySelector('.cancel-btn')
-                    const input = notesModal.querySelector('input')
-                    
-                    confirmBtn.addEventListener('click', () => {
-                        const value = input.value.trim()
-                        notesModal.remove()
-                        resolve(value)
-                    })
-                    
-                    cancelBtn.addEventListener('click', () => {
-                        notesModal.remove()
-                        resolve('')
-                    })
-                    
-                    input.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter') {
-                            const value = input.value.trim()
-                            notesModal.remove()
-                            resolve(value)
-                        }
-                    })
-                })
                 
                 // 로딩 모달 생성
                 const loadingModal = createLoadingModal('이미지 업로드 중...', files.length)
@@ -7272,7 +7237,7 @@ console.log('권한 관리 함수 로드 완료')
                 const response = await axios.post(\`\${API_BASE}/mailroom\`, {
                     member_id: null,
                     image_keys: uploadedKeys,
-                    notes: notes || '',
+                    notes: '',
                     created_by: currentStaff.id
                 })
                 
