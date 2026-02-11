@@ -3097,14 +3097,17 @@ console.log('권한 관리 함수 로드 완료')
                 ])
 
                 const stats = statsRes.data
-                const myTickets = ticketsRes.data.tickets.filter(t => !['completed', 'closed'].includes(t.status))
+                const myTickets = ticketsRes.data.tickets.filter(t => 
+                    !['completed', 'closed', 'pending_inspection'].includes(t.status)
+                )
 
                 document.getElementById('my-tickets-count').textContent = myTickets.length
                 document.getElementById('today-completed-count').textContent = stats.todayCompleted
 
-                // 미배정 티켓
+                // 미배정 티켓 (pending_inspection 제외)
                 const openTickets = await axios.get(\`\${API_BASE}/tickets?status=open\`)
-                document.getElementById('open-tickets-count').textContent = openTickets.data.tickets.length
+                const filteredOpenTickets = openTickets.data.tickets.filter(t => t.status !== 'pending_inspection')
+                document.getElementById('open-tickets-count').textContent = filteredOpenTickets.length
 
                 // 긴급 티켓
                 const urgentCount = stats.priorityStats.find(s => s.priority === 'urgent')?.count || 0
@@ -3593,7 +3596,11 @@ console.log('권한 관리 함수 로드 완료')
                 if (type !== 'all') url += \`ticket_type=\${type}&\`
 
                 const response = await axios.get(url)
-                const tickets = response.data.tickets
+                let tickets = response.data.tickets
+                
+                // 임시 티켓(pending_inspection) 제외
+                tickets = tickets.filter(t => t.status !== 'pending_inspection')
+                
                 const paginationInfo = response.data.pagination
                 
                 // 페이지네이션 정보 업데이트
@@ -6345,7 +6352,7 @@ console.log('권한 관리 함수 로드 완료')
                     description: \`수신자: \${receiverInfo.name || '미인식'}\\n번호: \${receiverInfo.number || '미인식'}\\n기관: \${receiverInfo.institution || '미인식'}\\n\\nOCR 텍스트:\\n\${ocrText}\`,
                     member_id: null,
                     ticket_type: 'MAIL_INSPECTION',
-                    status: 'open',
+                    status: 'pending_inspection',
                     priority: 'normal',
                     created_by: currentStaff.id,
                     image_keys: JSON.stringify([imageKey])
@@ -6361,7 +6368,7 @@ console.log('권한 관리 함수 로드 완료')
                     description: 'OCR 처리 실패. 수동으로 정보를 입력해주세요.',
                     member_id: null,
                     ticket_type: 'MAIL_INSPECTION',
-                    status: 'open',
+                    status: 'pending_inspection',
                     priority: 'high',
                     created_by: currentStaff.id,
                     image_keys: JSON.stringify([imageKey])
@@ -7616,13 +7623,17 @@ console.log('권한 관리 함수 로드 완료')
                 // OCR 원문 (전체)
                 const ocrText = ocrResults.map(r => r.text).join('\\n\\n')
                 
-                // 편지 요약 추출
-                const summaryMatch = ocrText.match(/요약:\s*(.+?)(?=\\n카테고리:|$)/s)
-                const letterSummary = summaryMatch ? summaryMatch[1].trim() : letterContents
+                // 편지 요약 추출 (AI가 생성한 요약만)
+                const summaryMatch = ocrText.match(/요약:\s*([^\n]+(?:\n(?!카테고리:|원문:)[^\n]+)*)/i)
+                const letterSummary = summaryMatch ? summaryMatch[1].trim() : '요약 없음'
                 
                 // 카테고리 자동 추출
-                const categoryMatch = ocrText.match(/카테고리:\s*(도서|베팅|문의|이체|충전|기타)/)
+                const categoryMatch = ocrText.match(/카테고리:\s*(도서|베팅|문의|이체|충전|기타)/i)
                 const autoCategory = categoryMatch ? categoryMatch[1] : ''
+                
+                // 편지 원문 추출 (원문: 부분)
+                const contentMatch = ocrText.match(/원문:\s*(.+)/is)
+                const fullContent = contentMatch ? contentMatch[1].trim() : ocrText
                 
                 // 폼 채우기 - 발신자 정보가 있으면 자동 입력
                 if (senderInfo) {
@@ -7638,7 +7649,7 @@ console.log('권한 관리 함수 로드 완료')
                     document.getElementById('inspection-address').value = item.po_box_address || item.mailbox_address || ''
                 }
                 
-                document.getElementById('inspection-ocr-text').value = ocrText
+                document.getElementById('inspection-ocr-text').value = fullContent
                 document.getElementById('inspection-letter-content').value = letterSummary
                 document.getElementById('inspection-notes').value = item.notes || ''
                 
