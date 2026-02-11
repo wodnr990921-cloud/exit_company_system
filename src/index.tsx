@@ -6665,35 +6665,80 @@ console.log('권한 관리 함수 로드 완료')
         // OCR 처리 및 임시 티켓 생성
         async function processImageToTempTicket(imageKey, imageUrl) {
             try {
-                // 1. Cloudflare AI로 OCR 처리 (간단하게 텍스트 추출)
-                const ocrRes = await axios.post(\`\${API_BASE}/mailroom/ocr-simple\`, {
+                // 1. 다중 편지봉투 감지 OCR
+                const detectRes = await axios.post(API_BASE + '/mailroom/ocr-detect-multiple', {
                     image_key: imageKey
                 })
                 
-                const ocrText = ocrRes.data.text || ''
+                const ocrText = detectRes.data.text || ''
+                const letterCount = detectRes.data.letter_count || 1
+                const isMultiple = detectRes.data.is_multiple || false
                 
-                // 2. 수신자 정보 추출 (간단한 패턴 매칭)
-                const receiverInfo = extractReceiverInfo(ocrText)
-                
-                // 3. 임시 티켓 생성
-                const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
-                    ticket_number: \`TEMP-\${Date.now()}-\${Math.random().toString(36).substr(2, 4)}\`,
-                    title: \`[임시] 우편물 - \${receiverInfo.name || '미인식'}\`,
-                    description: \`수신자: \${receiverInfo.name || '미인식'}\\n번호: \${receiverInfo.number || '미인식'}\\n기관: \${receiverInfo.institution || '미인식'}\\n\\nOCR 텍스트:\\n\${ocrText}\`,
-                    member_id: null,
-                    ticket_type: 'MAIL_INSPECTION',
-                    status: 'pending_inspection',
-                    priority: 'normal',
-                    created_by: currentStaff.id,
-                    image_keys: JSON.stringify([imageKey])
-                })
-                
-                return ticketRes.data
+                // 2. 다중 편지인 경우 여러 개의 티켓 생성
+                if (isMultiple && letterCount > 1) {
+                    console.log('다중 편지 감지:', letterCount + '개')
+                    
+                    // 각 편지별로 정보 파싱
+                    const letters = parseMultipleLetters(ocrText, letterCount)
+                    const tickets = []
+                    
+                    for (let i = 0; i < letters.length; i++) {
+                        const letter = letters[i]
+                        const ticketNumber = 'TEMP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4)
+                        const letterTitle = '[편지 ' + (i + 1) + '/' + letterCount + '] 우편물 - ' + (letter.name || '미인식')
+                        const letterDesc = '수신자: ' + (letter.name || '미인식') + '\n' +
+                                         '수용번호: ' + (letter.number || '미인식') + '\n' +
+                                         '기관명: ' + (letter.institution || '미인식') + '\n\n' +
+                                         'OCR 텍스트:\n' + letter.text
+                        
+                        const ticketRes = await axios.post(API_BASE + '/tickets', {
+                            ticket_number: ticketNumber,
+                            title: letterTitle,
+                            description: letterDesc,
+                            member_id: null,
+                            ticket_type: 'MAIL_INSPECTION',
+                            status: 'pending_inspection',
+                            priority: 'normal',
+                            created_by: currentStaff.id,
+                            image_keys: JSON.stringify([imageKey])
+                        })
+                        
+                        tickets.push(ticketRes.data)
+                    }
+                    
+                    alert(letterCount + '개의 편지가 감지되어 ' + tickets.length + '개의 티켓이 생성되었습니다.')
+                    return tickets[0] // 첫 번째 티켓 반환
+                    
+                } else {
+                    // 3. 단일 편지인 경우 기존 로직
+                    const receiverInfo = extractReceiverInfo(ocrText)
+                    const ticketNumber = 'TEMP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4)
+                    const ticketTitle = '[임시] 우편물 - ' + (receiverInfo.name || '미인식')
+                    const ticketDesc = '수신자: ' + (receiverInfo.name || '미인식') + '\n' +
+                                     '번호: ' + (receiverInfo.number || '미인식') + '\n' +
+                                     '기관: ' + (receiverInfo.institution || '미인식') + '\n\n' +
+                                     'OCR 텍스트:\n' + ocrText
+                    
+                    const ticketRes = await axios.post(API_BASE + '/tickets', {
+                        ticket_number: ticketNumber,
+                        title: ticketTitle,
+                        description: ticketDesc,
+                        member_id: null,
+                        ticket_type: 'MAIL_INSPECTION',
+                        status: 'pending_inspection',
+                        priority: 'normal',
+                        created_by: currentStaff.id,
+                        image_keys: JSON.stringify([imageKey])
+                    })
+                    
+                    return ticketRes.data
+                }
             } catch (error) {
                 console.error('OCR 처리 오류:', error)
                 // 오류 발생해도 일단 빈 티켓 생성
-                const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
-                    ticket_number: \`TEMP-\${Date.now()}-\${Math.random().toString(36).substr(2, 4)}\`,
+                const ticketNumber = 'TEMP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4)
+                const ticketRes = await axios.post(API_BASE + '/tickets', {
+                    ticket_number: ticketNumber,
                     title: '[임시] 우편물 - OCR 실패',
                     description: 'OCR 처리 실패. 수동으로 정보를 입력해주세요.',
                     member_id: null,
@@ -6705,6 +6750,26 @@ console.log('권한 관리 함수 로드 완료')
                 })
                 return ticketRes.data
             }
+        }
+        
+        // 다중 편지 파싱
+        function parseMultipleLetters(ocrText, letterCount) {
+            const letters = []
+            const letterPattern = /\[편지 \d+\]/g
+            const matches = ocrText.split(letterPattern)
+            
+            for (let i = 1; i < matches.length; i++) {
+                const letterText = matches[i].trim()
+                const info = extractReceiverInfo(letterText)
+                letters.push({
+                    name: info.name,
+                    number: info.number,
+                    institution: info.institution,
+                    text: letterText
+                })
+            }
+            
+            return letters
         }
 
         // 수신자 정보 추출 (간단한 패턴 매칭)
