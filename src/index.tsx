@@ -3155,7 +3155,7 @@ console.log('권한 관리 함수 로드 완료')
             const password = document.getElementById('login-password').value
 
             try {
-                const response = await axios.post(\`\${API_BASE}/auth/login\`, { email, password })
+                const response = await axios.post(API_BASE + '/auth/login', { email, password })
                 currentStaff = response.data.staff
 
                 // localStorage에 세션 정보 저장
