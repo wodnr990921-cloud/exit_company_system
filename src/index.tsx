@@ -4063,7 +4063,7 @@ console.log('권한 관리 함수 로드 완료')
                     </div>
                 \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">완료된 경기가 없습니다.</p>'
 
-                document.getElementById('match-settlement-list').innerHTML = html
+                document.getElementById('settlement-matches-list').innerHTML = html
             } catch (error) {
                 console.error('경기 정산 목록 로드 오류:', error)
             }
