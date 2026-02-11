@@ -4,6 +4,27 @@
 
 ## 🆕 최신 업데이트 (2026-02-11)
 
+### 🔧 v10.1 정규식 완전 제거 - 빌드 안정성 개선
+
+**문제 해결**:
+- Vite 빌드 시 정규식 리터럴 파싱 오류 완전 해결
+- 모든 정규식을 순수 JavaScript 문자열 메서드로 교체
+- `Invalid regular expression: missing /` 오류 근본 제거
+
+**교체된 정규식 패턴**:
+1. **OCR 텍스트 파싱** - `match()` → `indexOf()` + `substring()`
+2. **수신자 정보 추출** - 정규식 → 문자 범위 체크 루프
+3. **이메일 검증** - `test()` → `includes()` + 위치 검증
+4. **HTML 이스케이프** - `replace()` → `split()` + `join()`
+
+**기술적 장점**:
+- ✅ 빌드 안정성 향상
+- ✅ 성능 개선 (간단한 패턴 매칭)
+- ✅ 코드 가독성 향상
+- ✅ 모든 환경에서 안정적 작동
+
+---
+
 ### ✨ v9.2.5 티켓 상세 회원 변경 기능
 
 **회원 관리 기능**:
@@ -126,16 +147,17 @@
 
 ## 🌐 접속 정보
 
-- **로컬 개발 URL**: https://3000-izz2akoud4rd9s8t7plxq-b32ec7bb.sandbox.novita.ai ✅ **ACTIVE**
-- **프로덕션 URL**: https://exit-system.pages.dev ✅ **LIVE (v9.2)**
-- **최신 배포**: https://738bc9d6.exit-system.pages.dev (Production)
+- **프로덕션 URL**: https://exit-company-system.pages.dev ✅ **LIVE (v10.1)**
+- **최신 배포**: https://a29982b2.exit-company-system.pages.dev (v10.1 - 정규식 제거)
 - **데모 계정**: admin@prison-books.kr / admin123
-- **Cloudflare Pages**: exit-system
-- **D1 Database**: exit-system-production (17 migrations)
-- **R2 Storage**: exit-system-mailroom ✅ **활성화됨**
-- **Last Deployed**: 2026-02-11 00:15 UTC
-- **Build Size**: 577.48 kB (52 modules)
+- **Cloudflare Pages**: exit-company
+- **D1 Database**: exit-company-production (13 migrations)
+- **R2 Storage**: exit-company-mailroom ✅ **활성화됨**
+- **Last Deployed**: 2026-02-11 03:20 UTC
+- **Build Size**: 654.19 kB (53 modules)
 - **Status**: 🟢 **All Systems Operational**
+- **GitHub**: https://github.com/wodnr990921-cloud/exit_company_system
+- **Latest Commit**: 346acbf - Fix: remove ALL regex patterns
 
 ## 📋 프로젝트 개요
 
@@ -655,6 +677,7 @@ npm run deploy:prod
 - ✅ R2 Storage 활성화 및 통합 (v10.0)
 - ✅ 티켓 회원 변경 기능 (v9.2.5)
 - ✅ 승인 요청 기반 회원 변경 워크플로우 (v9.2.5)
+- ✅ 정규식 완전 제거 - 빌드 안정성 개선 (v10.1)
 
 ### 예정 📅
 - 📅 Cloudflare AI Workers OCR 실제 연동
@@ -700,6 +723,12 @@ EXIT 시스템 개발팀
 ---
 
 ## 🎉 주요 변경 사항 로그
+
+### v10.1 (2026-02-11) 🔧
+- **정규식 완전 제거**: 모든 정규식 패턴을 문자열 메서드로 교체
+- **빌드 안정성**: Vite 빌드 오류 근본 해결
+- **성능 개선**: 간단한 패턴 매칭에 최적화된 코드
+- **유지보수성**: 가독성 높은 코드로 개선
 
 ### v9.2.5 (2026-02-11) ✨
 - **회원 변경 기능**: 티켓 상세에서 회원 변경/등록
