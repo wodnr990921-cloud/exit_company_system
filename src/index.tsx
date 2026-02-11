@@ -533,9 +533,12 @@ app.get('/', (c) => {
                         <!-- 정산 통계 -->
                         <div class="card">
                             <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-bold"><i class="fas fa-calculator mr-2"></i>정산 통계</h3>
                                 <button onclick="refreshBettingStats()" class="text-blue-600 hover:text-blue-800 text-sm">
                                     <i class="fas fa-sync-alt mr-1"></i>새로고침
+                                </button>
+                                <h3 class="text-lg font-bold flex-1 text-center"><i class="fas fa-calculator mr-2"></i>정산 통계</h3>
+                                <button onclick="openBettingSettlementModal()" class="btn btn-success btn-sm">
+                                    <i class="fas fa-check-circle mr-1"></i>정산
                                 </button>
                             </div>
                             
@@ -563,7 +566,7 @@ app.get('/', (c) => {
                                 <div class="bg-red-50 p-4 rounded-lg">
                                     <div class="flex items-center justify-between">
                                         <div>
-                                            <p class="text-sm text-gray-600 mb-1">죽은금액 (마진)</p>
+                                            <p class="text-sm text-gray-600 mb-1">마진</p>
                                             <p class="text-2xl font-bold text-red-600" id="dashboard-net-profit">0원</p>
                                         </div>
                                         <i class="fas fa-chart-line text-3xl text-red-400"></i>
@@ -1532,7 +1535,7 @@ app.get('/', (c) => {
             <div class="bg-white rounded-lg max-w-7xl w-full max-h-[90vh] flex flex-col">
                 <div class="p-6 border-b">
                     <div class="flex justify-between items-center">
-                        <h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>경기 관리 및 정산</h3>
+                        <h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>경기 관리</h3>
                         <button onclick="closeMatchManagementModal()" class="text-gray-500 hover:text-gray-700">
                             <i class="fas fa-times text-2xl"></i>
                         </button>
@@ -1540,66 +1543,90 @@ app.get('/', (c) => {
                 </div>
                 
                 <div class="flex-1 overflow-hidden flex">
-                    <!-- 좌측: 경기 관리 -->
-                    <div class="w-1/2 border-r p-6 overflow-y-auto">
+                    <!-- 좌측: 경기 관리 (엑셀 테이블) -->
+                    <div class="w-2/3 border-r p-6 overflow-y-auto">
                         <div class="mb-4">
                             <div class="flex justify-between items-center mb-4">
-                                <h4 class="font-bold text-lg"><i class="fas fa-list mr-2"></i>등록된 경기</h4>
-                                <button onclick="addMatchRow()" class="btn btn-success btn-sm">
-                                    <i class="fas fa-plus mr-2"></i>경기 추가
-                                </button>
+                                <h4 class="font-bold text-lg"><i class="fas fa-list mr-2"></i>경기 목록</h4>
+                                <div class="space-x-2">
+                                    <button onclick="addMatchRow()" class="btn btn-success btn-sm">
+                                        <i class="fas fa-plus mr-2"></i>경기 추가
+                                    </button>
+                                    <button onclick="saveAllMatches()" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-save mr-2"></i>모두 저장
+                                    </button>
+                                </div>
                             </div>
-                            <p class="text-sm text-gray-600 mb-3">경기 추가, 수정, 결과 입력을 할 수 있습니다.</p>
                         </div>
                         
-                        <div id="match-management-list" class="space-y-3"></div>
-                        
-                        <div class="mt-4 flex justify-end">
-                            <button onclick="saveAllMatches()" class="btn btn-primary">
-                                <i class="fas fa-save mr-2"></i>모두 저장
-                            </button>
+                        <!-- 엑셀 형태 테이블 -->
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full border-collapse border border-gray-300">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">경기명</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">홈팀</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">원정팀</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">경기일시</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">홈승</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">무승부</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">원정승</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">기준점</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">오버</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">언더</th>
+                                        <th class="border border-gray-300 px-2 py-2 text-xs font-semibold">작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="match-management-list">
+                                    <!-- 경기 행 동적 추가 -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                     
-                    <!-- 우측: 정산 패널 -->
-                    <div class="w-1/2 p-6 overflow-y-auto bg-gray-50">
+                    <!-- 우측: 경기 결과 등록 -->
+                    <div class="w-1/3 p-6 overflow-y-auto bg-gray-50">
                         <div class="mb-4">
-                            <h4 class="font-bold text-lg mb-2"><i class="fas fa-calculator mr-2"></i>경기 정산</h4>
-                            <p class="text-sm text-gray-600 mb-3">완료된 경기의 배팅 결과를 확인하고 정산합니다.</p>
-                        </div>
-                        
-                        <!-- 정산 통계 -->
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div class="bg-white p-4 rounded-lg shadow-sm">
-                                <p class="text-xs text-gray-600 mb-1">완료된 경기</p>
-                                <p class="text-2xl font-bold text-blue-600" id="settlement-completed-count">0</p>
-                            </div>
-                            <div class="bg-white p-4 rounded-lg shadow-sm">
-                                <p class="text-xs text-gray-600 mb-1">총 배팅 건수</p>
-                                <p class="text-2xl font-bold text-green-600" id="settlement-total-bets">0</p>
-                            </div>
-                            <div class="bg-white p-4 rounded-lg shadow-sm">
-                                <p class="text-xs text-gray-600 mb-1">총 배팅액</p>
-                                <p class="text-xl font-bold text-purple-600" id="settlement-total-amount">0원</p>
-                            </div>
-                            <div class="bg-white p-4 rounded-lg shadow-sm">
-                                <p class="text-xs text-gray-600 mb-1">순수익</p>
-                                <p class="text-xl font-bold text-orange-600" id="settlement-net-profit">0원</p>
-                            </div>
+                            <h4 class="font-bold text-lg mb-2"><i class="fas fa-flag-checkered mr-2"></i>경기 결과 등록</h4>
+                            <p class="text-sm text-gray-600 mb-3">완료된 경기의 결과를 등록합니다.</p>
                         </div>
                         
                         <!-- 완료된 경기 목록 -->
-                        <div class="bg-white rounded-lg shadow-sm p-4">
-                            <div class="flex justify-between items-center mb-3">
-                                <h5 class="font-bold text-sm">완료된 경기 목록</h5>
-                                <button onclick="refreshSettlementData()" class="text-blue-600 hover:text-blue-800 text-sm">
-                                    <i class="fas fa-sync-alt mr-1"></i>새로고침
-                                </button>
-                            </div>
-                            <div id="settlement-matches-list" class="space-y-2 max-h-96 overflow-y-auto">
-                                <p class="text-gray-500 text-sm text-center py-4">정산할 경기가 없습니다.</p>
-                            </div>
+                        <div id="settlement-matches-list" class="space-y-2">
+                            <p class="text-gray-500 text-sm text-center py-4">완료된 경기가 없습니다.</p>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 배팅 정산 모달 -->
+        <div id="betting-settlement-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-bold"><i class="fas fa-check-circle mr-2"></i>배팅 정산</h3>
+                        <button onclick="closeBettingSettlementModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <p class="text-sm text-gray-600 mb-4">완료된 경기의 결과를 등록하고 배팅을 정산합니다.</p>
+                    
+                    <!-- 완료된 경기 목록 -->
+                    <div id="settlement-match-list" class="space-y-3 mb-6">
+                        <!-- 동적으로 추가 -->
+                    </div>
+                    
+                    <div class="flex justify-end gap-2">
+                        <button onclick="closeBettingSettlementModal()" class="btn btn-secondary">
+                            <i class="fas fa-times mr-2"></i>취소
+                        </button>
+                        <button onclick="confirmBettingSettlement()" class="btn btn-success">
+                            <i class="fas fa-check mr-2"></i>정산 확정
+                        </button>
                     </div>
                 </div>
             </div>
@@ -4836,105 +4863,51 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
 
-        // 경기 추가 행
+        // 경기 추가 행 (엑셀 테이블 형태)
         function addMatchRow() {
-            const list = document.getElementById('match-management-list')
-            const newIndex = list.children.length
-            const html = \`
-                <div class="border rounded p-4 bg-white" data-match-id="new-\${newIndex}">
-                    <div class="space-y-3">
-                        <!-- 기본 정보 -->
-                        <div class="grid grid-cols-12 gap-2">
-                            <div class="col-span-4">
-                                <label class="text-xs text-gray-600">경기명</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       data-field="match_name" placeholder="예: 맨체스터 유나이티드 vs 리버풀">
-                            </div>
-                            <div class="col-span-3">
-                                <label class="text-xs text-gray-600">홈팀</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       data-field="home_team" placeholder="홈팀명">
-                            </div>
-                            <div class="col-span-3">
-                                <label class="text-xs text-gray-600">원정팀</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       data-field="away_team" placeholder="원정팀명">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="text-xs text-gray-600">경기일시</label>
-                                <input type="datetime-local" class="w-full px-2 py-1 border rounded text-sm" 
-                                       data-field="match_date">
-                            </div>
-                        </div>
-                        
-                        <!-- 승무패 배당 -->
-                        <div class="bg-blue-50 p-2 rounded">
-                            <h5 class="text-xs font-bold text-blue-800 mb-1">승무패 배당</h5>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-600">홈승</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           data-field="home_odds" placeholder="1.50">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">무승부</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           data-field="draw_odds" placeholder="3.20">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">원정승</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           data-field="away_odds" placeholder="2.10">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 언오버 배당 -->
-                        <div class="bg-green-50 p-2 rounded">
-                            <h5 class="text-xs font-bold text-green-800 mb-1">언오버 배당</h5>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-600">기준점</label>
-                                    <input type="number" step="0.5" class="w-full px-2 py-1 border rounded text-sm" 
-                                           data-field="over_line" placeholder="2.5">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">오버</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           data-field="over_odds" placeholder="1.85">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">언더</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           data-field="under_odds" placeholder="1.95">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 핸디캡 배당 -->
-                        <div class="bg-purple-50 p-2 rounded">
-                            <h5 class="text-xs font-bold text-purple-800 mb-1">핸디캡 배당</h5>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-600">핸디캡</label>
-                                    <input type="number" step="0.5" class="w-full px-2 py-1 border rounded text-sm" 
-                                           data-field="handicap_line" placeholder="-1.5">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">홈팀</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           data-field="handicap_home_odds" placeholder="1.75">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">원정팀</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           data-field="handicap_away_odds" placeholder="2.05">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-end mt-2">
-                        <button onclick="this.parentElement.parentElement.remove()" class="btn btn-danger btn-sm">
+            const tbody = document.getElementById('match-management-list')
+            const newIndex = tbody.children.length
+            const tr = document.createElement('tr')
+            tr.setAttribute('data-match-id', \`new-\${newIndex}\`)
+            tr.innerHTML = \`
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="text" class="w-full px-1 py-1 text-xs" data-field="match_name" placeholder="경기명">
+                </td>
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="text" class="w-full px-1 py-1 text-xs" data-field="home_team" placeholder="홈팀">
+                </td>
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="text" class="w-full px-1 py-1 text-xs" data-field="away_team" placeholder="원정팀">
+                </td>
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="datetime-local" class="w-full px-1 py-1 text-xs" data-field="match_date">
+                </td>
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" data-field="home_odds" placeholder="1.50">
+                </td>
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" data-field="draw_odds" placeholder="3.20">
+                </td>
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" data-field="away_odds" placeholder="2.10">
+                </td>
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="number" step="0.5" class="w-full px-1 py-1 text-xs" data-field="over_line" placeholder="2.5">
+                </td>
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" data-field="over_odds" placeholder="1.85">
+                </td>
+                <td class="border border-gray-300 px-1 py-1">
+                    <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" data-field="under_odds" placeholder="1.95">
+                </td>
+                <td class="border border-gray-300 px-1 py-1 text-center">
+                    <button onclick="this.closest('tr').remove()" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            \`
+            tbody.appendChild(tr)
+        }
                             <i class="fas fa-trash mr-1"></i>제거
                         </button>
                     </div>
