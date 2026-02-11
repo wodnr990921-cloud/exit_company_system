@@ -2912,6 +2912,7 @@ console.log('권한 관리 함수 로드 완료')
         let currentStaff = null
         let currentView = 'dashboard'
         let currentAttendanceId = null
+        let selectedProcessedMails = []  // 검수 탭 체크박스 선택된 우편물 ID 배열
         
         // 페이지네이션 상태 관리
         const pagination = {
@@ -6757,7 +6758,26 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
 
-                container.innerHTML = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">' + 
+                // 선택된 항목 수 표시
+                const selectedCount = selectedProcessedMails.length
+                const headerHtml = selectedCount > 0 ? \`
+                    <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-4 flex justify-between items-center">
+                        <span class="text-blue-800 font-medium">
+                            <i class="fas fa-check-square mr-2"></i>
+                            선택된 \${selectedCount}개 우편물
+                        </span>
+                        <div class="flex gap-2">
+                            <button onclick="bulkAssignStaff()" class="btn btn-sm btn-primary">
+                                <i class="fas fa-user-check mr-1"></i>일괄 배당
+                            </button>
+                            <button onclick="bulkDeleteProcessedMails()" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash mr-1"></i>선택 삭제
+                            </button>
+                        </div>
+                    </div>
+                \` : ''
+
+                container.innerHTML = headerHtml + '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">' + 
                 items.map(item => {
                     const imageKeys = item.image_keys ? JSON.parse(item.image_keys) : []
                     const firstImage = imageKeys[0] || null
@@ -6770,8 +6790,21 @@ console.log('권한 관리 함수 로드 완료')
                     
                     const ocrText = ocrResults.length > 0 && ocrResults[0].text ? ocrResults[0].text.substring(0, 100) : '없음'
                     
+                    const isSelected = selectedProcessedMails.includes(item.id)
+                    const selectedClass = isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                    
                     return \`
-                        <div class="card cursor-pointer hover:shadow-lg transition-shadow" onclick="showInspectionDetail(\${item.id})">
+                        <div class="card relative \${selectedClass}" onclick="event.target.tagName !== 'INPUT' && showInspectionDetail(\${item.id})">
+                            <!-- 체크박스 -->
+                            <div class="absolute top-2 left-2 z-10" onclick="event.stopPropagation()">
+                                <input 
+                                    type="checkbox" 
+                                    class="w-5 h-5 text-blue-600 rounded cursor-pointer"
+                                    \${isSelected ? 'checked' : ''}
+                                    onchange="toggleProcessedMailSelection(\${item.id})"
+                                >
+                            </div>
+                            
                             \${firstImage ? \`
                                 <img src="/api/mailroom/image/\${firstImage}" 
                                      class="w-full h-48 object-cover rounded-t mb-3">
@@ -6817,6 +6850,113 @@ console.log('권한 관리 함수 로드 완료')
                 
             } catch (error) {
                 console.error('검수 우편물 로드 오류:', error)
+            }
+        }
+        
+        // 검수 탭 체크박스 토글
+        function toggleProcessedMailSelection(mailId) {
+            const index = selectedProcessedMails.indexOf(mailId)
+            if (index > -1) {
+                selectedProcessedMails.splice(index, 1)
+            } else {
+                selectedProcessedMails.push(mailId)
+            }
+            loadProcessedMail()
+        }
+        
+        // 검수 탭 일괄 배당
+        async function bulkAssignStaff() {
+            if (selectedProcessedMails.length === 0) {
+                alert('배당할 우편물을 선택해주세요.')
+                return
+            }
+            
+            try {
+                // 직원 목록 조회
+                const res = await axios.get(\`\${API_BASE}/staff\`)
+                const staffList = res.data.staff || []
+                
+                // 직원 선택 모달
+                const staffOptions = staffList.map(s => \`
+                    <option value="\${s.id}">\${s.name} (\${s.role === 'admin' ? '관리자' : s.role === 'manager' ? '매니저' : '직원'})</option>
+                \`).join('')
+                
+                const modal = document.createElement('div')
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center'
+                modal.innerHTML = \`
+                    <div class="bg-white rounded-lg p-6 max-w-md w-full">
+                        <h3 class="text-lg font-bold mb-4">
+                            <i class="fas fa-user-check mr-2"></i>담당자 일괄 배정
+                        </h3>
+                        <p class="text-sm text-gray-600 mb-4">
+                            선택된 \${selectedProcessedMails.length}개 우편물을 배정할 담당자를 선택하세요.
+                        </p>
+                        <select id="bulk-staff-select" class="w-full px-3 py-2 border rounded mb-4">
+                            <option value="">-- 담당자 선택 --</option>
+                            \${staffOptions}
+                        </select>
+                        <div class="flex gap-2">
+                            <button onclick="this.closest('.fixed').remove()" class="btn btn-secondary flex-1">취소</button>
+                            <button onclick="confirmBulkAssign()" class="btn btn-primary flex-1">배정</button>
+                        </div>
+                    </div>
+                \`
+                document.body.appendChild(modal)
+            } catch (error) {
+                console.error('직원 목록 조회 오류:', error)
+                alert('직원 목록을 불러올 수 없습니다.')
+            }
+        }
+        
+        // 일괄 배정 확인
+        async function confirmBulkAssign() {
+            const staffId = document.getElementById('bulk-staff-select').value
+            if (!staffId) {
+                alert('담당자를 선택해주세요.')
+                return
+            }
+            
+            try {
+                // 각 우편물에 대해 담당자 배정
+                for (const mailId of selectedProcessedMails) {
+                    await axios.put(\`\${API_BASE}/mailroom/\${mailId}\`, {
+                        staff_id: parseInt(staffId),
+                        status: 'assigned'
+                    })
+                }
+                
+                alert(\`\${selectedProcessedMails.length}개 우편물이 배정되었습니다.\`)
+                selectedProcessedMails = []
+                document.querySelector('.fixed.inset-0').remove()
+                await loadProcessedMail()
+            } catch (error) {
+                console.error('일괄 배정 오류:', error)
+                alert('배정 중 오류가 발생했습니다.')
+            }
+        }
+        
+        // 검수 탭 일괄 삭제
+        async function bulkDeleteProcessedMails() {
+            if (selectedProcessedMails.length === 0) {
+                alert('삭제할 우편물을 선택해주세요.')
+                return
+            }
+            
+            if (!confirm(\`선택된 \${selectedProcessedMails.length}개 우편물을 삭제하시겠습니까?\`)) {
+                return
+            }
+            
+            try {
+                for (const mailId of selectedProcessedMails) {
+                    await axios.delete(\`\${API_BASE}/mailroom/\${mailId}\`)
+                }
+                
+                alert(\`\${selectedProcessedMails.length}개 우편물이 삭제되었습니다.\`)
+                selectedProcessedMails = []
+                await loadProcessedMail()
+            } catch (error) {
+                console.error('일괄 삭제 오류:', error)
+                alert('삭제 중 오류가 발생했습니다.')
             }
         }
 
