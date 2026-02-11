@@ -7330,8 +7330,11 @@ console.log('권한 관리 함수 로드 완료')
                 
                 container.innerHTML = tickets.filter(t => 
                     !selectedTicketsForAssignment.find(st => st.id === t.id)
-                ).map(ticket => \`
-                    <div class="border rounded p-2 hover:bg-gray-50 cursor-pointer" onclick="selectTicketForAssignment(\${ticket.id}, '\${ticket.ticket_number}', '\${ticket.title.replace(/'/g, "\\'")}', '\${ticket.member_name || ""}')">
+                ).map(ticket => {
+                    const safeTitle = ticket.title.replace(/"/g, '&quot;')
+                    const safeMemberName = (ticket.member_name || '').replace(/"/g, '&quot;')
+                    return \`
+                    <div class="border rounded p-2 hover:bg-gray-50 cursor-pointer" onclick='selectTicketForAssignment(\${ticket.id}, "\${ticket.ticket_number}", "\${safeTitle}", "\${safeMemberName}")'>
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <p class="font-medium text-sm">\${ticket.ticket_number}</p>
@@ -7341,7 +7344,7 @@ console.log('권한 관리 함수 로드 완료')
                             <span class="status-badge status-\${ticket.status} text-xs">\${ticket.status}</span>
                         </div>
                     </div>
-                \`).join('')
+                \`}).join('')
             } catch (error) {
                 console.error('티켓 검색 오류:', error)
             }
