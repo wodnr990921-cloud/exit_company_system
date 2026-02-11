@@ -964,6 +964,9 @@ app.get('/', (c) => {
                 <button onclick="showMailroomTab('inspection')" id="mailroom-tab-inspection" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
                     <i class="fas fa-search mr-1"></i>검수 및 배당
                 </button>
+                <button onclick="showMailroomTab('responses')" id="mailroom-tab-responses" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                    <i class="fas fa-reply mr-1"></i>오늘의답변
+                </button>
                 <button onclick="showMailroomTab('history')" id="mailroom-tab-history" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
                     <i class="fas fa-history mr-1"></i>처리 내역
                 </button>
@@ -1041,6 +1044,65 @@ app.get('/', (c) => {
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-history mr-2"></i>우편물 처리 내역</h3>
                     <div id="mail-history-list" class="space-y-2">
                         <p class="text-gray-500 text-center py-8">처리 내역이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 오늘의답변 탭 -->
+            <div id="mailroom-responses-tab" class="mailroom-tab-content hidden">
+                <!-- 날짜 선택 및 필터 -->
+                <div class="card mb-6">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">조회 날짜</label>
+                            <input type="date" id="responses-date" class="px-3 py-2 border rounded">
+                        </div>
+                        <div class="self-end">
+                            <button onclick="loadResponses()" class="btn btn-primary">
+                                <i class="fas fa-search mr-2"></i>조회
+                            </button>
+                        </div>
+                        <div class="self-end ml-auto flex gap-2">
+                            <button onclick="printResponses()" class="btn btn-success">
+                                <i class="fas fa-print mr-2"></i>일괄 출력
+                            </button>
+                            <button onclick="showResponseSettings()" class="btn btn-secondary">
+                                <i class="fas fa-cog mr-2"></i>양식 설정
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 통계 요약 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card bg-blue-50">
+                        <h3 class="text-sm text-gray-600 mb-1">전체 답변</h3>
+                        <p class="text-3xl font-bold text-blue-600" id="responses-total">0건</p>
+                    </div>
+                    <div class="card bg-green-50">
+                        <h3 class="text-sm text-gray-600 mb-1">출력 완료</h3>
+                        <p class="text-3xl font-bold text-green-600" id="responses-printed">0건</p>
+                    </div>
+                    <div class="card bg-yellow-50">
+                        <h3 class="text-sm text-gray-600 mb-1">출력 대기</h3>
+                        <p class="text-3xl font-bold text-yellow-600" id="responses-pending">0건</p>
+                    </div>
+                    <div class="card bg-red-50">
+                        <h3 class="text-sm text-gray-600 mb-1">오류</h3>
+                        <p class="text-3xl font-bold text-red-600" id="responses-error">0건</p>
+                    </div>
+                </div>
+
+                <!-- 답변 목록 -->
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold"><i class="fas fa-reply mr-2"></i>답변 목록</h3>
+                        <button onclick="selectAllResponses()" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-check-double mr-1"></i>전체 선택
+                        </button>
+                    </div>
+                    <div id="responses-list" class="space-y-3">
+                        <p class="text-gray-500 text-center py-8">답변이 없습니다.</p>
                     </div>
                 </div>
             </div>
@@ -3609,9 +3671,9 @@ console.log('권한 관리 함수 로드 완료')
                 }
 
                 const html = tickets.length > 0 ? tickets.map(t => \`
-                    <div class="card hover:shadow-lg transition cursor-pointer" onclick="showTicketDetail(\${t.id})">
+                    <div class="card hover:shadow-lg transition">
                         <div class="flex justify-between items-start">
-                            <div>
+                            <div class="flex-1 cursor-pointer" onclick="showTicketDetail(\${t.id})">
                                 <h3 class="font-bold text-lg">\${t.ticket_number}: \${t.title}</h3>
                                 <p class="text-sm text-gray-600 mt-1">\${t.member_name || '회원 없음'}</p>
                                 <div class="flex space-x-2 mt-2">
@@ -3623,6 +3685,11 @@ console.log('권한 관리 함수 로드 완료')
                             <div class="text-right text-sm text-gray-500">
                                 <p>담당: \${t.assigned_to_name || '미배정'}</p>
                                 <p>\${new Date(t.created_at).toLocaleDateString()}</p>
+                                \${currentStaff.role === 'admin' ? \`
+                                    <button onclick="deleteTicket(\${t.id}, event)" class="mt-2 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs">
+                                        <i class="fas fa-trash mr-1"></i>삭제
+                                    </button>
+                                \` : ''}
                             </div>
                         </div>
                     </div>
@@ -3634,6 +3701,29 @@ console.log('권한 관리 함수 로드 완료')
                 renderPagination('tickets', 'tickets-pagination', 'loadTickets')
             } catch (error) {
                 console.error('티켓 목록 로드 오류:', error)
+            }
+        }
+
+        // 티켓 삭제 (관리자 전용)
+        async function deleteTicket(ticketId, event) {
+            event.stopPropagation() // 카드 클릭 이벤트 방지
+            
+            if (currentStaff.role !== 'admin') {
+                alert('관리자만 티켓을 삭제할 수 있습니다.')
+                return
+            }
+            
+            if (!confirm('이 티켓을 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                return
+            }
+            
+            try {
+                await axios.delete(\`\${API_BASE}/tickets/\${ticketId}\`)
+                alert('티켓이 삭제되었습니다.')
+                await loadTickets(pagination.tickets.page)
+            } catch (error) {
+                console.error('티켓 삭제 오류:', error)
+                alert('티켓 삭제 실패: ' + (error.response?.data?.error || error.message))
             }
         }
 
