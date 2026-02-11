@@ -10221,7 +10221,7 @@ console.log('권한 관리 함수 로드 완료')
         async function refreshBettingStats() {
             try {
                 // 모든 배팅 폴더 조회
-                const res = await axios.get(\`\${API_BASE}/betting/folders\`)
+                const res = await axios.get(API_BASE + '/betting/folders')
                 const folders = res.data.folders || []
                 
                 let totalBet = 0
@@ -10239,10 +10239,15 @@ console.log('권한 관리 함수 로드 완료')
                 const netProfit = totalBet - totalWin
                 
                 // 대시보드 통계 업데이트
-                document.getElementById('dashboard-total-bet').textContent = \`\${totalBet.toLocaleString()}원\`
-                document.getElementById('dashboard-total-win').textContent = \`\${totalWin.toLocaleString()}원\`
-                document.getElementById('dashboard-net-profit').textContent = \`\${netProfit.toLocaleString()}원\`
-                document.getElementById('dashboard-bet-count').textContent = \`\${betCount}건\`
+                const totalBetEl = document.getElementById('dashboard-total-bet')
+                const totalWinEl = document.getElementById('dashboard-total-win')
+                const netProfitEl = document.getElementById('dashboard-net-profit')
+                const betCountEl = document.getElementById('dashboard-bet-count')
+                
+                if (totalBetEl) totalBetEl.textContent = totalBet.toLocaleString() + '원'
+                if (totalWinEl) totalWinEl.textContent = totalWin.toLocaleString() + '원'
+                if (netProfitEl) netProfitEl.textContent = netProfit.toLocaleString() + '원'
+                if (betCountEl) betCountEl.textContent = betCount + '건'
             } catch (error) {
                 console.error('배팅 통계 로드 오류:', error)
             }
@@ -10251,46 +10256,60 @@ console.log('권한 관리 함수 로드 완료')
         // 완료된 경기 목록 로드 (결과 등록용)
         async function loadCompletedMatchesForResult() {
             try {
-                const res = await axios.get(\`\${API_BASE}/betting/matches?status=completed\`)
+                const res = await axios.get(API_BASE + '/betting/matches?status=completed')
                 const matches = res.data.matches || []
                 
-                const html = matches.length > 0 ? matches.map(m => \`
-                    <div class="border rounded p-3 bg-white" data-match-id="\${m.id}">
-                        <div class="mb-2">
-                            <p class="font-bold text-sm">\${m.match_name}</p>
-                            <p class="text-xs text-gray-600">\${m.home_team} vs \${m.away_team}</p>
-                        </div>
-                        <div class="space-y-2">
-                            <div>
-                                <label class="text-xs text-gray-600">경기 결과</label>
-                                <select class="w-full px-2 py-1 border rounded text-xs" data-match-id="\${m.id}" data-field="result">
-                                    <option value="">선택</option>
-                                    <option value="home_win" \${m.result === 'home_win' ? 'selected' : ''}>홈 승</option>
-                                    <option value="away_win" \${m.result === 'away_win' ? 'selected' : ''}>원정 승</option>
-                                    <option value="draw" \${m.result === 'draw' ? 'selected' : ''}>무승부</option>
-                                    <option value="cancelled" \${m.result === 'cancelled' ? 'selected' : ''}>취소</option>
-                                </select>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-600">홈 스코어</label>
-                                    <input type="number" class="w-full px-2 py-1 border rounded text-xs" 
-                                           value="\${m.home_score || ''}" data-match-id="\${m.id}" data-field="home_score">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">원정 스코어</label>
-                                    <input type="number" class="w-full px-2 py-1 border rounded text-xs" 
-                                           value="\${m.away_score || ''}" data-match-id="\${m.id}" data-field="away_score">
-                                </div>
-                            </div>
-                            <button onclick="saveMatchResult(\${m.id})" class="btn btn-primary btn-sm w-full">
-                                <i class="fas fa-save mr-1"></i>결과 저장
-                            </button>
-                        </div>
-                    </div>
-                \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">완료된 경기가 없습니다.</p>'
+                const list = document.getElementById('settlement-matches-list')
+                if (!list) return
                 
-                document.getElementById('settlement-matches-list').innerHTML = html
+                if (matches.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">완료된 경기가 없습니다.</p>'
+                    return
+                }
+                
+                list.innerHTML = ''
+                matches.forEach(m => {
+                    const div = document.createElement('div')
+                    div.className = 'border rounded p-3 bg-white'
+                    div.setAttribute('data-match-id', m.id)
+                    
+                    const homeWinSel = m.result === 'home_win' ? 'selected' : ''
+                    const awayWinSel = m.result === 'away_win' ? 'selected' : ''
+                    const drawSel = m.result === 'draw' ? 'selected' : ''
+                    const cancelSel = m.result === 'cancelled' ? 'selected' : ''
+                    
+                    div.innerHTML = '<div class="mb-2">' +
+                            '<p class="font-bold text-sm">' + (m.match_name || '') + '</p>' +
+                            '<p class="text-xs text-gray-600">' + (m.home_team || '') + ' vs ' + (m.away_team || '') + '</p>' +
+                        '</div>' +
+                        '<div class="space-y-2">' +
+                            '<div>' +
+                                '<label class="text-xs text-gray-600">경기 결과</label>' +
+                                '<select class="w-full px-2 py-1 border rounded text-xs" data-match-id="' + m.id + '" data-field="result">' +
+                                    '<option value="">선택</option>' +
+                                    '<option value="home_win" ' + homeWinSel + '>홈 승</option>' +
+                                    '<option value="away_win" ' + awayWinSel + '>원정 승</option>' +
+                                    '<option value="draw" ' + drawSel + '>무승부</option>' +
+                                    '<option value="cancelled" ' + cancelSel + '>취소</option>' +
+                                '</select>' +
+                            '</div>' +
+                            '<div class="grid grid-cols-2 gap-2">' +
+                                '<div>' +
+                                    '<label class="text-xs text-gray-600">홈 스코어</label>' +
+                                    '<input type="number" class="w-full px-2 py-1 border rounded text-xs" value="' + (m.home_score || '') + '" data-match-id="' + m.id + '" data-field="home_score">' +
+                                '</div>' +
+                                '<div>' +
+                                    '<label class="text-xs text-gray-600">원정 스코어</label>' +
+                                    '<input type="number" class="w-full px-2 py-1 border rounded text-xs" value="' + (m.away_score || '') + '" data-match-id="' + m.id + '" data-field="away_score">' +
+                                '</div>' +
+                            '</div>' +
+                            '<button onclick="saveMatchResult(' + m.id + ')" class="btn btn-primary btn-sm w-full">' +
+                                '<i class="fas fa-save mr-1"></i>결과 저장' +
+                            '</button>' +
+                        '</div>'
+                    
+                    list.appendChild(div)
+                })
             } catch (error) {
                 console.error('완료된 경기 로드 오류:', error)
             }
