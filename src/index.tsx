@@ -4818,6 +4818,11 @@ console.log('권한 관리 함수 로드 완료')
                 const matches = response.data.matches || []
 
                 const tbody = document.getElementById('match-management-list')
+                if (!tbody) {
+                    console.error('match-management-list element not found')
+                    return
+                }
+                
                 tbody.innerHTML = matches.map(m => {
                     const matchDate = m.match_date ? new Date(m.match_date).toISOString().slice(0, 16) : ''
                     const deleteBtn = m.id && isAdmin() ? '<button onclick="deleteMatch(' + m.id + ')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>' : ''
@@ -4863,6 +4868,7 @@ console.log('권한 관리 함수 로드 완료')
                 await loadCompletedMatchesForResult()
             } catch (error) {
                 console.error('경기 관리 목록 로드 오류:', error)
+                alert('경기 목록 로드 실패: ' + error.message)
             }
         }
 
