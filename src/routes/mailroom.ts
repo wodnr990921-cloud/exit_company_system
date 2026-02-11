@@ -248,8 +248,21 @@ mailroom.post('/ocr-simple', async (c) => {
       }
       
       const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
-        image: Array.from(new Uint8Array(imageBuffer)),
-        prompt: `이 편지 이미지를 분석하세요.
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "agree"
+              },
+              {
+                type: "image",
+                image: Array.from(new Uint8Array(imageBuffer))
+              },
+              {
+                type: "text",
+                text: `이 편지 이미지를 분석하세요.
 
 **STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)
 - 상단에 "OO 사서함 XX-YYYY" 형태의 주소가 있으면 → [ENVELOPE: YES]
@@ -281,6 +294,11 @@ mailroom.post('/ocr-simple', async (c) => {
 수용번호: 
 주소: 
 내용: (편지 본문)`
+              }
+            ]
+          }
+        ],
+        max_tokens: 512
       })
       
       text = aiResponse?.response || ''
@@ -354,8 +372,21 @@ mailroom.post('/:id/ocr', async (c) => {
           }
           
           aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
-            image: Array.from(new Uint8Array(imageBuffer)),
-            prompt: `이 편지 이미지를 분석하세요.
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "agree"
+                  },
+                  {
+                    type: "image",
+                    image: Array.from(new Uint8Array(imageBuffer))
+                  },
+                  {
+                    type: "text",
+                    text: `이 편지 이미지를 분석하세요.
 
 **STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)
 - 상단에 "OO 사서함 XX-YYYY" 형태의 주소가 있으면 → [ENVELOPE: YES]
@@ -392,6 +423,11 @@ mailroom.post('/:id/ocr', async (c) => {
 수용번호: 
 주소: 
 내용: (편지 본문)`
+                  }
+                ]
+              }
+            ],
+            max_tokens: 512
           })
           
           // OCR 결과 파싱
@@ -780,6 +816,58 @@ function extractAddress(text: string): any {
   
   return Object.keys(addressInfo).length > 0 ? addressInfo : null
 }
+
+// 우편물 정보 수정 (담당자 배정, 회원 연결 등)
+mailroom.put('/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    const body = await c.req.json()
+    const { member_id, staff_id, ocr_result, notes, status } = body
+    
+    const updates: string[] = []
+    const params: any[] = []
+    
+    if (member_id !== undefined) {
+      updates.push('member_id = ?')
+      params.push(member_id)
+    }
+    
+    if (staff_id !== undefined) {
+      updates.push('staff_id = ?')
+      params.push(staff_id)
+    }
+    
+    if (ocr_result !== undefined) {
+      updates.push('ocr_result = ?')
+      params.push(typeof ocr_result === 'string' ? ocr_result : JSON.stringify(ocr_result))
+    }
+    
+    if (notes !== undefined) {
+      updates.push('notes = ?')
+      params.push(notes)
+    }
+    
+    if (status !== undefined) {
+      updates.push('status = ?')
+      params.push(status)
+    }
+    
+    if (updates.length === 0) {
+      return c.json({ error: '수정할 내용이 없습니다.' }, 400)
+    }
+    
+    updates.push('updated_at = CURRENT_TIMESTAMP')
+    params.push(id)
+    
+    const query = `UPDATE mailroom_items SET ${updates.join(', ')} WHERE id = ?`
+    await c.env.DB.prepare(query).bind(...params).run()
+    
+    return c.json({ success: true })
+  } catch (error: any) {
+    console.error('우편물 수정 오류:', error)
+    return c.json({ error: '수정 중 오류가 발생했습니다.' }, 500)
+  }
+})
 
 // 우편물 삭제
 mailroom.delete('/:id', async (c) => {
