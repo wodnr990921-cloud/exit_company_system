@@ -4,6 +4,7 @@ type Bindings = {
   DB: D1Database
   R2: R2Bucket
   AI: any
+  OPENAI_API_KEY: string
 }
 
 const mailroom = new Hono<{ Bindings: Bindings }>()
@@ -243,68 +244,10 @@ mailroom.post('/ocr-simple', async (c) => {
     let text = ''
     
     try {
-      if (!c.env.AI) {
-        throw new Error('AI binding is not configured')
-      }
-      
-      const aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "agree"
-              },
-              {
-                type: "image",
-                image: Array.from(new Uint8Array(imageBuffer))
-              },
-              {
-                type: "text",
-                text: `이 편지 이미지를 분석하세요.
-
-**STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)
-- 상단에 "OO 사서함 XX-YYYY" 형태의 주소가 있으면 → [ENVELOPE: YES]
-- 그 외 → [ENVELOPE: NO]
-
-**STEP 2: 정보 추출**
-
-[봉투가 있으면 (상단에서)]
-발신자: 홍길동
-수용기관: 서울 (사서함 앞의 지역명)
-사서함주소: 서울 사서함 211 (하이픈 앞까지)
-수용번호: 1111 (하이픈 뒤 숫자, 1-9999)
-주소: 서울 사서함 211-1111 (전체)
-
-**주소 형식 예시:**
-"서울 사서함 211-1111"
-  → 수용기관: 서울
-  → 사서함주소: 서울 사서함 211
-  → 수용번호: 1111
-
-[편지 내용 (중간~하단에서)]
-내용: (여기에 편지 본문 텍스트 전부 추출)
-
-**응답 형식:**
-[ENVELOPE: YES/NO]
-발신자: 
-수용기관: 
-사서함주소: 
-수용번호: 
-주소: 
-내용: (편지 본문)`
-              }
-            ]
-          }
-        ],
-        max_tokens: 512
-      })
-      
-      text = aiResponse?.response || ''
+      text = await callOpenAIVision(c, imageBuffer)
     } catch (aiError: any) {
-      console.error('AI OCR error:', aiError)
-      text = `[OCR 실패: Workers AI를 사용할 수 없습니다. Cloudflare Dashboard에서 Workers AI를 활성화해주세요.]`
+      console.error('OpenAI OCR error:', aiError)
+      text = '[AI OCR 실패: ' + aiError.message + ']'
     }
     
     return c.json({ 
@@ -367,74 +310,11 @@ mailroom.post('/:id/ocr', async (c) => {
         let aiResponse: any = null
         
         try {
-          if (!c.env.AI) {
-            throw new Error('AI binding is not configured. Please set up Workers AI in wrangler.toml')
-          }
-          
-          aiResponse = await c.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
-            messages: [
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "text",
-                    text: "agree"
-                  },
-                  {
-                    type: "image",
-                    image: Array.from(new Uint8Array(imageBuffer))
-                  },
-                  {
-                    type: "text",
-                    text: `이 편지 이미지를 분석하세요.
-
-**STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)
-- 상단에 "OO 사서함 XX-YYYY" 형태의 주소가 있으면 → [ENVELOPE: YES]
-- 그 외 → [ENVELOPE: NO]
-
-**STEP 2: 정보 추출**
-
-[봉투가 있으면 (상단에서)]
-발신자: 홍길동
-수용기관: 서울 (사서함 앞의 지역명)
-사서함주소: 서울 사서함 211 (하이픈 앞까지)
-수용번호: 1111 (하이픈 뒤 숫자, 1-9999)
-주소: 서울 사서함 211-1111 (전체)
-
-**주소 형식 예시:**
-"서울 사서함 211-1111"
-  → 수용기관: 서울
-  → 사서함주소: 서울 사서함 211
-  → 수용번호: 1111
-
-"안양 사서함 456-89"
-  → 수용기관: 안양
-  → 사서함주소: 안양 사서함 456
-  → 수용번호: 89
-
-[편지 내용 (중간~하단에서)]
-내용: (여기에 편지 본문 텍스트 전부 추출)
-
-**응답 형식:**
-[ENVELOPE: YES/NO]
-발신자: 
-수용기관: 
-사서함주소: 
-수용번호: 
-주소: 
-내용: (편지 본문)`
-                  }
-                ]
-              }
-            ],
-            max_tokens: 512
-          })
-          
-          // OCR 결과 파싱
-          extractedText = aiResponse?.response || aiResponse?.description || aiResponse?.text || ''
+          extractedText = await callOpenAIVision(c, imageBuffer)
+          aiResponse = { response: extractedText }
         } catch (aiError: any) {
-          console.error(`AI OCR error for ${key}:`, aiError)
-          extractedText = `[AI OCR 실패: ${aiError.message || 'Workers AI 권한이 필요합니다'}]`
+          console.error('OpenAI OCR error for ' + key + ':', aiError)
+          extractedText = '[AI OCR 실패: ' + aiError.message + ']'
         }
         
         // 봉투 감지 (간단한 키워드 기반)
@@ -1157,5 +1037,59 @@ mailroom.get('/image/:key', async (c) => {
     return c.json({ error: '이미지 조회 중 오류가 발생했습니다.' }, 500)
   }
 })
+
+// OpenAI GPT-4o Vision OCR 함수
+async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer): Promise<string> {
+  const apiKey = c.env.OPENAI_API_KEY
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured')
+  }
+  
+  const uint8Array = new Uint8Array(imageBuffer)
+  const base64Image = btoa(
+    uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')
+  )
+  
+  const promptText = '이 편지 이미지를 분석하세요.\n\n**STEP 1: 봉투 판별** (이미지 상단 1/3만 확인)\n- 상단에 "OO 사서함 XX-YYYY" 형태의 주소가 있으면 → [ENVELOPE: YES]\n- 그 외 → [ENVELOPE: NO]\n\n**STEP 2: 정보 추출**\n\n[봉투가 있으면 (상단에서)]\n발신자: 홍길동\n수용기관: 서울 (사서함 앞의 지역명)\n사서함주소: 서울 사서함 211 (하이픈 앞까지)\n수용번호: 1111 (하이픈 뒤 숫자, 1-9999)\n주소: 서울 사서함 211-1111 (전체)\n\n**주소 형식 예시:**\n"서울 사서함 211-1111"\n  → 수용기관: 서울\n  → 사서함주소: 서울 사서함 211\n  → 수용번호: 1111\n\n[편지 내용 (중간~하단에서)]\n내용: (여기에 편지 본문 텍스트 전부 추출)\n\n**응답 형식:**\n[ENVELOPE: YES/NO]\n발신자: \n수용기관: \n사서함주소: \n수용번호: \n주소: \n내용: (편지 본문)'
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: promptText
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: 'data:image/jpeg;base64,' + base64Image,
+                detail: 'high'
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 1500,
+      temperature: 0.1
+    })
+  })
+  
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error('OpenAI API 오류 (' + response.status + '): ' + errorText)
+  }
+  
+  const data = await response.json()
+  return data.choices[0]?.message?.content || ''
+}
 
 export default mailroom
