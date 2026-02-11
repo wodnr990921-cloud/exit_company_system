@@ -195,6 +195,61 @@ members.patch('/:id', requireRole(ROLES.STAFF), async (c) => {
   }
 })
 
+// 회원 수정 (PUT - PATCH와 동일한 기능)
+members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
+  try {
+    const id = c.req.param('id')
+    const body = await c.req.json()
+
+    const { name, member_number, inmate_number, institution, po_box_address, notes } = body
+
+    const updates: string[] = []
+    const params: any[] = []
+
+    if (name !== undefined) {
+      updates.push('name = ?')
+      params.push(name)
+    }
+    if (member_number !== undefined) {
+      updates.push('member_number = ?')
+      params.push(member_number)
+    }
+    if (inmate_number !== undefined) {
+      updates.push('inmate_number = ?')
+      params.push(inmate_number)
+    }
+    if (institution !== undefined) {
+      updates.push('institution = ?')
+      params.push(institution)
+    }
+    if (po_box_address !== undefined) {
+      updates.push('po_box_address = ?')
+      params.push(po_box_address)
+    }
+    if (notes !== undefined) {
+      updates.push('notes = ?')
+      params.push(notes)
+    }
+
+    if (updates.length === 0) {
+      return c.json({ error: '수정할 내용이 없습니다.' }, 400)
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP')
+    params.push(id)
+
+    const setClause = updates.join(', ')
+    await c.env.DB.prepare(
+      `UPDATE members SET ${setClause} WHERE id = ?`
+    ).bind(...params).run()
+
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('회원 수정 오류:', error)
+    return c.json({ error: '회원 수정 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 회원 삭제 (admin 권한 필요)
 members.delete('/:id', requireRole(ROLES.ADMIN), async (c) => {
   try {

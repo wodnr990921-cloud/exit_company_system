@@ -1027,9 +1027,6 @@ app.get('/', (c) => {
                         <button onclick="mergeTempTickets()" class="btn btn-sm btn-primary" id="merge-tickets-btn" disabled>
                             <i class="fas fa-compress mr-1"></i>선택 항목 합치기
                         </button>
-                        <button onclick="confirmAllTempTickets()" class="btn btn-sm btn-success">
-                            <i class="fas fa-check-double mr-1"></i>전체 확정
-                        </button>
                     </div>
                     
                     <div id="processed-mail-list" class="space-y-4">
@@ -1198,6 +1195,9 @@ app.get('/', (c) => {
                 </div>
                 
                 <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <!-- 현재 회원 정보 -->
+                    <div id="current-member-info" class="bg-gray-50 p-3 rounded border"></div>
+                    
                     <!-- 회원 검색 -->
                     <div class="relative">
                         <label class="block text-sm font-medium mb-2">회원 검색</label>
@@ -7282,6 +7282,11 @@ console.log('권한 관리 함수 로드 완료')
                     
                     // 임시 티켓 자동 생성
                     try {
+                        if (!currentStaff || !currentStaff.id) {
+                            console.error('현재 로그인된 직원 정보가 없습니다.')
+                            throw new Error('로그인 정보가 없습니다.')
+                        }
+                        
                         const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
                             member_id: null,  // 미지정
                             staff_id: null,   // 담당자 미배정
@@ -7290,10 +7295,11 @@ console.log('권한 관리 함수 로드 완료')
                             title: \`[임시] 우편물 \${mailNumber}\`,
                             description: \`우편물 자동 등록\\n번호: \${mailNumber}\\n상태: OCR 처리 대기 중\`,
                             status: 'pending',
+                            created_by: currentStaff.id,
                             mailroom_id: mailroomId
                         })
                         
-                        console.log('임시 티켓 생성됨:', ticketRes.data.ticket.ticket_number)
+                        console.log('임시 티켓 생성됨:', ticketRes.data.ticket_number)
                     } catch (ticketError) {
                         console.error('임시 티켓 생성 실패:', ticketError)
                         // 티켓 생성 실패해도 우편물 등록은 성공이므로 계속 진행
