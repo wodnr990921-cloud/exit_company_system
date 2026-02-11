@@ -3270,7 +3270,7 @@ console.log('권한 관리 함수 로드 완료')
         async function loadDashboard() {
             try {
                 // 출근 상태 확인
-                const attendanceRes = await axios.get(\`\${API_BASE}/attendance/status/\${currentStaff.id}\`)
+                const attendanceRes = await axios.get(API_BASE + '/attendance/status/ + currentStaff.id)
                 if (attendanceRes.data.checkedIn) {
                     currentAttendanceId = attendanceRes.data.record.id
                     document.getElementById('not-checked-in').classList.add('hidden')
@@ -3287,8 +3287,8 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 통계 로드
                 const [statsRes, ticketsRes] = await Promise.all([
-                    axios.get(\`\${API_BASE}/tickets/stats/dashboard\`),
-                    axios.get(\`\${API_BASE}/tickets?assigned_to=\${currentStaff.id}&status=open\`)
+                    axios.get(API_BASE + '/tickets/stats/dashboard'),
+                    axios.get(API_BASE + '/tickets?assigned_to= + currentStaff.id + '&status=open')
                 ])
 
                 const stats = statsRes.data
@@ -3300,7 +3300,7 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('today-completed-count').textContent = stats.todayCompleted
 
                 // 미배정 티켓 (pending_inspection 제외)
-                const openTickets = await axios.get(\`\${API_BASE}/tickets?status=open\`)
+                const openTickets = await axios.get(API_BASE + '/tickets?status=open')
                 const filteredOpenTickets = openTickets.data.tickets.filter(t => t.status !== 'pending_inspection')
                 document.getElementById('open-tickets-count').textContent = filteredOpenTickets.length
 
@@ -3324,7 +3324,7 @@ console.log('권한 관리 함수 로드 완료')
         // 출근
         async function checkin() {
             try {
-                await axios.post(\`\${API_BASE}/attendance/checkin\`, { staff_id: currentStaff.id })
+                await axios.post(API_BASE + '/attendance/checkin', { staff_id: currentStaff.id })
                 alert('출근이 완료되었습니다!')
                 await loadDashboard()
             } catch (error) {
@@ -3343,7 +3343,7 @@ console.log('권한 관리 함수 로드 완료')
                 const stampsUsed = document.getElementById('stamps-used').value
                 const dailyReport = document.getElementById('daily-report').value
 
-                await axios.post(\`\${API_BASE}/attendance/checkout\`, {
+                await axios.post(API_BASE + '/attendance/checkout', {
                     staff_id: currentStaff.id,
                     stamps_used: parseInt(stampsUsed) || 0,
                     daily_report: dailyReport
@@ -3371,10 +3371,10 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 데이터 로드
                 const [ticketStats, mailroomStats, bettingStats, pointStats] = await Promise.all([
-                    axios.get(\`\${API_BASE}/tickets/stats/dashboard\`),
-                    axios.get(\`\${API_BASE}/mailroom?status=all\`),
-                    axios.get(\`\${API_BASE}/betting/folders\`),
-                    axios.get(\`\${API_BASE}/points/pending\`)
+                    axios.get(API_BASE + '/tickets/stats/dashboard'),
+                    axios.get(API_BASE + '/mailroom?status=all'),
+                    axios.get(API_BASE + '/betting/folders'),
+                    axios.get(API_BASE + '/points/pending')
                 ])
 
                 // 1. 티켓 상태 별 통계 (도넛 차트)
@@ -3501,7 +3501,7 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 // 최근 6개월 티켓 데이터
-                const response = await axios.get(\`\${API_BASE}/tickets\`)
+                const response = await axios.get(API_BASE + '/tickets')
                 const tickets = response.data.tickets || []
 
                 // 월별 집계
@@ -3690,8 +3690,8 @@ console.log('권한 관리 함수 로드 완료')
         async function loadPendingApprovals() {
             try {
                 const [pointsRes, settlementsRes] = await Promise.all([
-                    axios.get(\`\${API_BASE}/points/pending\`),
-                    axios.get(\`\${API_BASE}/betting/settlements/pending\`)
+                    axios.get(API_BASE + '/points/pending'),
+                    axios.get(API_BASE + '/betting/settlements/pending')
                 ])
 
                 const points = pointsRes.data.transactions || []
@@ -3736,7 +3736,7 @@ console.log('권한 관리 함수 로드 완료')
         // 포인트 승인/거부
         async function approvePoint(id, action) {
             try {
-                await axios.post(\`\${API_BASE}/points/approve/\${id}\`, {
+                await axios.post(API_BASE + '/points/approve/ + id, {
                     approved_by: currentStaff.id,
                     action
                 })
@@ -3750,7 +3750,7 @@ console.log('권한 관리 함수 로드 완료')
         // 정산 승인
         async function approveSettlement(id) {
             try {
-                await axios.post(\`\${API_BASE}/betting/settlements/\${id}/approve\`, {
+                await axios.post(API_BASE + '/betting/settlements/ + id + '/approve', {
                     approved_by: currentStaff.id
                 })
                 alert('정산이 승인되었습니다.')
@@ -3767,7 +3767,7 @@ console.log('권한 관리 함수 로드 완료')
                 const notes = prompt('거부 사유를 입력하세요:')
                 if (!notes) return
 
-                await axios.post(\`\${API_BASE}/betting/settlements/\${id}/reject\`, {
+                await axios.post(API_BASE + '/betting/settlements/ + id + '/reject', {
                     approved_by: currentStaff.id,
                     notes
                 })
@@ -3786,7 +3786,7 @@ console.log('권한 관리 함수 로드 완료')
             pagination.tickets.page = page
 
             try {
-                let url = \`\${API_BASE}/tickets?page=\${page}&limit=\${pagination.tickets.limit}&\`
+                let url = API_BASE + '/tickets?page= + page + '&limit= + pagination.tickets.limit + '&'
                 if (status !== 'all') url += \`status=\${status}&\`
                 if (type !== 'all') url += \`ticket_type=\${type}&\`
 
@@ -3851,7 +3851,7 @@ console.log('권한 관리 함수 로드 완료')
             }
             
             try {
-                await axios.delete(\`\${API_BASE}/tickets/\${ticketId}\`)
+                await axios.delete(API_BASE + '/tickets/ + ticketId)
                 alert('티켓이 삭제되었습니다.')
                 await loadTickets(pagination.tickets.page)
             } catch (error) {
@@ -3945,7 +3945,7 @@ console.log('권한 관리 함수 로드 완료')
             pagination.members.page = page
 
             try {
-                const response = await axios.get(\`\${API_BASE}/members?search=\${search}&page=\${page}&limit=\${pagination.members.limit}\`)
+                const response = await axios.get(API_BASE + '/members?search= + search + '&page= + page + '&limit= + pagination.members.limit)
                 const members = response.data.members
                 const paginationInfo = response.data.pagination
                 
@@ -4050,7 +4050,7 @@ console.log('권한 관리 함수 로드 완료')
             const search = document.getElementById('book-search').value
 
             try {
-                const response = await axios.get(\`\${API_BASE}/books?search=\${search}\`)
+                const response = await axios.get(API_BASE + '/books?search= + search)
                 const books = response.data.books
 
                 const html = books.length > 0 ? books.map(b => \`
@@ -4287,7 +4287,7 @@ console.log('권한 관리 함수 로드 완료')
         // 직원 목록 로드
         async function loadStaff() {
             try {
-                const response = await axios.get(\`\${API_BASE}/staff\`)
+                const response = await axios.get(API_BASE + '/staff')
                 allStaffList = response.data.staff
                 renderStaffList()
             } catch (error) {
@@ -4359,15 +4359,15 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 직원 정보 조회
-                const staffRes = await axios.get(\`\${API_BASE}/staff/\${staffId}\`)
+                const staffRes = await axios.get(API_BASE + '/staff/ + staffId)
                 const staff = staffRes.data.staff
                 
                 // 업무 통계 조회
-                const statsRes = await axios.get(\`\${API_BASE}/staff/\${staffId}/stats\`)
+                const statsRes = await axios.get(API_BASE + '/staff/ + staffId + '/stats')
                 const stats = statsRes.data
                 
                 // 권한 변경 이력 조회
-                const changesRes = await axios.get(\`\${API_BASE}/staff/\${staffId}/role-changes\`)
+                const changesRes = await axios.get(API_BASE + '/staff/ + staffId + '/role-changes')
                 const changes = changesRes.data.changes
                 
                 // 기본 정보 채우기
@@ -4457,7 +4457,7 @@ console.log('권한 관리 함수 로드 완료')
                     updateData.password = newPassword
                 }
                 
-                await axios.patch(\`\${API_BASE}/staff/\${currentEditingStaffId}\`, updateData)
+                await axios.patch(API_BASE + '/staff/ + currentEditingStaffId, updateData)
                 
                 alert('직원 정보가 업데이트되었습니다.')
                 closeStaffDetail()
@@ -4478,7 +4478,7 @@ console.log('권한 관리 함수 로드 완료')
             }
             
             try {
-                await axios.delete(\`\${API_BASE}/staff/\${currentEditingStaffId}\`)
+                await axios.delete(API_BASE + '/staff/ + currentEditingStaffId)
                 alert('직원이 삭제되었습니다.')
                 closeStaffDetail()
                 await loadStaff()
@@ -4534,7 +4534,7 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
                 
-                await axios.post(\`\${API_BASE}/staff\`, {
+                await axios.post(API_BASE + '/staff', {
                     name,
                     email,
                     password,
@@ -4570,7 +4570,7 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
 
-                const response = await axios.get(\`\${API_BASE}/closing?date=\${date}\`)
+                const response = await axios.get(API_BASE + '/closing?date= + date)
                 const data = response.data
 
                 // 티켓 통계
@@ -4642,7 +4642,7 @@ console.log('권한 관리 함수 로드 완료')
 
                 const notes = prompt('마감 메모를 입력하세요 (선택사항):')
 
-                const response = await axios.post(\`\${API_BASE}/closing\`, {
+                const response = await axios.post(API_BASE + '/closing', {
                     date: date,
                     closed_by: currentStaff.id,
                     notes: notes || ''
@@ -5053,7 +5053,7 @@ console.log('권한 관리 함수 로드 완료')
                 }
 
                 // 일괄 저장
-                await axios.post(\`\${API_BASE}/betting/matches/bulk\`, { matches })
+                await axios.post(API_BASE + '/betting/matches/bulk', { matches })
                 alert('경기가 저장되었습니다.')
                 closeMatchManagementModal()
                 await loadBetting()
@@ -5073,7 +5073,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('이 경기를 삭제하시겠습니까?')) return
 
             try {
-                await axios.delete(\`\${API_BASE}/betting/matches/\` + matchId)
+                await axios.delete(API_BASE + '/betting/matches/' + matchId)
                 alert('경기가 삭제되었습니다.')
                 await loadMatchManagement()
             } catch (error) {
@@ -5097,8 +5097,8 @@ console.log('권한 관리 함수 로드 완료')
         async function loadCompletedMatches() {
             try {
                 const [matchesRes, statsRes] = await Promise.all([
-                    axios.get(\`\${API_BASE}/betting/matches?status=completed\`),
-                    axios.get(\`\${API_BASE}/betting/settlement-stats\`)
+                    axios.get(API_BASE + '/betting/matches?status=completed'),
+                    axios.get(API_BASE + '/betting/settlement-stats')
                 ])
 
                 const matches = matchesRes.data.matches || []
@@ -5228,7 +5228,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                await axios.post(\`\${API_BASE}/betting/matches\`, data)
+                await axios.post(API_BASE + '/betting/matches', data)
                 alert('경기가 등록되었습니다.')
                 closeNewMatchModal()
                 if (currentView === 'betting') await loadBetting()
@@ -5259,7 +5259,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                await axios.post(\`\${API_BASE}/betting/matches/\${currentMatchId}/result\`, { result })
+                await axios.post(API_BASE + '/betting/matches/ + currentMatchId + '/result', { result })
                 alert('경기 결과가 입력되고 자동 정산이 완료되었습니다.')
                 closeMatchResultModal()
                 if (currentView === 'betting') await loadBetting()
@@ -5273,7 +5273,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('이 정산을 승인하시겠습니까?')) return
 
             try {
-                await axios.post(\`\${API_BASE}/betting/settlements/\${settlementId}/approve\`, {
+                await axios.post(API_BASE + '/betting/settlements/ + settlementId + '/approve', {
                     approved_by: currentStaff.id
                 })
                 alert('정산이 승인되었습니다.')
@@ -5288,7 +5288,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!reason) return
 
             try {
-                await axios.post(\`\${API_BASE}/betting/settlements/\${settlementId}/reject\`, {
+                await axios.post(API_BASE + '/betting/settlements/ + settlementId + '/reject', {
                     rejected_by: currentStaff.id,
                     reject_reason: reason
                 })
@@ -5361,7 +5361,7 @@ console.log('권한 관리 함수 로드 완료')
                 thumbnail.onclick = () => showMailImageAtIndex(index)
 
                 const img = document.createElement('img')
-                img.src = \`\${API_BASE}/mailroom/image/\${imageKey}\`
+                img.src = API_BASE + '/mailroom/image/ + imageKey
                 img.className = 'w-full h-full object-cover'
                 img.alt = \`썸네일 \${index + 1}\`
 
@@ -5382,7 +5382,7 @@ console.log('권한 관리 함수 로드 완료')
 
             const imageKey = currentMailImages[index]
             const imgElement = document.getElementById('current-mail-image')
-            imgElement.src = \`\${API_BASE}/mailroom/image/\${imageKey}\`
+            imgElement.src = API_BASE + '/mailroom/image/ + imageKey
             imgElement.style.transform = 'rotate(0deg) scale(1)'
             imgElement.style.cursor = 'default'
 
@@ -5602,8 +5602,8 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 const [ticketRes, staffRes] = await Promise.all([
-                    axios.get(\`\${API_BASE}/tickets/\${ticketId}\`),
-                    axios.get(\`\${API_BASE}/staff\`)
+                    axios.get(API_BASE + '/tickets/ + ticketId),
+                    axios.get(API_BASE + '/staff')
                 ])
 
                 const ticket = ticketRes.data.ticket
@@ -5735,7 +5735,7 @@ console.log('권한 관리 함수 로드 완료')
                 // 우편물 이미지 로드 (mailroom_id가 있는 경우)
                 if (ticket.mailroom_id) {
                     try {
-                        const mailRes = await axios.get(\`\${API_BASE}/mailroom/\${ticket.mailroom_id}\`)
+                        const mailRes = await axios.get(API_BASE + '/mailroom/ + ticket.mailroom_id)
                         const mailItem = mailRes.data.mailroom_item
                         
                         if (mailItem && mailItem.image_keys) {
@@ -5793,7 +5793,7 @@ console.log('권한 관리 함수 로드 완료')
             const assigned_to = document.getElementById('update-ticket-assigned').value || null
 
             try {
-                await axios.patch(\`\${API_BASE}/tickets/\${currentTicketId}\`, {
+                await axios.patch(API_BASE + '/tickets/ + currentTicketId, {
                     status,
                     priority,
                     assigned_to
@@ -5808,7 +5808,7 @@ console.log('권한 관리 함수 로드 완료')
 
         async function loadTicketComments(ticketId) {
             try {
-                const response = await axios.get(\`\${API_BASE}/tickets/\${ticketId}/comments\`)
+                const response = await axios.get(API_BASE + '/tickets/ + ticketId + '/comments')
                 const comments = response.data.comments || []
 
                 const commentsHtml = comments.map(c => {
@@ -5851,7 +5851,7 @@ console.log('권한 관리 함수 로드 완료')
             const commentType = document.querySelector('input[name="comment-type"]:checked').value
 
             try {
-                await axios.post(\`\${API_BASE}/tickets/\${currentTicketId}/comments\`, {
+                await axios.post(API_BASE + '/tickets/ + currentTicketId + '/comments', {
                     content,
                     created_by: currentStaff.id,
                     comment_type: commentType
@@ -5922,8 +5922,8 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 const [ticketRes, commentsRes] = await Promise.all([
-                    axios.get(\`\${API_BASE}/tickets/\${currentTicketId}\`),
-                    axios.get(\`\${API_BASE}/tickets/\${currentTicketId}/comments\`)
+                    axios.get(API_BASE + '/tickets/ + currentTicketId),
+                    axios.get(API_BASE + '/tickets/ + currentTicketId + '/comments')
                 ])
 
                 const ticket = ticketRes.data.ticket
@@ -6201,10 +6201,10 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                const ticketRes = await axios.get(\`\${API_BASE}/tickets/\${currentTicketId}\`)
+                const ticketRes = await axios.get(API_BASE + '/tickets/ + currentTicketId)
                 const ticket = ticketRes.data.ticket
 
-                await axios.post(\`\${API_BASE}/betting/folders\`, {
+                await axios.post(API_BASE + '/betting/folders', {
                     ticket_id: currentTicketId,
                     member_id: ticket.member_id,
                     bets: bets,
@@ -6224,7 +6224,7 @@ console.log('권한 관리 함수 로드 완료')
         async function showNewTicketModal() {
             try {
                 // 회원 목록 로드
-                const membersRes = await axios.get(\`\${API_BASE}/members\`)
+                const membersRes = await axios.get(API_BASE + '/members')
                 const members = membersRes.data.members || []
                 
                 const memberOptions = members.map(m => 
@@ -6233,7 +6233,7 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('ticket-member').innerHTML = '<option value="">선택하세요</option>' + memberOptions
 
                 // 직원 목록 로드
-                const staffRes = await axios.get(\`\${API_BASE}/staff\`)
+                const staffRes = await axios.get(API_BASE + '/staff')
                 const staff = staffRes.data.staff || []
                 
                 const staffOptions = staff.map(s => 
@@ -6337,7 +6337,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                const ticketResponse = await axios.post(\`\${API_BASE}/tickets\`, data)
+                const ticketResponse = await axios.post(API_BASE + '/tickets', data)
                 const ticketId = ticketResponse.data.ticket_id
 
                 // 이미지 업로드 처리
@@ -6349,7 +6349,7 @@ console.log('권한 관리 함수 로드 완료')
                     }
                     
                     try {
-                        await axios.post(\`\${API_BASE}/tickets/\${ticketId}/images\`, formData, {
+                        await axios.post(API_BASE + '/tickets/ + ticketId + '/images', formData, {
                             headers: {
                                 'Content-Type': 'multipart/form-data'
                             }
@@ -6423,7 +6423,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                const response = await axios.post(\`\${API_BASE}/members\`, data)
+                const response = await axios.post(API_BASE + '/members', data)
                 const newMemberId = response.data.member_id
                 alert('회원이 등록되었습니다.')
                 closeNewMemberModal()
@@ -6431,7 +6431,7 @@ console.log('권한 관리 함수 로드 완료')
                 // 티켓 모달이 열려있으면 회원 목록 새로고침 및 자동 선택
                 const ticketModal = document.getElementById('new-ticket-modal')
                 if (ticketModal && !ticketModal.classList.contains('hidden')) {
-                    const membersRes = await axios.get(\`\${API_BASE}/members\`)
+                    const membersRes = await axios.get(API_BASE + '/members')
                     const members = membersRes.data.members || []
                     const memberOptions = members.map(m => 
                         \`<option value="\${m.id}">\${m.name} (\${m.institution})</option>\`
@@ -6451,7 +6451,7 @@ console.log('권한 관리 함수 로드 완료')
         async function showMemberDetail(memberId) {
             currentMemberId = memberId // 포인트 조정용 ID 저장
             try {
-                const memberRes = await axios.get(\`\${API_BASE}/members/\${memberId}\`)
+                const memberRes = await axios.get(API_BASE + '/members/ + memberId)
                 const member = memberRes.data.member
                 const transactions = memberRes.data.transactions || []
                 const tickets = memberRes.data.tickets || []
@@ -6559,7 +6559,7 @@ console.log('권한 관리 함수 로드 완료')
                 const transactionType = currentAdjustMode === 'add' ? 'add' : 'deduct'
                 
                 // 포인트 조정 API 호출 (point_transactions 테이블에 자동 기록)
-                await axios.post(\`\${API_BASE}/points/adjust\`, {
+                await axios.post(API_BASE + '/points/adjust', {
                     member_id: currentMemberId,
                     point_type: pointType,
                     transaction_type: transactionType,
@@ -6876,7 +6876,7 @@ console.log('권한 관리 함수 로드 완료')
                 const imageKeys = uploadedMailImages.map(img => img.key)
                 
                 // 우편물 등록
-                const res = await axios.post(\`\${API_BASE}/mailroom\`, {
+                const res = await axios.post(API_BASE + '/mailroom', {
                     member_id: memberId || null,
                     image_keys: imageKeys,
                     notes: '',
@@ -6886,7 +6886,7 @@ console.log('권한 관리 함수 로드 완료')
                 const mailroomId = res.data.mailroom_id
 
                 // OCR 처리 시작
-                await axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
+                await axios.post(API_BASE + '/mailroom/ + mailroomId + '/ocr')
 
                 alert('우편물이 등록되고 OCR 처리가 시작되었습니다.')
                 
@@ -6916,7 +6916,7 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 // 회원 목록 로드
-                const res = await axios.get(\`\${API_BASE}/members\`)
+                const res = await axios.get(API_BASE + '/members')
                 allMembers = res.data.members || []
 
                 // 모달에 이미지별 회원 선택 UI 생성
@@ -6984,7 +6984,7 @@ console.log('권한 관리 함수 로드 완료')
                 }
 
                 // 대량 등록 API 호출
-                const res = await axios.post(\`\${API_BASE}/mailroom/bulk\`, {
+                const res = await axios.post(API_BASE + '/mailroom/bulk', {
                     items,
                     created_by: currentStaff.id
                 })
@@ -7014,7 +7014,7 @@ console.log('권한 관리 함수 로드 완료')
 
         async function loadPendingMail() {
             try {
-                const res = await axios.get(\`\${API_BASE}/mailroom\`)
+                const res = await axios.get(API_BASE + '/mailroom')
                 const items = res.data.mailroom_items || []
 
                 const container = document.getElementById('pending-mail-list')
@@ -7154,7 +7154,7 @@ console.log('권한 관리 함수 로드 완료')
 
         async function startOCR(mailroomId) {
             try {
-                await axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
+                await axios.post(API_BASE + '/mailroom/ + mailroomId + '/ocr')
                 alert('OCR 처리가 시작되었습니다.')
                 await loadPendingMail()
                 
@@ -7174,7 +7174,7 @@ console.log('권한 관리 함수 로드 완료')
         async function moveToInspection(mailroomId) {
             try {
                 // 상태를 inspection으로 변경
-                await axios.patch(\`\${API_BASE}/mailroom/\${mailroomId}/status\`, {
+                await axios.patch(API_BASE + '/mailroom/ + mailroomId + '/status', {
                     status: 'inspection'
                 })
                 
@@ -7193,7 +7193,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('이 우편물을 삭제하시겠습니까?')) return
             
             try {
-                await axios.delete(\`\${API_BASE}/mailroom/\${mailroomId}\`)
+                await axios.delete(API_BASE + '/mailroom/ + mailroomId)
                 alert('삭제되었습니다.')
                 await loadPendingMail()
             } catch (error) {
@@ -7207,7 +7207,7 @@ console.log('권한 관리 함수 로드 완료')
         async function loadProcessedMail() {
             try {
                 // inspection 상태의 우편물 조회
-                const res = await axios.get(\`\${API_BASE}/mailroom?status=inspection\`)
+                const res = await axios.get(API_BASE + '/mailroom?status=inspection')
                 const items = res.data.mailroom_items || []
 
                 const container = document.getElementById('processed-mail-list')
@@ -7331,7 +7331,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 직원 목록 조회
-                const res = await axios.get(\`\${API_BASE}/staff\`)
+                const res = await axios.get(API_BASE + '/staff')
                 const staffList = res.data.staff || []
                 
                 // 직원 선택 모달
@@ -7377,7 +7377,7 @@ console.log('권한 관리 함수 로드 완료')
             try {
                 // 각 우편물에 대해 담당자 배정
                 for (const mailId of selectedProcessedMails) {
-                    await axios.put(\`\${API_BASE}/mailroom/\${mailId}\`, {
+                    await axios.put(API_BASE + '/mailroom/ + mailId, {
                         staff_id: parseInt(staffId),
                         status: 'assigned'
                     })
@@ -7406,7 +7406,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 for (const mailId of selectedProcessedMails) {
-                    await axios.delete(\`\${API_BASE}/mailroom/\${mailId}\`)
+                    await axios.delete(API_BASE + '/mailroom/ + mailId)
                 }
                 
                 alert(\`\${selectedProcessedMails.length}개 우편물이 삭제되었습니다.\`)
@@ -7420,7 +7420,7 @@ console.log('권한 관리 함수 로드 완료')
 
         async function loadMailHistory() {
             try {
-                const res = await axios.get(\`\${API_BASE}/mailroom?status=assigned\`)
+                const res = await axios.get(API_BASE + '/mailroom?status=assigned')
                 const items = res.data.mailroom_items || []
 
                 const container = document.getElementById('mail-history-list')
@@ -7448,7 +7448,7 @@ console.log('권한 관리 함수 로드 완료')
 
         async function viewMailImages(mailId) {
             try {
-                const res = await axios.get(\`\${API_BASE}/mailroom/\${mailId}\`)
+                const res = await axios.get(API_BASE + '/mailroom/ + mailId)
                 const item = res.data.mailroom_item
                 const imageKeys = JSON.parse(item.image_keys)
 
@@ -7474,7 +7474,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('이 우편물을 삭제하시겠습니까?')) return
 
             try {
-                await axios.delete(\`\${API_BASE}/mailroom/\${mailId}\`)
+                await axios.delete(API_BASE + '/mailroom/ + mailId)
                 alert('우편물이 삭제되었습니다.')
                 await loadPendingMail()
             } catch (error) {
@@ -7493,7 +7493,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 우편물 정보 로드
-                const res = await axios.get(\`\${API_BASE}/mailroom/\${mailId}\`)
+                const res = await axios.get(API_BASE + '/mailroom/ + mailId)
                 const mail = res.data.mailroom_item
                 
                 // 모달에 정보 표시
@@ -7577,7 +7577,7 @@ console.log('권한 관리 함수 로드 완료')
             }
             
             try {
-                const res = await axios.get(\`\${API_BASE}/tickets?search=\${query}\`)
+                const res = await axios.get(API_BASE + '/tickets?search= + query)
                 const tickets = res.data.tickets || []
                 
                 const container = document.getElementById('ticket-search-results')
@@ -7676,7 +7676,7 @@ console.log('권한 관리 함수 로드 완료')
             try {
                 // 각 티켓에 대해 배당 실행
                 for (const ticket of selectedTicketsForAssignment) {
-                    await axios.patch(\`\${API_BASE}/mailroom/\${currentAssignmentMailId}/status\`, {
+                    await axios.patch(API_BASE + '/mailroom/ + currentAssignmentMailId + '/status', {
                         status: 'assigned',
                         ticket_id: ticket.id
                     })
@@ -7832,7 +7832,7 @@ console.log('권한 관리 함수 로드 완료')
                     const formData = new FormData()
                     formData.append('file', file)
                     
-                    const response = await axios.post(\`\${API_BASE}/mailroom/upload\`, formData, {
+                    const response = await axios.post(API_BASE + '/mailroom/upload', formData, {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     })
                     
@@ -7844,7 +7844,7 @@ console.log('권한 관리 함수 로드 완료')
                 // 우편물 등록 (모든 이미지를 하나로)
                 updateLoadingModal(loadingModal, files.length, files.length, '우편물 등록 중...')
                 
-                const response = await axios.post(\`\${API_BASE}/mailroom\`, {
+                const response = await axios.post(API_BASE + '/mailroom', {
                     member_id: null,
                     image_keys: uploadedKeys,
                     notes: '',
@@ -7862,7 +7862,7 @@ console.log('권한 관리 함수 로드 완료')
                             throw new Error('로그인 정보가 없습니다.')
                         }
                         
-                        const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
+                        const ticketRes = await axios.post(API_BASE + '/tickets', {
                             member_id: null,  // 미지정
                             staff_id: null,   // 담당자 미배정
                             ticket_type: 'mailroom',
@@ -7883,7 +7883,7 @@ console.log('권한 관리 함수 로드 완료')
                     // OCR 처리 시작 (비동기)
                     updateLoadingModal(loadingModal, files.length, files.length, 'OCR 처리 시작 중...')
                     
-                    axios.post(\`\${API_BASE}/mailroom/\${mailroomId}/ocr\`)
+                    axios.post(API_BASE + '/mailroom/ + mailroomId + '/ocr')
                         .then(() => console.log('OCR 시작됨:', mailroomId))
                         .catch(err => console.error('OCR 시작 실패:', err))
                     
@@ -8059,7 +8059,7 @@ console.log('권한 관리 함수 로드 완료')
                 currentInspectionId = mailId
                 
                 // 우편물 상세 정보 조회
-                const response = await axios.get(\`\${API_BASE}/mailroom/\${mailId}\`)
+                const response = await axios.get(API_BASE + '/mailroom/ + mailId)
                 const item = response.data.mailroom_item
                 
                 // 이미지 표시
@@ -8167,7 +8167,7 @@ console.log('권한 관리 함수 로드 완료')
         // 담당자 목록 로드
         async function loadStaffList() {
             try {
-                const res = await axios.get(\`\${API_BASE}/staff\`)
+                const res = await axios.get(API_BASE + '/staff')
                 const staffList = res.data.staff || []
                 
                 const staffSelect = document.getElementById('inspection-staff')
@@ -8183,7 +8183,7 @@ console.log('권한 관리 함수 로드 완료')
         // 회원 자동 매칭 (수용번호 기반)
         async function searchAndMatchMember(inmateNumber) {
             try {
-                const res = await axios.get(\`\${API_BASE}/members?search=\${inmateNumber}\`)
+                const res = await axios.get(API_BASE + '/members?search= + inmateNumber)
                 const members = res.data.members || []
                 
                 if (members.length > 0) {
@@ -8225,7 +8225,7 @@ console.log('권한 관리 함수 로드 완료')
             
             memberSearchTimeout = setTimeout(async () => {
                 try {
-                    const res = await axios.get(\`\${API_BASE}/members?search=\${query}\`)
+                    const res = await axios.get(API_BASE + '/members?search= + query)
                     memberSearchResults = res.data.members || []
                     
                     const dropdown = document.getElementById('member-search-dropdown')
@@ -8328,7 +8328,7 @@ console.log('권한 관리 함수 로드 완료')
             clearTimeout(memberSearchTimeout2)
             memberSearchTimeout2 = setTimeout(async () => {
                 try {
-                    const res = await axios.get(\`\${API_BASE}/members?search=\${encodeURIComponent(query)}\`)
+                    const res = await axios.get(API_BASE + '/members?search= + encodeURIComponent(query))
                     memberSearchResults2 = res.data.members || []
                     
                     if (memberSearchResults2.length === 0) {
@@ -8374,7 +8374,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 티켓의 member_id 변경 + 수정 내역 저장 (approval_required: true)
-                await axios.put(\`\${API_BASE}/tickets/\${currentTicketId}\`, {
+                await axios.put(API_BASE + '/tickets/ + currentTicketId, {
                     member_id: memberId,
                     change_reason: \`회원 변경: \${oldMember} → \${name}\`,
                     approval_required: true
@@ -8418,7 +8418,7 @@ console.log('권한 관리 함수 로드 완료')
                 const oldMemberName = currentTicketForMemberChange.currentMemberName || '미지정'
                 
                 // 1. 신규 회원 등록
-                const memberRes = await axios.post(\`\${API_BASE}/members\`, {
+                const memberRes = await axios.post(API_BASE + '/members', {
                     name: name.trim(),
                     member_number: memberNumber.trim(),
                     inmate_number: memberNumber.trim(),
@@ -8433,7 +8433,7 @@ console.log('권한 관리 함수 로드 완료')
                 const newMemberName = name.trim()
                 
                 // 2. 승인 요청 생성 (신규 회원 등록 + 티켓 연결)
-                await axios.post(\`\${API_BASE}/modifications\`, {
+                await axios.post(API_BASE + '/modifications', {
                     target_type: 'ticket',
                     target_id: ticketId,
                     field_name: 'member_id',
@@ -8465,7 +8465,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 회원 정보 조회
-                const res = await axios.get(\`\${API_BASE}/members/\${memberId}\`)
+                const res = await axios.get(API_BASE + '/members/ + memberId)
                 const member = res.data.member
                 currentEditingMemberData = member
                 
@@ -8548,7 +8548,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 회원 정보 수정 요청 (관리자 전체 필드 수정)
-                await axios.put(\`\${API_BASE}/members/\${currentEditingMemberId}\`, {
+                await axios.put(API_BASE + '/members/ + currentEditingMemberId, {
                     name: newName,
                     member_number: newMemberNumber,
                     inmate_number: newInmateNumber,
@@ -8600,7 +8600,7 @@ console.log('권한 관리 함수 로드 완료')
                 // 회원 정보가 있으면 처리
                 if (name && number) {
                     // 1. 회원 검색
-                    const membersRes = await axios.get(\`\${API_BASE}/members?search=\${number}\`)
+                    const membersRes = await axios.get(API_BASE + '/members?search= + number)
                     const members = membersRes.data.members || []
                     
                     if (members.length === 0) {
@@ -8608,7 +8608,7 @@ console.log('권한 관리 함수 로드 완료')
                         const confirmCreate = window.confirm(\`수용번호 "\${number}"를 찾을 수 없습니다.\\n\\n신규 회원으로 등록하시겠습니까?\\n\\n(취소 시 미지정 회원으로 처리됩니다)\`)
                         
                         if (confirmCreate) {
-                            const newMemberRes = await axios.post(\`\${API_BASE}/members\`, {
+                            const newMemberRes = await axios.post(API_BASE + '/members', {
                                 name,
                                 member_number: number,
                                 inmate_number: number,
@@ -8631,7 +8631,7 @@ console.log('권한 관리 함수 로드 완료')
                 }
                 
                 // 2. 우편물 정보 업데이트
-                await axios.put(\`\${API_BASE}/mailroom/\${currentInspectionId}\`, {
+                await axios.put(API_BASE + '/mailroom/ + currentInspectionId, {
                     member_id: memberId,
                     member_name: memberName,
                     member_number: number || '',
@@ -8641,7 +8641,7 @@ console.log('권한 관리 함수 로드 완료')
                 })
                 
                 // 3. 티켓 생성 및 확정 (임시 티켓 → 정식 티켓)
-                const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
+                const ticketRes = await axios.post(API_BASE + '/tickets', {
                     member_id: memberId,  // null 가능 (미지정)
                     staff_id: parseInt(staffId),
                     ticket_type: 'mailroom',
@@ -8656,7 +8656,7 @@ console.log('권한 관리 함수 로드 완료')
                 const ticketNumber = ticketRes.data.ticket.ticket_number
                 
                 // 4. 우편물에 티켓 연결
-                await axios.patch(\`\${API_BASE}/mailroom/\${currentInspectionId}/status\`, {
+                await axios.patch(API_BASE + '/mailroom/ + currentInspectionId + '/status', {
                     status: 'assigned',
                     ticket_id: ticketRes.data.ticket.id
                 })
@@ -8686,7 +8686,7 @@ console.log('권한 관리 함수 로드 완료')
             const notes = document.getElementById('inspection-notes').value
             
             try {
-                await axios.put(\`\${API_BASE}/mailroom/\${currentInspectionId}\`, {
+                await axios.put(API_BASE + '/mailroom/ + currentInspectionId, {
                     notes,
                     member_name: name,
                     member_number: number,
@@ -8717,7 +8717,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 회원 검색
-                const membersRes = await axios.get(\`\${API_BASE}/members?search=\${number}\`)
+                const membersRes = await axios.get(API_BASE + '/members?search= + number)
                 const members = membersRes.data.members || []
                 
                 let memberId
@@ -8727,7 +8727,7 @@ console.log('권한 관리 함수 로드 완료')
                     const confirm = window.confirm(\`회원번호 "\${number}"를 찾을 수 없습니다.\\n\\n신규 회원으로 등록하시겠습니까?\`)
                     if (!confirm) return
                     
-                    const newMemberRes = await axios.post(\`\${API_BASE}/members\`, {
+                    const newMemberRes = await axios.post(API_BASE + '/members', {
                         name,
                         member_number: number,
                         institution: institution || '미지정',
@@ -8744,7 +8744,7 @@ console.log('권한 관리 함수 로드 완료')
                 }
                 
                 // 티켓 생성
-                const ticketRes = await axios.post(\`\${API_BASE}/tickets\`, {
+                const ticketRes = await axios.post(API_BASE + '/tickets', {
                     member_id: memberId,
                     title: \`우편물: \${name}\`,
                     description: \`우편물 검수를 통해 생성된 티켓\\n수신자: \${name}\\n번호: \${number}\\n기관: \${institution || '미지정'}\`,
@@ -8756,7 +8756,7 @@ console.log('권한 관리 함수 로드 완료')
                 const ticketId = ticketRes.data.id
                 
                 // 우편물에 티켓 연결
-                await axios.put(\`\${API_BASE}/mailroom/\${currentInspectionId}\`, {
+                await axios.put(API_BASE + '/mailroom/ + currentInspectionId, {
                     member_id: memberId,
                     ticket_id: ticketId,
                     status: 'assigned'
@@ -8780,7 +8780,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 직원 목록 조회
-                const staffRes = await axios.get(\`\${API_BASE}/staff\`)
+                const staffRes = await axios.get(API_BASE + '/staff')
                 const staffList = staffRes.data.staff || []
                 
                 if (staffList.length === 0) {
@@ -8857,7 +8857,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 일괄 배당 API 호출
-                const response = await axios.post(\`\${API_BASE}/mailroom/batch-assign\`, {
+                const response = await axios.post(API_BASE + '/mailroom/batch-assign', {
                     mailroom_ids: selectedMailItems,
                     member_id: null,
                     staff_id: parseInt(staffId)
@@ -8895,7 +8895,7 @@ console.log('권한 관리 함수 로드 완료')
             try {
                 // 각 우편물 삭제
                 for (const mailId of selectedMailItems) {
-                    await axios.delete(\`\${API_BASE}/mailroom/\${mailId}\`)
+                    await axios.delete(API_BASE + '/mailroom/ + mailId)
                 }
                 
                 alert(\`✅ \${selectedMailItems.length}개 우편물이 삭제되었습니다.\`)
@@ -8912,12 +8912,12 @@ console.log('권한 관리 함수 로드 완료')
         // 우편물 이미지 보기
         async function viewMailImages(mailId) {
             try {
-                const response = await axios.get(\`\${API_BASE}/mailroom/\${mailId}\`)
+                const response = await axios.get(API_BASE + '/mailroom/ + mailId)
                 const item = response.data.mailroom_item
                 const imageKeys = JSON.parse(item.image_keys)
                 
                 // 간단한 이미지 뷰어 (새 창)
-                const imageUrls = imageKeys.map(key => \`\${API_BASE}/mailroom/image/\${key}\`).join('\\n')
+                const imageUrls = imageKeys.map(key => API_BASE + '/mailroom/image/ + key).join('\\n')
                 alert(\`우편물 번호: \${item.mail_number}\\n\\n이미지 URL:\\n\${imageUrls}\`)
                 
                 // TODO: 나중에 모달로 개선
@@ -8936,7 +8936,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('이 우편물을 삭제하시겠습니까?')) return
             
             try {
-                await axios.delete(\`\${API_BASE}/mailroom/\${mailId}\`)
+                await axios.delete(API_BASE + '/mailroom/ + mailId)
                 alert('우편물이 삭제되었습니다.')
                 await loadPendingMail()
             } catch (error) {
@@ -8947,7 +8947,7 @@ console.log('권한 관리 함수 로드 완료')
         // 처리 내역 로드
         async function loadMailHistory() {
             try {
-                const response = await axios.get(\`\${API_BASE}/mailroom?status=all\`)
+                const response = await axios.get(API_BASE + '/mailroom?status=all')
                 const items = response.data.mailroom_items || []
                 
                 const container = document.getElementById('mail-history-list')
@@ -9036,7 +9036,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                await axios.post(\`\${API_BASE}/books\`, data)
+                await axios.post(API_BASE + '/books', data)
                 alert('도서가 등록되었습니다.')
                 closeNewBookModal()
                 if (currentView === 'books') await loadBooks()
@@ -9050,7 +9050,7 @@ console.log('권한 관리 함수 로드 완료')
 
         async function showBookDetail(bookId) {
             try {
-                const response = await axios.get(\`\${API_BASE}/books/\${bookId}\`)
+                const response = await axios.get(API_BASE + '/books/ + bookId)
                 const book = response.data.book
 
                 currentBookId = bookId
@@ -9115,7 +9115,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                await axios.patch(\`\${API_BASE}/books/\${currentBookId}\`, data)
+                await axios.patch(API_BASE + '/books/ + currentBookId, data)
                 alert('도서 정보가 수정되었습니다.')
                 closeBookDetail()
                 if (currentView === 'books') await loadBooks()
@@ -9135,7 +9135,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('정말 이 도서를 삭제하시겠습니까?')) return
 
             try {
-                await axios.delete(\`\${API_BASE}/books/\${currentBookId}\`)
+                await axios.delete(API_BASE + '/books/ + currentBookId)
                 alert('도서가 삭제되었습니다.')
                 closeBookDetail()
                 if (currentView === 'books') await loadBooks()
@@ -9202,7 +9202,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                await axios.post(\`\${API_BASE}/staff\`, data)
+                await axios.post(API_BASE + '/staff', data)
                 alert('직원이 등록되었습니다.')
                 closeNewStaffModal()
                 if (currentView === 'staff') await loadStaff()
@@ -9216,7 +9216,7 @@ console.log('권한 관리 함수 로드 완료')
 
         async function showStaffDetail(staffId) {
             try {
-                const response = await axios.get(\`\${API_BASE}/staff/\${staffId}\`)
+                const response = await axios.get(API_BASE + '/staff/ + staffId)
                 const staff = response.data.staff
                 const stats = response.data.stats || {}
 
@@ -9301,7 +9301,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                await axios.patch(\`\${API_BASE}/staff/\${currentStaffDetailId}\`, data)
+                await axios.patch(API_BASE + '/staff/ + currentStaffDetailId, data)
                 alert('직원 정보가 수정되었습니다.')
                 closeStaffDetail()
                 if (currentView === 'staff') await loadStaff()
@@ -9322,7 +9322,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('정말 이 직원을 삭제하시겠습니까?\\n\\n직원과 관련된 모든 데이터는 유지되지만, 로그인할 수 없게 됩니다.')) return
 
             try {
-                await axios.delete(\`\${API_BASE}/staff/\${currentStaffDetailId}\`)
+                await axios.delete(API_BASE + '/staff/ + currentStaffDetailId)
                 alert('직원이 삭제되었습니다.')
                 closeStaffDetail()
                 if (currentView === 'staff') await loadStaff()
@@ -9369,7 +9369,7 @@ console.log('권한 관리 함수 로드 완료')
         // 경기 목록 로드
         async function loadMatchesForBetting() {
             try {
-                const response = await axios.get(\`\${API_BASE}/betting/matches?status=open\`)
+                const response = await axios.get(API_BASE + '/betting/matches?status=open')
                 const matches = response.data.matches || []
                 
                 const container = document.getElementById('modal-betting-matches-list')
@@ -9596,7 +9596,7 @@ console.log('권한 관리 함수 로드 완료')
             const potentialWin = Math.floor(betAmount * totalOdds)
             
             try {
-                await axios.post(\`\${API_BASE}/ticket-items/\${currentTicketId}\`, {
+                await axios.post(API_BASE + '/ticket-items/ + currentTicketId, {
                     item_type: 'betting',
                     item_data: {
                         member_id: memberId,
@@ -9625,7 +9625,7 @@ console.log('권한 관리 함수 로드 완료')
             }
             
             try {
-                const response = await axios.get(\`\${API_BASE}/books?search=\${keyword}\`)
+                const response = await axios.get(API_BASE + '/books?search= + keyword)
                 const books = response.data.books || []
                 
                 const container = document.getElementById('book-search-results')
@@ -9676,7 +9676,7 @@ console.log('권한 관리 함수 로드 완료')
             const notes = document.getElementById('book-order-notes').value
             
             try {
-                await axios.post(\`\${API_BASE}/ticket-items/\${currentTicketId}\`, {
+                await axios.post(API_BASE + '/ticket-items/ + currentTicketId, {
                     item_type: 'book_order',
                     item_data: {
                         book_id: selectedBook.id,
@@ -9727,7 +9727,7 @@ console.log('권한 관리 함수 로드 완료')
             }
             
             try {
-                await axios.post(\`\${API_BASE}/ticket-items/\${currentTicketId}\`, {
+                await axios.post(API_BASE + '/ticket-items/ + currentTicketId, {
                     item_type: 'point_request',
                     item_data: {
                         member_id: memberId,
@@ -9749,7 +9749,7 @@ console.log('권한 관리 함수 로드 완료')
         // 티켓 아이템 목록 로드
         async function loadTicketItems(ticketId) {
             try {
-                const response = await axios.get(\`\${API_BASE}/ticket-items/\${ticketId}\`)
+                const response = await axios.get(API_BASE + '/ticket-items/ + ticketId)
                 const items = response.data.items || []
                 
                 const countBadge = document.getElementById('cart-count')
@@ -9866,7 +9866,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('이 요청을 처리하시겠습니까?')) return
             
             try {
-                await axios.post(\`\${API_BASE}/ticket-items/\${itemId}/process\`, {
+                await axios.post(API_BASE + '/ticket-items/ + itemId + '/process', {
                     processed_by: currentStaff.id
                 })
                 
@@ -9882,7 +9882,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('이 요청을 삭제하시겠습니까?')) return
             
             try {
-                await axios.delete(\`\${API_BASE}/ticket-items/\${itemId}\`)
+                await axios.delete(API_BASE + '/ticket-items/ + itemId)
                 alert('삭제되었습니다.')
                 loadTicketItems(currentTicketId)
             } catch (error) {
@@ -9895,12 +9895,12 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('모든 대기 중인 요청을 일괄 처리하시겠습니까?')) return
             
             try {
-                const response = await axios.get(\`\${API_BASE}/ticket-items/\${currentTicketId}\`)
+                const response = await axios.get(API_BASE + '/ticket-items/ + currentTicketId)
                 const items = response.data.items || []
                 const pendingItems = items.filter(item => item.status === 'pending')
                 
                 for (const item of pendingItems) {
-                    await axios.post(\`\${API_BASE}/ticket-items/\${item.id}/process\`, {
+                    await axios.post(API_BASE + '/ticket-items/ + item.id + '/process', {
                         processed_by: currentStaff.id
                     })
                 }
@@ -9917,12 +9917,12 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm('모든 대기 중인 요청을 삭제하시겠습니까?')) return
             
             try {
-                const response = await axios.get(\`\${API_BASE}/ticket-items/\${currentTicketId}\`)
+                const response = await axios.get(API_BASE + '/ticket-items/ + currentTicketId)
                 const items = response.data.items || []
                 const pendingItems = items.filter(item => item.status === 'pending')
                 
                 for (const item of pendingItems) {
-                    await axios.delete(\`\${API_BASE}/ticket-items/\${item.id}\`)
+                    await axios.delete(API_BASE + '/ticket-items/ + item.id)
                 }
                 
                 alert(\`\${pendingItems.length}개의 요청이 삭제되었습니다.\`)
@@ -9936,7 +9936,7 @@ console.log('권한 관리 함수 로드 완료')
         
         async function loadPendingModifications() {
             try {
-                const response = await axios.get(\`\${API_BASE}/modifications/pending\`)
+                const response = await axios.get(API_BASE + '/modifications/pending')
                 const requests = response.data.requests || []
                 
                 document.getElementById('pending-count').textContent = requests.length
@@ -9999,7 +9999,7 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm(\`이 수정 요청을 \${action === 'approve' ? '승인' : '거부'}하시겠습니까?\`)) return
             
             try {
-                await axios.post(\`\${API_BASE}/modifications/\${requestId}/review\`, {
+                await axios.post(API_BASE + '/modifications/ + requestId + '/review', {
                     action: action,
                     reviewed_by: currentStaff.id
                 })
@@ -10071,7 +10071,7 @@ console.log('권한 관리 함수 로드 완료')
 //             
 //             memberChangeDebounceTimer = setTimeout(async () => {
 //                 try {
-//                     const response = await axios.get(\`\${API_BASE}/members?search=\${encodeURIComponent(searchValue)}\`)
+//                     const response = await axios.get(API_BASE + '/members?search= + encodeURIComponent(searchValue))
 //                     const members = response.data.members || []
 //                     
 //                     const dropdown = document.getElementById('change-member-dropdown')
@@ -10124,7 +10124,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 승인 요청 생성
-                await axios.post(\`\${API_BASE}/modifications\`, {
+                await axios.post(API_BASE + '/modifications', {
                     target_type: 'ticket',
                     target_id: ticketId,
                     field_name: 'member_id',
@@ -10153,7 +10153,7 @@ console.log('권한 관리 함수 로드 완료')
         async function refreshSettlementData() {
             try {
                 // 완료된 경기 조회
-                const matchesRes = await axios.get(\`\${API_BASE}/betting/matches?status=completed\`)
+                const matchesRes = await axios.get(API_BASE + '/betting/matches?status=completed')
                 const completedMatches = matchesRes.data.matches || []
                 
                 // 정산 통계 계산
@@ -10163,7 +10163,7 @@ console.log('권한 관리 함수 로드 완료')
                 
                 // 각 경기별 배팅 조회
                 for (const match of completedMatches) {
-                    const betsRes = await axios.get(\`\${API_BASE}/betting/folders?match_id=\${match.id}\`)
+                    const betsRes = await axios.get(API_BASE + '/betting/folders?match_id= + match.id)
                     const folders = betsRes.data.folders || []
                     
                     folders.forEach(folder => {
@@ -10335,7 +10335,7 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
                 
-                await axios.post(\`\${API_BASE}/betting/matches/\${matchId}/result\`, {
+                await axios.post(API_BASE + '/betting/matches/ + matchId + '/result', {
                     result,
                     home_score: homeScore,
                     away_score: awayScore
@@ -10353,7 +10353,7 @@ console.log('권한 관리 함수 로드 완료')
         async function openBettingSettlementModal() {
             try {
                 // 완료된 경기 조회
-                const res = await axios.get(\`\${API_BASE}/betting/matches?status=completed\`)
+                const res = await axios.get(API_BASE + '/betting/matches?status=completed')
                 const matches = res.data.matches || []
                 
                 // 결과가 등록되지 않은 경기 필터링
@@ -10398,7 +10398,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 // 정산 API 호출
-                await axios.post(\`\${API_BASE}/betting/settlement/confirm\`)
+                await axios.post(API_BASE + '/betting/settlement/confirm')
                 
                 alert('정산이 완료되었습니다.')
                 closeBettingSettlementModal()
@@ -10421,7 +10421,7 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
                 
-                const response = await axios.get(\`\${API_BASE}/responses?date=\${date}\`)
+                const response = await axios.get(API_BASE + '/responses?date= + date)
                 const { responses, stats } = response.data
                 
                 // 통계 업데이트
@@ -10498,7 +10498,7 @@ console.log('권한 관리 함수 로드 완료')
             try {
                 const newStatus = currentStatus === 'printed' ? 'pending' : 'printed'
                 
-                await axios.patch(\`\${API_BASE}/responses/\${id}\`, {
+                await axios.patch(API_BASE + '/responses/ + id, {
                     print_status: newStatus,
                     printed_by: newStatus === 'printed' ? currentStaff.id : null
                 })
@@ -10532,12 +10532,12 @@ console.log('권한 관리 함수 로드 완료')
                 }
                 
                 // 출력 양식 설정 가져오기
-                const settingsRes = await axios.get(\`\${API_BASE}/responses/settings\`)
+                const settingsRes = await axios.get(API_BASE + '/responses/settings')
                 const settings = settingsRes.data.settings
                 
                 // 선택된 답변 데이터 가져오기
                 const date = document.getElementById('responses-date').value
-                const responsesRes = await axios.get(\`\${API_BASE}/responses?date=\${date}\`)
+                const responsesRes = await axios.get(API_BASE + '/responses?date= + date)
                 const allResponses = responsesRes.data.responses
                 const selectedResponses = allResponses.filter(r => responseIds.includes(r.id))
                 
@@ -10616,7 +10616,7 @@ console.log('권한 관리 함수 로드 완료')
                     printWindow.print()
                     
                     // 출력 완료로 상태 변경
-                    await axios.post(\`\${API_BASE}/responses/bulk-print\`, {
+                    await axios.post(API_BASE + '/responses/bulk-print', {
                         response_ids: responseIds,
                         printed_by: currentStaff.id
                     })
