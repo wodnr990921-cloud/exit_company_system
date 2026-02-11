@@ -4087,38 +4087,40 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 배팅 폴더 목록 (고객 배팅) - 더 상세한 정보 표시
                 const folders = foldersRes.data.folders || []
-                const bettingHtml = folders.length > 0 ? folders.map(f => \`
-                    <div class="bg-white border-l-4 \${f.status === 'won' ? 'border-green-500' : f.status === 'lost' ? 'border-red-500' : 'border-blue-500'} p-4 rounded shadow-sm">
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <p class="font-bold text-lg">\${f.folder_number}</p>
-                                <p class="text-sm text-gray-600">\${f.member_name} | \${f.ticket_number}</p>
-                            </div>
-                            <span class="status-badge status-\${f.status}">\${getStatusText(f.status)}</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
-                            <div>
-                                <p class="text-gray-500">폴더 유형</p>
-                                <p class="font-semibold">\${f.folder_type === 'single' ? '단폴더' : '다폴더'}</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">배팅 금액</p>
-                                <p class="font-semibold text-blue-600">\${f.total_bet_amount.toLocaleString()}원</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">총 배당률</p>
-                                <p class="font-semibold">\${f.total_odds.toFixed(2)}</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">예상 적중금</p>
-                                <p class="font-semibold text-green-600">\${(f.total_bet_amount * f.total_odds).toLocaleString()}원</p>
-                            </div>
-                        </div>
-                        <div class="mt-2 text-xs text-gray-400">
-                            \${new Date(f.created_at).toLocaleString()}
-                        </div>
-                    </div>
-                \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">배팅이 없습니다.</p>'
+                const bettingHtml = folders.length > 0 ? folders.map(f => {
+                    const borderClass = f.status === 'won' ? 'border-green-500' : f.status === 'lost' ? 'border-red-500' : 'border-blue-500'
+                    const folderType = f.folder_type === 'single' ? '단폴더' : '다폴더'
+                    return '<div class="bg-white border-l-4 ' + borderClass + ' p-4 rounded shadow-sm">' +
+                        '<div class="flex justify-between items-start mb-2">' +
+                            '<div>' +
+                                '<p class="font-bold text-lg">' + (f.folder_number || '') + '</p>' +
+                                '<p class="text-sm text-gray-600">' + (f.member_name || '') + ' | ' + (f.ticket_number || '') + '</p>' +
+                            '</div>' +
+                            '<span class="status-badge status-' + f.status + '">' + getStatusText(f.status) + '</span>' +
+                        '</div>' +
+                        '<div class="grid grid-cols-2 gap-2 mt-2 text-sm">' +
+                            '<div>' +
+                                '<p class="text-gray-500">폴더 유형</p>' +
+                                '<p class="font-semibold">' + folderType + '</p>' +
+                            '</div>' +
+                            '<div>' +
+                                '<p class="text-gray-500">배팅 금액</p>' +
+                                '<p class="font-semibold text-blue-600">' + (f.total_bet_amount || 0).toLocaleString() + '원</p>' +
+                            '</div>' +
+                            '<div>' +
+                                '<p class="text-gray-500">총 배당률</p>' +
+                                '<p class="font-semibold">' + (f.total_odds || 0).toFixed(2) + '</p>' +
+                            '</div>' +
+                            '<div>' +
+                                '<p class="text-gray-500">예상 적중금</p>' +
+                                '<p class="font-semibold text-green-600">' + ((f.total_bet_amount || 0) * (f.total_odds || 0)).toLocaleString() + '원</p>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="mt-2 text-xs text-gray-400">' +
+                            new Date(f.created_at).toLocaleString() +
+                        '</div>' +
+                    '</div>'
+                }).join('') : '<p class="text-gray-500 text-sm text-center py-4">배팅이 없습니다.</p>'
 
                 document.getElementById('betting-folders-list').innerHTML = bettingHtml
 
@@ -4138,20 +4140,20 @@ console.log('권한 관리 함수 로드 완료')
                 const response = await axios.get(API_BASE + '/betting/matches?status=completed')
                 const matches = response.data.matches || []
 
-                const html = matches.length > 0 ? matches.map(m => \`
-                    <div class="bg-green-50 p-3 rounded border border-green-200">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <p class="font-bold">\${m.match_name}</p>
-                                <p class="text-sm text-gray-600">\${new Date(m.match_date).toLocaleString()}</p>
-                                <p class="text-xs text-gray-500">결과: \${m.result || '미정'}</p>
-                            </div>
-                            <button onclick="viewMatchSettlement(\${m.id})" class="btn btn-sm btn-primary">
-                                상세보기
-                            </button>
-                        </div>
-                    </div>
-                \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">완료된 경기가 없습니다.</p>'
+                const html = matches.length > 0 ? matches.map(m => 
+                    '<div class="bg-green-50 p-3 rounded border border-green-200">' +
+                        '<div class="flex justify-between items-center">' +
+                            '<div>' +
+                                '<p class="font-bold">' + (m.match_name || '') + '</p>' +
+                                '<p class="text-sm text-gray-600">' + new Date(m.match_date).toLocaleString() + '</p>' +
+                                '<p class="text-xs text-gray-500">결과: ' + (m.result || '미정') + '</p>' +
+                            '</div>' +
+                            '<button onclick="viewMatchSettlement(' + m.id + ')" class="btn btn-sm btn-primary">' +
+                                '상세보기' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>'
+                ).join('') : '<p class="text-gray-500 text-sm text-center py-4">완료된 경기가 없습니다.</p>'
 
                 document.getElementById('settlement-matches-list').innerHTML = html
             } catch (error) {
