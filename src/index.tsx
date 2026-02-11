@@ -1201,6 +1201,109 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 회원 정보 수정 모달 -->
+        <div id="edit-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col">
+                <div class="p-6 border-b">
+                    <h3 class="text-xl font-bold"><i class="fas fa-user-edit mr-2"></i>회원 정보 수정</h3>
+                    <p class="text-sm text-gray-600 mt-1">회원 정보를 수정하고 승인을 요청하세요</p>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <!-- 현재 정보 표시 -->
+                    <div class="bg-gray-50 p-4 rounded">
+                        <h4 class="font-semibold mb-2 text-sm text-gray-700">현재 정보</h4>
+                        <div id="edit-member-current-info" class="space-y-1 text-sm text-gray-600">
+                            <!-- JavaScript로 채워짐 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 이름 (읽기 전용) -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">회원 이름</label>
+                        <input 
+                            type="text" 
+                            id="edit-member-name" 
+                            class="w-full px-3 py-2 border rounded bg-gray-100"
+                            readonly
+                        >
+                        <p class="text-xs text-gray-500 mt-1">이름은 변경할 수 없습니다</p>
+                    </div>
+                    
+                    <!-- 수용번호 -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">수용번호</label>
+                        <input 
+                            type="text" 
+                            id="edit-member-number" 
+                            class="w-full px-3 py-2 border rounded"
+                            placeholder="예: 1234"
+                        >
+                    </div>
+                    
+                    <!-- 수용기관 -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">수용기관</label>
+                        <input 
+                            type="text" 
+                            id="edit-member-institution" 
+                            class="w-full px-3 py-2 border rounded"
+                            placeholder="예: 서울, 안양, 의정부"
+                        >
+                    </div>
+                    
+                    <!-- 사서함 주소 -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">사서함 주소</label>
+                        <input 
+                            type="text" 
+                            id="edit-member-mailbox" 
+                            class="w-full px-3 py-2 border rounded"
+                            placeholder="예: 서울 사서함 123"
+                        >
+                    </div>
+                    
+                    <!-- 입금자명 -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">입금자명</label>
+                        <input 
+                            type="text" 
+                            id="edit-member-depositor" 
+                            class="w-full px-3 py-2 border rounded"
+                            placeholder="예: 김영희"
+                        >
+                    </div>
+                    
+                    <!-- 수정 사유 -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">수정 사유 (선택)</label>
+                        <textarea 
+                            id="edit-member-reason" 
+                            class="w-full px-3 py-2 border rounded"
+                            rows="3"
+                            placeholder="수정 사유를 입력하세요..."
+                        ></textarea>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border border-yellow-200 rounded p-3">
+                        <p class="text-sm text-yellow-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            이 수정은 관리자 승인이 필요합니다.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="p-6 border-t flex gap-2">
+                    <button onclick="closeEditMemberModal()" class="btn btn-secondary flex-1">
+                        취소
+                    </button>
+                    <button onclick="submitMemberEdit()" class="btn btn-primary flex-1">
+                        <i class="fas fa-check mr-2"></i>수정 요청
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- 경기 결과 입력 모달 -->
         <div id="bulk-register-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -3516,9 +3619,22 @@ console.log('권한 관리 함수 로드 완료')
                 }
 
                 const html = members.length > 0 ? members.map(m => \`
-                    <div class="card hover:shadow-lg transition cursor-pointer" onclick="showMemberDetail(\${m.id})">
-                        <h3 class="font-bold text-lg">\${m.name}</h3>
-                        <p class="text-sm text-gray-600">\${m.institution} - \${m.inmate_number}</p>
+                    <div class="card hover:shadow-lg transition">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1" onclick="showMemberDetail(\${m.id})" style="cursor: pointer;">
+                                <h3 class="font-bold text-lg">\${m.name}</h3>
+                                <p class="text-sm text-gray-600">
+                                    <i class="fas fa-building mr-1"></i>수용기관: \${m.institution || '미지정'}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    <i class="fas fa-id-card mr-1"></i>수용번호: \${m.member_number || m.inmate_number || '-'}
+                                </p>
+                            </div>
+                            <button onclick="event.stopPropagation(); showEditMemberModal(\${m.id})" 
+                                    class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
                         <div class="mt-3 space-y-1">
                             <p class="text-sm"><span class="font-bold">일반 포인트:</span> \${m.points.toLocaleString()}원</p>
                             <p class="text-sm"><span class="font-bold">배팅 포인트:</span> \${m.betting_points.toLocaleString()}원</p>
@@ -7531,6 +7647,111 @@ console.log('권한 관리 함수 로드 완료')
         }
         
         // ==================== 회원 변경 관련 함수 끝 ====================
+        
+        // ==================== 회원 정보 수정 관련 함수 ====================
+        let currentEditingMemberId = null
+        let currentEditingMemberData = null
+        
+        // 회원 정보 수정 모달 열기
+        async function showEditMemberModal(memberId) {
+            currentEditingMemberId = memberId
+            
+            try {
+                // 회원 정보 조회
+                const res = await axios.get(\`\${API_BASE}/members/\${memberId}\`)
+                const member = res.data.member
+                currentEditingMemberData = member
+                
+                // 현재 정보 표시
+                const currentInfo = document.getElementById('edit-member-current-info')
+                currentInfo.innerHTML = \`
+                    <div><strong>이름:</strong> \${member.name}</div>
+                    <div><strong>수용번호:</strong> \${member.member_number || '-'}</div>
+                    <div><strong>수용기관:</strong> \${member.institution || '미지정'}</div>
+                    <div><strong>사서함:</strong> \${member.mailbox_address || '-'}</div>
+                    <div><strong>입금자명:</strong> \${member.depositor_name || '-'}</div>
+                \`
+                
+                // 폼 필드 채우기
+                document.getElementById('edit-member-name').value = member.name
+                document.getElementById('edit-member-number').value = member.member_number || ''
+                document.getElementById('edit-member-institution').value = member.institution || ''
+                document.getElementById('edit-member-mailbox').value = member.mailbox_address || ''
+                document.getElementById('edit-member-depositor').value = member.depositor_name || ''
+                document.getElementById('edit-member-reason').value = ''
+                
+                // 모달 열기
+                document.getElementById('edit-member-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('회원 정보 조회 오류:', error)
+                alert(\`회원 정보를 불러오는데 실패했습니다.\\n\\n\${error.response?.data?.error || error.message}\`)
+            }
+        }
+        
+        // 회원 정보 수정 모달 닫기
+        function closeEditMemberModal() {
+            document.getElementById('edit-member-modal').classList.add('hidden')
+            currentEditingMemberId = null
+            currentEditingMemberData = null
+        }
+        
+        // 회원 정보 수정 제출
+        async function submitMemberEdit() {
+            if (!currentEditingMemberId || !currentEditingMemberData) return
+            
+            const newNumber = document.getElementById('edit-member-number').value.trim()
+            const newInstitution = document.getElementById('edit-member-institution').value.trim()
+            const newMailbox = document.getElementById('edit-member-mailbox').value.trim()
+            const newDepositor = document.getElementById('edit-member-depositor').value.trim()
+            const reason = document.getElementById('edit-member-reason').value.trim()
+            
+            // 변경 사항 확인
+            const changes = []
+            if (newNumber !== (currentEditingMemberData.member_number || '')) {
+                changes.push(\`수용번호: \${currentEditingMemberData.member_number || '-'} → \${newNumber || '-'}\`)
+            }
+            if (newInstitution !== (currentEditingMemberData.institution || '')) {
+                changes.push(\`수용기관: \${currentEditingMemberData.institution || '미지정'} → \${newInstitution || '미지정'}\`)
+            }
+            if (newMailbox !== (currentEditingMemberData.mailbox_address || '')) {
+                changes.push(\`사서함: \${currentEditingMemberData.mailbox_address || '-'} → \${newMailbox || '-'}\`)
+            }
+            if (newDepositor !== (currentEditingMemberData.depositor_name || '')) {
+                changes.push(\`입금자명: \${currentEditingMemberData.depositor_name || '-'} → \${newDepositor || '-'}\`)
+            }
+            
+            if (changes.length === 0) {
+                alert('변경된 내용이 없습니다.')
+                return
+            }
+            
+            // 확인
+            const confirmMsg = \`다음 정보를 수정하시겠습니까?\\n\\n\${changes.join('\\n')}\\n\\n※ 이 변경은 관리자 승인이 필요합니다.\`
+            if (!confirm(confirmMsg)) return
+            
+            try {
+                // 회원 정보 수정 요청 (승인 필요)
+                await axios.put(\`\${API_BASE}/members/\${currentEditingMemberId}\`, {
+                    member_number: newNumber,
+                    institution: newInstitution,
+                    mailbox_address: newMailbox,
+                    depositor_name: newDepositor,
+                    change_reason: reason || changes.join(', '),
+                    approval_required: true
+                })
+                
+                alert(\`회원 정보 수정 요청이 저장되었습니다.\\n\\n변경 내역:\\n\${changes.join('\\n')}\\n\\n※ 관리자 승인 후 반영됩니다.\`)
+                
+                // 모달 닫고 목록 새로고침
+                closeEditMemberModal()
+                loadMembers()
+            } catch (error) {
+                console.error('회원 정보 수정 오류:', error)
+                alert(\`회원 정보 수정 실패:\\n\\n\${error.response?.data?.error || error.message}\`)
+            }
+        }
+        
+        // ==================== 회원 정보 수정 관련 함수 끝 ====================
         
         // 담당자 배정 및 티켓 확정
         async function assignStaffAndConfirmTicket() {
