@@ -1,8 +1,45 @@
-# EXIT System v9.2.4 🔧 네비게이션 수정
+# EXIT System v9.2.5 ✨ 회원 변경 기능 구현
 
 **통합 교도소 도서 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
-## 🆕 최신 업데이트 (2026-02-10)
+## 🆕 최신 업데이트 (2026-02-11)
+
+### ✨ v9.2.5 티켓 상세 회원 변경 기능
+
+**회원 관리 기능**:
+- **기존 회원 선택**: 검색 (이름/수용번호) + 300ms debounce 자동완성
+- **신규 회원 등록**: 모달에서 즉시 회원 생성
+- **승인 요청 시스템**: 모든 회원 변경은 관리자 승인 필요
+- **조건부 표시**: 미지정 회원일 때만 "신규 회원 등록" 버튼 노출
+- **변경 시나리오 지원**:
+  - 미지정 → 기존 회원 (승인 요청)
+  - 미지정 → 신규 회원 (회원 생성 + 승인 요청)
+  - 기존 회원 A → 기존 회원 B (승인 요청)
+  - 기존 회원 → 신규 회원 (회원 생성 + 승인 요청)
+
+**워크플로우**:
+1. 티켓 상세 모달에서 "회원 변경" 버튼 클릭
+2. 회원 검색 또는 신규 등록 선택
+3. 회원 선택/등록 시 자동으로 승인 요청 생성
+4. 관리자 승인 후 티켓에 반영
+5. 수정 내역 탭에서 변경 이력 확인
+
+**기술 구현**:
+- `openChangeMemberModal()`: 모달 열기 및 현재 티켓 정보 저장
+- `closeChangeMemberModal()`: 모달 닫기
+- `searchMembersForChange(event)`: 300ms debounce 자동완성 검색
+- `selectChangeMember(id, name, number)`: 회원 선택 및 승인 요청 생성
+- `openNewMemberRegistration()`: 신규 회원 등록 및 승인 요청 생성
+
+**UI 개선**:
+- 조건부 알림: 미지정 회원 시 경고 표시
+- 현재 회원 정보 카드 표시
+- 회원 검색 드롭다운 (회원 정보 + 기관 표시)
+- 신규 등록 시 간편 입력 폼
+
+---
+
+## 🆕 이전 업데이트 (2026-02-10)
 
 ### 🔧 v9.2.4 데스크톱 네비게이션 수정
 
@@ -89,14 +126,15 @@
 
 ## 🌐 접속 정보
 
+- **로컬 개발 URL**: https://3000-izz2akoud4rd9s8t7plxq-b32ec7bb.sandbox.novita.ai ✅ **ACTIVE**
 - **프로덕션 URL**: https://exit-system.pages.dev ✅ **LIVE (v9.2)**
 - **최신 배포**: https://738bc9d6.exit-system.pages.dev (Production)
 - **데모 계정**: admin@prison-books.kr / admin123
 - **Cloudflare Pages**: exit-system
 - **D1 Database**: exit-system-production (17 migrations)
 - **R2 Storage**: exit-system-mailroom ✅ **활성화됨**
-- **Last Deployed**: 2026-02-08 09:30 UTC
-- **Build Size**: 495.12 kB (52 modules)
+- **Last Deployed**: 2026-02-11 00:15 UTC
+- **Build Size**: 577.48 kB (52 modules)
 - **Status**: 🟢 **All Systems Operational**
 
 ## 📋 프로젝트 개요
@@ -615,6 +653,8 @@ npm run deploy:prod
 - ✅ 네비게이션 최적화 (v9.2)
 - ✅ Cloudflare Pages 프로덕션 배포 (v10.0)
 - ✅ R2 Storage 활성화 및 통합 (v10.0)
+- ✅ 티켓 회원 변경 기능 (v9.2.5)
+- ✅ 승인 요청 기반 회원 변경 워크플로우 (v9.2.5)
 
 ### 예정 📅
 - 📅 Cloudflare AI Workers OCR 실제 연동
@@ -640,12 +680,13 @@ EXIT 시스템 개발팀
 
 ## 📌 버전 정보
 
-- **버전**: v9.2 PRODUCTION
-- **최종 업데이트**: 2026-02-08
-- **상태**: ✅ 프로덕션 배포 완료
+- **버전**: v9.2.5 DEVELOPMENT
+- **최종 업데이트**: 2026-02-11
+- **상태**: ✅ 로컬 개발 진행 중
+- **로컬 URL**: https://3000-izz2akoud4rd9s8t7plxq-b32ec7bb.sandbox.novita.ai
 - **프로덕션 URL**: https://exit-system.pages.dev
 - **최신 배포**: https://738bc9d6.exit-system.pages.dev
-- **빌드 크기**: 495.12 kB (52 modules)
+- **빌드 크기**: 577.48 kB (52 modules)
 - **마이그레이션**: 17개 (0001~0017)
 
 ### 배포 정보
@@ -653,12 +694,23 @@ EXIT 시스템 개발팀
 - **프로젝트**: exit-system
 - **D1 Database**: exit-system-production (929f31de-899f-4015-be47-1a20e127bfe7)
 - **R2 Storage**: exit-system-mailroom ✅ **활성화됨**
-- **배포 일시**: 2026-02-08 09:30 UTC
-- **Last Commit**: Fix: UI improvements - Desktop shows icon+text navigation, mobile uses hamburger menu only (v9.2)
+- **배포 일시**: 2026-02-11 00:15 UTC
+- **Last Commit**: feat: 회원 변경 기능 JavaScript 함수 구현
 
 ---
 
 ## 🎉 주요 변경 사항 로그
+
+### v9.2.5 (2026-02-11) ✨
+- **회원 변경 기능**: 티켓 상세에서 회원 변경/등록
+- **승인 요청 시스템**: 모든 회원 변경은 관리자 승인 필요
+- **검색 최적화**: 300ms debounce 자동완성 검색
+- **조건부 UI**: 미지정 회원일 때만 신규 등록 버튼 표시
+- **신규 회원 등록**: 모달에서 즉시 회원 생성 후 티켓 연결
+
+### v9.2.4 (2026-02-10) 🔧
+- **네비게이션 수정**: 데스크톱 상단 탭 네비게이션 표시 문제 해결
+- **Tailwind Breakpoint**: 커스텀 CSS로 데스크톱 네비게이션 강제 표시
 
 ### v9.2 (2026-02-08) 🎨
 - **UI 개선**: 모바일 네비게이션 최적화
