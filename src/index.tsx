@@ -1130,10 +1130,10 @@ app.get('/', (c) => {
                             
                             <div>
                                 <label class="block text-sm font-medium mb-2">
-                                    편지 요약 카테고리
+                                    카테고리 (AI 자동 분류)
                                 </label>
-                                <select id="inspection-category" class="w-full px-3 py-2 border rounded">
-                                    <option value="">-- 카테고리 선택 --</option>
+                                <select id="inspection-category" class="w-full px-3 py-2 border rounded bg-gray-50" disabled>
+                                    <option value="">-- 분류 중 --</option>
                                     <option value="도서">도서</option>
                                     <option value="베팅">베팅</option>
                                     <option value="문의">문의</option>
@@ -1145,7 +1145,7 @@ app.get('/', (c) => {
                             
                             <div>
                                 <label class="block text-sm font-medium mb-2">
-                                    편지 내용 (AI 추출)
+                                    편지 요약 (AI 생성)
                                 </label>
                                 <textarea id="inspection-letter-content" class="w-full px-3 py-2 border rounded h-32" readonly></textarea>
                             </div>
@@ -7616,6 +7616,14 @@ console.log('권한 관리 함수 로드 완료')
                 // OCR 원문 (전체)
                 const ocrText = ocrResults.map(r => r.text).join('\\n\\n')
                 
+                // 편지 요약 추출
+                const summaryMatch = ocrText.match(/요약:\s*(.+?)(?=\n카테고리:|$)/s)
+                const letterSummary = summaryMatch ? summaryMatch[1].trim() : letterContents
+                
+                // 카테고리 자동 추출
+                const categoryMatch = ocrText.match(/카테고리:\s*(도서|베팅|문의|이체|충전|기타)/)
+                const autoCategory = categoryMatch ? categoryMatch[1] : ''
+                
                 // 폼 채우기 - 발신자 정보가 있으면 자동 입력
                 if (senderInfo) {
                     document.getElementById('inspection-name').value = senderInfo.sender_name || ''
@@ -7631,8 +7639,18 @@ console.log('권한 관리 함수 로드 완료')
                 }
                 
                 document.getElementById('inspection-ocr-text').value = ocrText
-                document.getElementById('inspection-letter-content').value = letterContents
+                document.getElementById('inspection-letter-content').value = letterSummary
                 document.getElementById('inspection-notes').value = item.notes || ''
+                
+                // 카테고리 자동 설정
+                const categorySelect = document.getElementById('inspection-category')
+                if (autoCategory) {
+                    categorySelect.value = autoCategory
+                    categorySelect.disabled = false
+                } else {
+                    categorySelect.value = ''
+                    categorySelect.disabled = false
+                }
                 
                 // 회원 자동 매칭 (수용번호 기반)
                 if (senderInfo && senderInfo.inmate_number) {

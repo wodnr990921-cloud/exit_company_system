@@ -1074,6 +1074,10 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer): Promise<strin
 [편지 내용 (중간~하단에서)]
 내용: (여기에 편지 본문 텍스트 전부 추출)
 
+**STEP 3: 편지 요약 및 카테고리 분류**
+- 편지 내용을 2-3문장으로 요약
+- 카테고리를 다음 중 하나로 분류: 도서, 베팅, 문의, 이체, 충전, 기타
+
 **응답 형식:**
 [ENVELOPE: YES/NO]
 발신자: 
@@ -1081,7 +1085,9 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer): Promise<strin
 사서함주소: 
 수용번호: 
 주소: 
-내용: (편지 본문)`
+내용: (편지 본문)
+요약: (2-3문장 요약)
+카테고리: (도서/베팅/문의/이체/충전/기타 중 하나)`
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
