@@ -1769,12 +1769,16 @@ app.get('/', (c) => {
                             <h4 class="font-bold mb-3"><i class="fas fa-info-circle mr-2"></i>기본 정보</h4>
                             <div class="space-y-2 text-sm">
                                 <div class="flex justify-between">
-                                    <span class="text-gray-600">회원번호:</span>
-                                    <span id="detail-member-number" class="font-mono font-bold text-blue-600"></span>
+                                    <span class="text-gray-600">이름:</span>
+                                    <span id="detail-member-name-field" class="font-medium"></span>
                                 </div>
                                 <div class="flex justify-between">
-                                    <span class="text-gray-600">수감번호:</span>
-                                    <span id="detail-prisoner-number" class="font-mono"></span>
+                                    <span class="text-gray-600">수용기관:</span>
+                                    <span id="detail-institution"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">수용번호:</span>
+                                    <span id="detail-member-number" class="font-mono"></span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">사서함:</span>
@@ -6042,10 +6046,11 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 기본 정보
                 document.getElementById('detail-member-name').textContent = member.name
-                document.getElementById('detail-member-prison').textContent = member.institution
+                document.getElementById('detail-member-prison').textContent = member.institution || '미지정'
+                document.getElementById('detail-member-name-field').textContent = member.name
+                document.getElementById('detail-institution').textContent = member.institution || '미지정'
                 document.getElementById('detail-member-number').textContent = member.member_number || '-'
-                document.getElementById('detail-prisoner-number').textContent = member.inmate_number
-                document.getElementById('detail-address').textContent = member.po_box_address || '-'
+                document.getElementById('detail-address').textContent = member.mailbox_address || member.po_box_address || '-'
                 document.getElementById('detail-depositor').textContent = member.depositor_name || '-'
                 document.getElementById('detail-created-at').textContent = new Date(member.created_at).toLocaleDateString()
                 document.getElementById('detail-status').textContent = member.status === 'active' ? '활성' : '비활성'
