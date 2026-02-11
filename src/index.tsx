@@ -1773,12 +1773,16 @@ app.get('/', (c) => {
                                     <span id="detail-member-name-field" class="font-medium"></span>
                                 </div>
                                 <div class="flex justify-between">
+                                    <span class="text-gray-600">회원 고유번호:</span>
+                                    <span id="detail-member-number" class="font-mono font-bold text-blue-600"></span>
+                                </div>
+                                <div class="flex justify-between">
                                     <span class="text-gray-600">수용기관:</span>
                                     <span id="detail-institution"></span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">수용번호:</span>
-                                    <span id="detail-member-number" class="font-mono"></span>
+                                    <span id="detail-inmate-number" class="font-mono"></span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">사서함:</span>
@@ -3678,7 +3682,7 @@ console.log('권한 관리 함수 로드 완료')
                                         <i class="fas fa-building mr-1"></i>수용기관: \${m.institution || '미지정'}
                                     </p>
                                     <p class="text-sm text-gray-600">
-                                        <i class="fas fa-id-card mr-1"></i>수용번호: \${m.member_number || m.inmate_number || '-'}
+                                        <i class="fas fa-id-card mr-1"></i>수용번호: \${m.inmate_number || '-'}
                                     </p>
                                 </div>
                                 <button onclick="event.stopPropagation(); showEditMemberModal(\${m.id})" 
@@ -3721,7 +3725,7 @@ console.log('권한 관리 함수 로드 완료')
                                             <i class="fas fa-building mr-1"></i>\${m.institution || '미지정'}
                                         </td>
                                         <td class="p-3 text-sm text-gray-600">
-                                            \${m.member_number || m.inmate_number || '-'}
+                                            \${m.inmate_number || '-'}
                                         </td>
                                         <td class="p-3 text-right text-sm">
                                             \${m.points.toLocaleString()}원
@@ -6048,8 +6052,9 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('detail-member-name').textContent = member.name
                 document.getElementById('detail-member-prison').textContent = member.institution || '미지정'
                 document.getElementById('detail-member-name-field').textContent = member.name
-                document.getElementById('detail-institution').textContent = member.institution || '미지정'
                 document.getElementById('detail-member-number').textContent = member.member_number || '-'
+                document.getElementById('detail-institution').textContent = member.institution || '미지정'
+                document.getElementById('detail-inmate-number').textContent = member.inmate_number || '-'
                 document.getElementById('detail-address').textContent = member.mailbox_address || member.po_box_address || '-'
                 document.getElementById('detail-depositor').textContent = member.depositor_name || '-'
                 document.getElementById('detail-created-at').textContent = new Date(member.created_at).toLocaleDateString()
