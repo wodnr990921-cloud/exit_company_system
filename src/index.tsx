@@ -6578,17 +6578,69 @@ console.log('권한 관리 함수 로드 완료')
                 institution: null
             }
             
-            // 이름 추출 (한글 2-4자)
-            const nameMatch = text.match(/[가-힣]{2,4}/)
-            if (nameMatch) info.name = nameMatch[0]
+            // 이름 추출 (한글 2-4자) - 간단한 패턴 매칭
+            let foundName = ''
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i]
+                if (char >= '가' && char <= '힣') {
+                    let name = char
+                    for (let j = i + 1; j < Math.min(i + 4, text.length); j++) {
+                        const nextChar = text[j]
+                        if (nextChar >= '가' && nextChar <= '힣') {
+                            name += nextChar
+                        } else {
+                            break
+                        }
+                    }
+                    if (name.length >= 2 && name.length <= 4) {
+                        foundName = name
+                        break
+                    }
+                }
+            }
+            if (foundName) info.name = foundName
             
             // 번호 추출 (숫자 4-8자리)
-            const numberMatch = text.match(/\\d{4,8}/)
-            if (numberMatch) info.number = numberMatch[0]
+            let foundNumber = ''
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i]
+                if (char >= '0' && char <= '9') {
+                    let number = char
+                    for (let j = i + 1; j < text.length; j++) {
+                        const nextChar = text[j]
+                        if (nextChar >= '0' && nextChar <= '9') {
+                            number += nextChar
+                        } else {
+                            break
+                        }
+                    }
+                    if (number.length >= 4 && number.length <= 8) {
+                        foundNumber = number
+                        break
+                    }
+                }
+            }
+            if (foundNumber) info.number = foundNumber
             
-            // 기관명 추출 (교도소, 구치소 등)
-            const institutionMatch = text.match(/([가-힣]+교도소|[가-힣]+구치소|[가-힣]+교정소)/)
-            if (institutionMatch) info.institution = institutionMatch[0]
+            // 기관명 추출 (교도소, 구치소, 교정소)
+            const keywords = ['교도소', '구치소', '교정소']
+            for (const keyword of keywords) {
+                const keywordIndex = text.indexOf(keyword)
+                if (keywordIndex !== -1) {
+                    let institution = ''
+                    for (let i = keywordIndex - 1; i >= 0; i--) {
+                        const char = text[i]
+                        if (char >= '가' && char <= '힣') {
+                            institution = char + institution
+                        } else {
+                            break
+                        }
+                    }
+                    institution += keyword
+                    info.institution = institution
+                    break
+                }
+            }
             
             return info
         }
@@ -7829,16 +7881,38 @@ console.log('권한 관리 함수 로드 완료')
                 const ocrText = ocrResults.map(r => r.text).join('\\n\\n')
                 
                 // 편지 요약 추출 (AI가 생성한 요약만)
-                const summaryMatch = ocrText.match(/요약:\s*([^\n]+(?:\n(?!카테고리:|원문:)[^\n]+)*)/i)
-                const letterSummary = summaryMatch ? summaryMatch[1].trim() : '요약 없음'
+                let letterSummary = '요약 없음'
+                const summaryIndex = ocrText.indexOf('요약:')
+                if (summaryIndex !== -1) {
+                    let summaryText = ocrText.substring(summaryIndex + 3).trim()
+                    const categoryIndex = summaryText.indexOf('카테고리:')
+                    const contentIndex = summaryText.indexOf('원문:')
+                    let endIndex = summaryText.length
+                    if (categoryIndex !== -1) endIndex = Math.min(endIndex, categoryIndex)
+                    if (contentIndex !== -1) endIndex = Math.min(endIndex, contentIndex)
+                    letterSummary = summaryText.substring(0, endIndex).trim()
+                }
                 
                 // 카테고리 자동 추출
-                const categoryMatch = ocrText.match(/카테고리:\s*(도서|베팅|문의|이체|충전|기타)/i)
-                const autoCategory = categoryMatch ? categoryMatch[1] : ''
+                let autoCategory = ''
+                const categoryIndex = ocrText.indexOf('카테고리:')
+                if (categoryIndex !== -1) {
+                    const categoryText = ocrText.substring(categoryIndex + 5).trim()
+                    const categories = ['도서', '베팅', '문의', '이체', '충전', '기타']
+                    for (const cat of categories) {
+                        if (categoryText.startsWith(cat)) {
+                            autoCategory = cat
+                            break
+                        }
+                    }
+                }
                 
                 // 편지 원문 추출 (원문: 부분)
-                const contentMatch = ocrText.match(/원문:\s*(.+)/is)
-                const fullContent = contentMatch ? contentMatch[1].trim() : ocrText
+                let fullContent = ocrText
+                const contentIndex = ocrText.indexOf('원문:')
+                if (contentIndex !== -1) {
+                    fullContent = ocrText.substring(contentIndex + 3).trim()
+                }
                 
                 // 폼 채우기 - 발신자 정보가 있으면 자동 입력
                 if (senderInfo) {
@@ -8892,9 +8966,12 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
 
-            // 이메일 형식 검증
-            const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/
-            if (!emailRegex.test(email)) {
+            // 이메일 형식 검증 - 간단한 @ 및 . 체크
+            if (!email.includes('@') || !email.includes('.') || 
+                email.indexOf('@') === 0 || 
+                email.indexOf('.') < email.indexOf('@') ||
+                email.indexOf('@') === email.length - 1 ||
+                email.indexOf('.') === email.length - 1) {
                 alert('올바른 이메일 형식을 입력해주세요.')
                 return
             }
@@ -8984,9 +9061,12 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
 
-            // 이메일 형식 검증
-            const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/
-            if (!emailRegex.test(email)) {
+            // 이메일 형식 검증 - 간단한 @ 및 . 체크
+            if (!email.includes('@') || !email.includes('.') || 
+                email.indexOf('@') === 0 || 
+                email.indexOf('.') < email.indexOf('@') ||
+                email.indexOf('@') === email.length - 1 ||
+                email.indexOf('.') === email.length - 1) {
                 alert('올바른 이메일 형식을 입력해주세요.')
                 return
             }
