@@ -1474,32 +1474,76 @@ app.get('/', (c) => {
 
         <!-- 경기 관리 모달 -->
         <div id="match-management-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>경기 관리</h3>
+            <div class="bg-white rounded-lg max-w-7xl w-full max-h-[90vh] flex flex-col">
+                <div class="p-6 border-b">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>경기 관리 및 정산</h3>
                         <button onclick="closeMatchManagementModal()" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times"></i>
+                            <i class="fas fa-times text-2xl"></i>
                         </button>
                     </div>
-                    
-                    <div class="space-y-4">
-                        <!-- 경기 목록 -->
-                        <div class="card">
+                </div>
+                
+                <div class="flex-1 overflow-hidden flex">
+                    <!-- 좌측: 경기 관리 -->
+                    <div class="w-1/2 border-r p-6 overflow-y-auto">
+                        <div class="mb-4">
                             <div class="flex justify-between items-center mb-4">
-                                <h4 class="font-bold">등록된 경기 일정</h4>
+                                <h4 class="font-bold text-lg"><i class="fas fa-list mr-2"></i>등록된 경기</h4>
                                 <button onclick="addMatchRow()" class="btn btn-success btn-sm">
                                     <i class="fas fa-plus mr-2"></i>경기 추가
                                 </button>
                             </div>
-                            <div id="match-management-list" class="space-y-3"></div>
+                            <p class="text-sm text-gray-600 mb-3">경기 추가, 수정, 결과 입력을 할 수 있습니다.</p>
                         </div>
                         
-                        <div class="flex justify-end space-x-2">
-                            <button onclick="closeMatchManagementModal()" class="btn btn-secondary">취소</button>
+                        <div id="match-management-list" class="space-y-3"></div>
+                        
+                        <div class="mt-4 flex justify-end">
                             <button onclick="saveAllMatches()" class="btn btn-primary">
                                 <i class="fas fa-save mr-2"></i>모두 저장
                             </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 우측: 정산 패널 -->
+                    <div class="w-1/2 p-6 overflow-y-auto bg-gray-50">
+                        <div class="mb-4">
+                            <h4 class="font-bold text-lg mb-2"><i class="fas fa-calculator mr-2"></i>경기 정산</h4>
+                            <p class="text-sm text-gray-600 mb-3">완료된 경기의 배팅 결과를 확인하고 정산합니다.</p>
+                        </div>
+                        
+                        <!-- 정산 통계 -->
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="bg-white p-4 rounded-lg shadow-sm">
+                                <p class="text-xs text-gray-600 mb-1">완료된 경기</p>
+                                <p class="text-2xl font-bold text-blue-600" id="settlement-completed-count">0</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm">
+                                <p class="text-xs text-gray-600 mb-1">총 배팅 건수</p>
+                                <p class="text-2xl font-bold text-green-600" id="settlement-total-bets">0</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm">
+                                <p class="text-xs text-gray-600 mb-1">총 배팅액</p>
+                                <p class="text-xl font-bold text-purple-600" id="settlement-total-amount">0원</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm">
+                                <p class="text-xs text-gray-600 mb-1">순수익</p>
+                                <p class="text-xl font-bold text-orange-600" id="settlement-net-profit">0원</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 완료된 경기 목록 -->
+                        <div class="bg-white rounded-lg shadow-sm p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h5 class="font-bold text-sm">완료된 경기 목록</h5>
+                                <button onclick="refreshSettlementData()" class="text-blue-600 hover:text-blue-800 text-sm">
+                                    <i class="fas fa-sync-alt mr-1"></i>새로고침
+                                </button>
+                            </div>
+                            <div id="settlement-matches-list" class="space-y-2 max-h-96 overflow-y-auto">
+                                <p class="text-gray-500 text-sm text-center py-4">정산할 경기가 없습니다.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4669,6 +4713,7 @@ console.log('권한 관리 함수 로드 완료')
         async function showMatchManagementModal() {
             document.getElementById('match-management-modal').classList.remove('hidden')
             await loadMatchManagement()
+            await refreshSettlementData()
         }
 
         // 경기 관리 모달 닫기
@@ -4739,45 +4784,101 @@ console.log('권한 관리 함수 로드 완료')
             const newIndex = list.children.length
             const html = \`
                 <div class="border rounded p-4 bg-white" data-match-id="new-\${newIndex}">
-                    <div class="grid grid-cols-12 gap-4 items-center">
-                        <div class="col-span-3">
-                            <label class="text-xs text-gray-600">경기명</label>
-                            <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                   data-field="match_name" placeholder="예: 맨체스터 유나이티드 vs 리버풀">
+                    <div class="space-y-3">
+                        <!-- 기본 정보 -->
+                        <div class="grid grid-cols-12 gap-2">
+                            <div class="col-span-4">
+                                <label class="text-xs text-gray-600">경기명</label>
+                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
+                                       data-field="match_name" placeholder="예: 맨체스터 유나이티드 vs 리버풀">
+                            </div>
+                            <div class="col-span-3">
+                                <label class="text-xs text-gray-600">홈팀</label>
+                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
+                                       data-field="home_team" placeholder="홈팀명">
+                            </div>
+                            <div class="col-span-3">
+                                <label class="text-xs text-gray-600">원정팀</label>
+                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
+                                       data-field="away_team" placeholder="원정팀명">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="text-xs text-gray-600">경기일시</label>
+                                <input type="datetime-local" class="w-full px-2 py-1 border rounded text-sm" 
+                                       data-field="match_date">
+                            </div>
                         </div>
-                        <div class="col-span-2">
-                            <label class="text-xs text-gray-600">홈팀</label>
-                            <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                   data-field="home_team" placeholder="홈팀명">
+                        
+                        <!-- 승무패 배당 -->
+                        <div class="bg-blue-50 p-2 rounded">
+                            <h5 class="text-xs font-bold text-blue-800 mb-1">승무패 배당</h5>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-xs text-gray-600">홈승</label>
+                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
+                                           data-field="home_odds" placeholder="1.50">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">무승부</label>
+                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
+                                           data-field="draw_odds" placeholder="3.20">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">원정승</label>
+                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
+                                           data-field="away_odds" placeholder="2.10">
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-span-2">
-                            <label class="text-xs text-gray-600">원정팀</label>
-                            <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                   data-field="away_team" placeholder="원정팀명">
+                        
+                        <!-- 언오버 배당 -->
+                        <div class="bg-green-50 p-2 rounded">
+                            <h5 class="text-xs font-bold text-green-800 mb-1">언오버 배당</h5>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-xs text-gray-600">기준점</label>
+                                    <input type="number" step="0.5" class="w-full px-2 py-1 border rounded text-sm" 
+                                           data-field="over_line" placeholder="2.5">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">오버</label>
+                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
+                                           data-field="over_odds" placeholder="1.85">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">언더</label>
+                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
+                                           data-field="under_odds" placeholder="1.95">
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-span-2">
-                            <label class="text-xs text-gray-600">경기일시</label>
-                            <input type="datetime-local" class="w-full px-2 py-1 border rounded text-sm" 
-                                   data-field="match_date">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="text-xs text-gray-600">홈승 배당</label>
-                            <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                   data-field="home_odds" placeholder="1.50">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="text-xs text-gray-600">무승부 배당</label>
-                            <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                   data-field="draw_odds" placeholder="3.20">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="text-xs text-gray-600">원정승 배당</label>
-                            <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                   data-field="away_odds" placeholder="2.10">
+                        
+                        <!-- 핸디캡 배당 -->
+                        <div class="bg-purple-50 p-2 rounded">
+                            <h5 class="text-xs font-bold text-purple-800 mb-1">핸디캡 배당</h5>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-xs text-gray-600">핸디캡</label>
+                                    <input type="number" step="0.5" class="w-full px-2 py-1 border rounded text-sm" 
+                                           data-field="handicap_line" placeholder="-1.5">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">홈팀</label>
+                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
+                                           data-field="handicap_home_odds" placeholder="1.75">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">원정팀</label>
+                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
+                                           data-field="handicap_away_odds" placeholder="2.05">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="flex justify-end mt-2">
-                        <button onclick="this.parentElement.parentElement.remove()" class="btn btn-danger btn-sm">제거</button>
+                        <button onclick="this.parentElement.parentElement.remove()" class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash mr-1"></i>제거
+                        </button>
                     </div>
                 </div>
             \`
@@ -9750,6 +9851,80 @@ console.log('권한 관리 함수 로드 완료')
                 console.error('회원 변경 오류:', error)
                 alert('회원 변경 실패: ' + (error.response?.data?.error || error.message))
             }
+        }
+
+        // ==================== 경기 정산 함수 ====================
+        
+        // 정산 데이터 새로고침
+        async function refreshSettlementData() {
+            try {
+                // 완료된 경기 조회
+                const matchesRes = await axios.get(\`\${API_BASE}/betting/matches?status=completed\`)
+                const completedMatches = matchesRes.data.matches || []
+                
+                // 정산 통계 계산
+                let totalBets = 0
+                let totalAmount = 0
+                let totalWinAmount = 0
+                
+                // 각 경기별 배팅 조회
+                for (const match of completedMatches) {
+                    const betsRes = await axios.get(\`\${API_BASE}/betting/folders?match_id=\${match.id}\`)
+                    const folders = betsRes.data.folders || []
+                    
+                    folders.forEach(folder => {
+                        totalBets++
+                        totalAmount += folder.bet_amount || 0
+                        if (folder.status === 'win') {
+                            totalWinAmount += (folder.bet_amount || 0) * (folder.total_odds || 1)
+                        }
+                    })
+                }
+                
+                const netProfit = totalAmount - totalWinAmount
+                
+                // 통계 업데이트
+                document.getElementById('settlement-completed-count').textContent = completedMatches.length
+                document.getElementById('settlement-total-bets').textContent = totalBets
+                document.getElementById('settlement-total-amount').textContent = \`\${totalAmount.toLocaleString()}원\`
+                document.getElementById('settlement-net-profit').textContent = \`\${netProfit.toLocaleString()}원\`
+                
+                // 완료된 경기 목록 렌더링
+                const matchesHtml = completedMatches.length > 0 ? completedMatches.map(m => \`
+                    <div class="border rounded p-3 bg-white">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h6 class="font-bold text-sm">\${m.match_name}</h6>
+                                <p class="text-xs text-gray-600">\${m.home_team} vs \${m.away_team}</p>
+                            </div>
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">완료</span>
+                        </div>
+                        <div class="text-xs text-gray-700">
+                            <span class="mr-2">결과: <strong>\${getMatchResultText(m.result)}</strong></span>
+                            <span>스코어: <strong>\${m.home_score || 0}:\${m.away_score || 0}</strong></span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            \${new Date(m.match_date).toLocaleString()}
+                        </div>
+                    </div>
+                \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">정산할 경기가 없습니다.</p>'
+                
+                document.getElementById('settlement-matches-list').innerHTML = matchesHtml
+                
+            } catch (error) {
+                console.error('정산 데이터 로드 오류:', error)
+            }
+        }
+        
+        // 경기 결과 텍스트 반환
+        function getMatchResultText(result) {
+            const resultMap = {
+                'home_win': '홈 승',
+                'away_win': '원정 승',
+                'draw': '무승부',
+                'cancelled': '취소'
+            }
+            return resultMap[result] || '미정'
         }
 
         // ==================== 답변 관리 함수 ====================
