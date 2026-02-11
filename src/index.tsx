@@ -516,16 +516,71 @@ app.get('/', (c) => {
 
                 <!-- 배팅 목록 탭 -->
                 <div id="betting-management-tab" class="betting-tab-content">
-                    <!-- 경기 일정 (상단) -->
-                    <div class="card mb-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold"><i class="fas fa-calendar mr-2"></i>경기 일정</h3>
-                            <button onclick="showMatchManagementModal()" class="btn btn-primary btn-sm">
-                                <i class="fas fa-cog mr-2"></i>경기 관리
-                            </button>
+                    <!-- 상단: 경기 일정 + 정산 통계 -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- 경기 일정 -->
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold"><i class="fas fa-calendar mr-2"></i>경기 일정</h3>
+                                <button onclick="showMatchManagementModal()" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-cog mr-2"></i>경기 관리
+                                </button>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-4">경기 종료 후 하루까지 표시됩니다</p>
+                            <div id="match-schedule-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
                         </div>
-                        <p class="text-sm text-gray-600 mb-4">경기 종료 후 하루까지 표시됩니다</p>
-                        <div id="match-schedule-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                        
+                        <!-- 정산 통계 -->
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold"><i class="fas fa-calculator mr-2"></i>정산 통계</h3>
+                                <button onclick="refreshBettingStats()" class="text-blue-600 hover:text-blue-800 text-sm">
+                                    <i class="fas fa-sync-alt mr-1"></i>새로고침
+                                </button>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 gap-3">
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm text-gray-600 mb-1">총 배팅액</p>
+                                            <p class="text-2xl font-bold text-blue-600" id="dashboard-total-bet">0원</p>
+                                        </div>
+                                        <i class="fas fa-coins text-3xl text-blue-400"></i>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm text-gray-600 mb-1">당첨금액</p>
+                                            <p class="text-2xl font-bold text-green-600" id="dashboard-total-win">0원</p>
+                                        </div>
+                                        <i class="fas fa-trophy text-3xl text-green-400"></i>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-red-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm text-gray-600 mb-1">죽은금액 (마진)</p>
+                                            <p class="text-2xl font-bold text-red-600" id="dashboard-net-profit">0원</p>
+                                        </div>
+                                        <i class="fas fa-chart-line text-3xl text-red-400"></i>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-purple-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm text-gray-600 mb-1">배팅 건수</p>
+                                            <p class="text-2xl font-bold text-purple-600" id="dashboard-bet-count">0건</p>
+                                        </div>
+                                        <i class="fas fa-folder text-3xl text-purple-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 고객 베팅 목록 (하단) -->
@@ -4034,6 +4089,9 @@ console.log('권한 관리 함수 로드 완료')
                 \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">배팅이 없습니다.</p>'
 
                 document.getElementById('betting-folders-list').innerHTML = bettingHtml
+
+                // 정산 통계 로드
+                await refreshBettingStats()
 
                 // 경기 정산 목록 로드
                 await loadMatchSettlementList()
@@ -10013,6 +10071,37 @@ console.log('권한 관리 함수 로드 완료')
                 'cancelled': '취소'
             }
             return resultMap[result] || '미정'
+        }
+        
+        // 배팅 통계 새로고침 (대시보드용)
+        async function refreshBettingStats() {
+            try {
+                // 모든 배팅 폴더 조회
+                const res = await axios.get(\`\${API_BASE}/betting/folders\`)
+                const folders = res.data.folders || []
+                
+                let totalBet = 0
+                let totalWin = 0
+                let betCount = 0
+                
+                folders.forEach(folder => {
+                    betCount++
+                    totalBet += folder.total_bet_amount || 0
+                    if (folder.status === 'won') {
+                        totalWin += (folder.total_bet_amount || 0) * (folder.total_odds || 1)
+                    }
+                })
+                
+                const netProfit = totalBet - totalWin
+                
+                // 대시보드 통계 업데이트
+                document.getElementById('dashboard-total-bet').textContent = \`\${totalBet.toLocaleString()}원\`
+                document.getElementById('dashboard-total-win').textContent = \`\${totalWin.toLocaleString()}원\`
+                document.getElementById('dashboard-net-profit').textContent = \`\${netProfit.toLocaleString()}원\`
+                document.getElementById('dashboard-bet-count').textContent = \`\${betCount}건\`
+            } catch (error) {
+                console.error('배팅 통계 로드 오류:', error)
+            }
         }
 
         // ==================== 답변 관리 함수 ====================
