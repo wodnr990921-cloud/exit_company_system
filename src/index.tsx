@@ -5255,7 +5255,15 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('detail-ticket-member-name').textContent = ticket.member_name || '-'
                 document.getElementById('detail-ticket-assigned').textContent = ticket.assigned_to_name || '미배정'
                 document.getElementById('detail-ticket-created').textContent = new Date(ticket.created_at).toLocaleString()
-                document.getElementById('detail-ticket-description').textContent = ticket.description || '설명 없음'
+                
+                // 원문 표시 (ticket.original 필드)
+                document.getElementById('detail-ticket-description').textContent = ticket.original || ticket.description || '원문 없음'
+                
+                // 요약 표시 (ticket.summary 필드)
+                const summaryEl = document.getElementById('ticket-summary')
+                if (summaryEl) {
+                    summaryEl.textContent = ticket.summary || ticket.description || '요약 없음'
+                }
 
                 // 상태 변경 폼
                 document.getElementById('update-ticket-status').value = ticket.status
