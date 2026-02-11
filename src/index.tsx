@@ -1187,7 +1187,7 @@ app.get('/', (c) => {
                     
                     <!-- 신규 회원 등록 버튼 -->
                     <div class="pt-4 border-t">
-                        <button onclick="openNewMemberForm()" class="btn btn-success w-full">
+                        <button onclick="openNewMemberRegistration()" class="btn btn-success w-full">
                             <i class="fas fa-user-plus mr-2"></i>신규 회원 등록
                         </button>
                     </div>
@@ -2237,25 +2237,9 @@ app.get('/', (c) => {
                                         </div>
                                     </div>
                                     
-                                    <!-- 회원 변경 -->
-                                    <div class="card">
-                                        <h4 class="font-bold mb-3"><i class="fas fa-user-edit mr-2"></i>회원 관리</h4>
-                                        
-                                        <!-- 미지정 회원 알림 (조건부 표시) -->
-                                        <div id="unassigned-member-alert" class="hidden mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
-                                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-1"></i>
-                                            <strong>미지정 회원:</strong> 회원 정보가 없습니다.
-                                        </div>
-                                        
-                                        <!-- 현재 회원 정보 -->
-                                        <div class="mb-3 p-3 bg-gray-50 rounded text-sm">
-                                            <p class="text-gray-600 mb-1">현재 회원:</p>
-                                            <p id="current-member-display" class="font-medium">-</p>
-                                        </div>
-                                        
-                                        <button onclick="openChangeMemberModal()" class="btn btn-primary w-full mb-2">
-                                            <i class="fas fa-exchange-alt mr-2"></i>회원 변경
-                                        </button>
+                                    <!-- 회원 관리 -->
+                                    <div id="member-management-card">
+                                        <!-- JavaScript로 동적 렌더링됩니다 -->
                                     </div>
 
                                     <!-- 상태 변경 -->
@@ -5031,6 +5015,83 @@ console.log('권한 관리 함수 로드 완료')
                 assignedSelect.innerHTML = '<option value="">미배정</option>' + 
                     staffList.map(s => \`<option value="\${s.id}" \${ticket.assigned_to === s.id ? 'selected' : ''}>\${s.name} (\${s.role === 'admin' ? '관리자' : '직원'})</option>\`).join('')
 
+                // 회원 관리 카드 렌더링
+                const memberManagementCard = document.getElementById('member-management-card')
+                if (memberManagementCard) {
+                    if (!ticket.member_name) {
+                        // 미지정 회원: 신규 등록 버튼 표시
+                        memberManagementCard.innerHTML = \`
+                            <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-semibold text-gray-800">
+                                        <i class="fas fa-user-tag mr-2 text-orange-500"></i>
+                                        회원 정보
+                                    </h3>
+                                    <span class="text-sm text-orange-600 font-medium">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                                        미지정
+                                    </span>
+                                </div>
+                                <div class="text-sm text-gray-600 mb-4">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    회원이 지정되지 않았습니다.
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="openNewMemberRegistration()" 
+                                            class="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm">
+                                        <i class="fas fa-user-plus mr-1"></i>
+                                        신규 회원 등록
+                                    </button>
+                                    <button onclick="openChangeMemberModal()" 
+                                            class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
+                                        <i class="fas fa-exchange-alt mr-1"></i>
+                                        기존 회원 선택
+                                    </button>
+                                </div>
+                            </div>
+                        \`
+                    } else {
+                        // 기존 회원: 정보 표시 + 회원 변경 버튼
+                        memberManagementCard.innerHTML = \`
+                            <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-semibold text-gray-800">
+                                        <i class="fas fa-user-check mr-2 text-green-500"></i>
+                                        회원 정보
+                                    </h3>
+                                    <span class="text-sm text-green-600 font-medium">
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        등록 완료
+                                    </span>
+                                </div>
+                                <div class="space-y-2 mb-4">
+                                    <div class="flex items-start">
+                                        <span class="text-sm text-gray-500 w-20">이름</span>
+                                        <span class="text-sm text-gray-800 font-medium">\${ticket.member_name}</span>
+                                    </div>
+                                    \${ticket.member_number ? \`
+                                        <div class="flex items-start">
+                                            <span class="text-sm text-gray-500 w-20">수용번호</span>
+                                            <span class="text-sm text-gray-800">\${ticket.member_number}</span>
+                                        </div>
+                                    \` : ''}
+                                    \${ticket.institution ? \`
+                                        <div class="flex items-start">
+                                            <span class="text-sm text-gray-500 w-20">수용기관</span>
+                                            <span class="text-sm text-gray-800">\${ticket.institution}</span>
+                                        </div>
+                                    \` : ''}
+                                </div>
+                                <button onclick="openChangeMemberModal()" 
+                                        class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
+                                    <i class="fas fa-exchange-alt mr-1"></i>
+                                    회원 변경
+                                </button>
+                            </div>
+                        \`
+                    }
+                }
+
                 // 댓글 로드
                 await loadTicketComments(ticketId)
 
@@ -7288,6 +7349,189 @@ console.log('권한 관리 함수 로드 완료')
             currentInspectionId = null
         }
         
+        // ==================== 회원 변경 관련 함수 ====================
+        let memberSearchTimeout2 = null
+        let memberSearchResults2 = []
+        
+        // 회원 변경 모달 열기
+        function openChangeMemberModal() {
+            if (!currentTicket) return
+            
+            // 현재 회원 정보 표시
+            const currentMemberInfo = document.getElementById('current-member-info')
+            if (currentTicket.member_name) {
+                const memberNumber = currentTicket.member_number ? \` (\${currentTicket.member_number})\` : ''
+                currentMemberInfo.innerHTML = \`
+                    <div class="text-sm">
+                        <div class="font-semibold text-gray-700">현재 회원</div>
+                        <div class="mt-1">
+                            <span class="font-medium">\${currentTicket.member_name || '-'}</span>
+                            <span class="text-gray-500 ml-2">\${memberNumber}</span>
+                        </div>
+                    </div>
+                \`
+            } else {
+                currentMemberInfo.innerHTML = \`
+                    <div class="text-sm text-orange-600">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        미지정 회원
+                    </div>
+                \`
+            }
+            
+            // 검색창 초기화
+            document.getElementById('change-member-search').value = ''
+            document.getElementById('change-member-dropdown').classList.add('hidden')
+            
+            document.getElementById('change-member-modal').classList.remove('hidden')
+        }
+        
+        // 회원 변경 모달 닫기
+        function closeChangeMemberModal() {
+            document.getElementById('change-member-modal').classList.add('hidden')
+            memberSearchResults2 = []
+        }
+        
+        // 회원 검색 (자동완성)
+        function handleChangeMemberSearch(event) {
+            const query = event.target.value.trim()
+            const dropdown = document.getElementById('change-member-dropdown')
+            
+            if (!query) {
+                dropdown.classList.add('hidden')
+                return
+            }
+            
+            clearTimeout(memberSearchTimeout2)
+            memberSearchTimeout2 = setTimeout(async () => {
+                try {
+                    const res = await axios.get(\`\${API_BASE}/members?search=\${encodeURIComponent(query)}\`)
+                    memberSearchResults2 = res.data.members || []
+                    
+                    if (memberSearchResults2.length === 0) {
+                        dropdown.innerHTML = '<div class="p-3 text-sm text-gray-500">검색 결과가 없습니다.</div>'
+                        dropdown.classList.remove('hidden')
+                        return
+                    }
+                    
+                    dropdown.innerHTML = memberSearchResults2.map(member => {
+                        const numberDiv = member.member_number ? \`<div class="text-sm text-gray-600">수용번호: \${member.member_number}</div>\` : ''
+                        const instDiv = member.institution ? \`<div class="text-sm text-gray-500">수용기관: \${member.institution}</div>\` : ''
+                        return \`
+                            <div class="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0" 
+                                 onclick="selectChangeMember(\${member.id}, '\${member.name}', '\${member.member_number || ''}', '\${member.institution || ''}', '\${member.mailbox_address || ''}')">
+                                <div class="font-medium text-gray-800">\${member.name}</div>
+                                \${numberDiv}
+                                \${instDiv}
+                            </div>
+                        \`
+                    }).join('')
+                    
+                    dropdown.classList.remove('hidden')
+                } catch (error) {
+                    console.error('회원 검색 오류:', error)
+                    dropdown.innerHTML = '<div class="p-3 text-sm text-red-500">검색 오류가 발생했습니다.</div>'
+                    dropdown.classList.remove('hidden')
+                }
+            }, 300)
+        }
+        
+        // 기존 회원 선택 → 변경 승인 요청
+        async function selectChangeMember(memberId, name, memberNumber, institution, mailboxAddress) {
+            if (!currentTicketId || !currentTicket) return
+            
+            // 드롭다운 닫기
+            document.getElementById('change-member-dropdown').classList.add('hidden')
+            
+            // 확인
+            const oldMember = currentTicket.member_name || '미지정'
+            if (!confirm(\`회원을 변경하시겠습니까?\\n\\n기존: \${oldMember}\\n변경: \${name} (\${memberNumber})\\n\\n※ 이 변경은 승인이 필요합니다.\`)) {
+                return
+            }
+            
+            try {
+                // 티켓의 member_id 변경 + 수정 내역 저장 (approval_required: true)
+                await axios.put(\`\${API_BASE}/tickets/\${currentTicketId}\`, {
+                    member_id: memberId,
+                    change_reason: \`회원 변경: \${oldMember} → \${name}\`,
+                    approval_required: true
+                })
+                
+                alert(\`회원 변경 요청이 저장되었습니다.\\n\\n변경된 회원: \${name}\\n\\n※ 관리자 승인 후 반영됩니다.\`)
+                
+                // 모달 닫고 티켓 다시 로드
+                closeChangeMemberModal()
+                await showTicketDetail(currentTicketId)
+            } catch (error) {
+                console.error('회원 변경 오류:', error)
+                alert(\`회원 변경 실패:\\n\\n\${error.response?.data?.error || error.message}\`)
+            }
+        }
+        
+        // 신규 회원 등록 버튼 클릭
+        async function openNewMemberRegistration() {
+            if (!currentTicketForMemberChange) {
+                alert('오류: 티켓 정보가 없습니다.')
+                return
+            }
+            
+            closeChangeMemberModal()
+            
+            const name = prompt('회원 이름을 입력하세요:')
+            if (!name || !name.trim()) return
+            
+            const memberNumber = prompt('수용번호를 입력하세요:')
+            if (!memberNumber || !memberNumber.trim()) return
+            
+            const institution = prompt('수용기관을 입력하세요 (예: 서울):') || '미지정'
+            const mailboxAddress = prompt('사서함 주소를 입력하세요 (예: 서울 사서함 123):') || ''
+            
+            if (!confirm(\`신규 회원을 등록하시겠습니까?\\n\\n이름: \${name}\\n수용번호: \${memberNumber}\\n수용기관: \${institution}\\n\\n※ 이 변경은 승인이 필요합니다.\`)) {
+                return
+            }
+            
+            try {
+                const ticketId = currentTicketForMemberChange.id
+                const oldMemberName = currentTicketForMemberChange.currentMemberName || '미지정'
+                
+                // 1. 신규 회원 등록
+                const memberRes = await axios.post(\`\${API_BASE}/members\`, {
+                    name: name.trim(),
+                    member_number: memberNumber.trim(),
+                    inmate_number: memberNumber.trim(),
+                    institution: institution.trim(),
+                    mailbox_address: mailboxAddress.trim(),
+                    depositor_name: '',
+                    status: 'active',
+                    notes: \`티켓에서 신규 등록\`
+                })
+                
+                const newMemberId = memberRes.data.member.id
+                const newMemberName = name.trim()
+                
+                // 2. 승인 요청 생성 (신규 회원 등록 + 티켓 연결)
+                await axios.post(\`\${API_BASE}/modifications\`, {
+                    target_type: 'ticket',
+                    target_id: ticketId,
+                    field_name: 'member_id',
+                    old_value: oldMemberName,
+                    new_value: \`\${newMemberName} (신규 등록)\`,
+                    reason: \`신규 회원 등록 및 연결: \${oldMemberName} → \${newMemberName}\`,
+                    requested_by: currentStaff.id
+                })
+                
+                alert(\`✅ 승인 요청이 생성되었습니다.\\n\\n회원: \${newMemberName} (\${memberNumber})\\n\\n관리자 승인 후 회원이 등록되고 티켓에 연결됩니다.\`)
+                
+                // 티켓 다시 로드
+                await showTicketDetail(ticketId)
+            } catch (error) {
+                console.error('신규 회원 등록 오류:', error)
+                alert(\`신규 회원 등록 실패:\\n\\n\${error.response?.data?.error || error.message}\`)
+            }
+        }
+        
+        // ==================== 회원 변경 관련 함수 끝 ====================
+        
         // 담당자 배정 및 티켓 확정
         async function assignStaffAndConfirmTicket() {
             if (!currentInspectionId) return
@@ -8726,6 +8970,131 @@ console.log('권한 관리 함수 로드 완료')
                 'staff': '직원'
             }
             return typeMap[type] || type
+        }
+        
+        // ==================== 회원 변경 모달 ====================
+        
+        let currentTicketForMemberChange = null
+        let memberChangeDebounceTimer = null
+        
+        function openChangeMemberModal() {
+            // 현재 티켓 정보 저장
+            const ticketId = document.getElementById('modal-ticket-id').textContent
+            currentTicketForMemberChange = {
+                id: ticketId,
+                currentMemberId: null,
+                currentMemberName: null,
+                currentMemberNumber: null
+            }
+            
+            // 현재 회원 정보 가져오기
+            const memberNameEl = document.getElementById('detail-ticket-member-name')
+            if (memberNameEl && memberNameEl.textContent !== '-') {
+                currentTicketForMemberChange.currentMemberName = memberNameEl.textContent
+            }
+            
+            // 모달 열기
+            document.getElementById('change-member-modal').classList.remove('hidden')
+            document.getElementById('change-member-search').value = ''
+            document.getElementById('change-member-dropdown').classList.add('hidden')
+            document.getElementById('change-member-search').focus()
+        }
+        
+        function closeChangeMemberModal() {
+            document.getElementById('change-member-modal').classList.add('hidden')
+            currentTicketForMemberChange = null
+            memberChangeDebounceTimer = null
+        }
+        
+        async function searchMembersForChange(event) {
+            const searchValue = event.target.value.trim()
+            
+            // 디바운스 처리 (300ms)
+            if (memberChangeDebounceTimer) {
+                clearTimeout(memberChangeDebounceTimer)
+            }
+            
+            if (searchValue.length < 2) {
+                document.getElementById('change-member-dropdown').classList.add('hidden')
+                return
+            }
+            
+            memberChangeDebounceTimer = setTimeout(async () => {
+                try {
+                    const response = await axios.get(\`\${API_BASE}/members?search=\${encodeURIComponent(searchValue)}\`)
+                    const members = response.data.members || []
+                    
+                    const dropdown = document.getElementById('change-member-dropdown')
+                    
+                    if (members.length === 0) {
+                        dropdown.innerHTML = '<div class="p-3 text-gray-500 text-sm">검색 결과가 없습니다.</div>'
+                        dropdown.classList.remove('hidden')
+                        return
+                    }
+                    
+                    dropdown.innerHTML = members.map(member => \`
+                        <div onclick="selectChangeMember(\${member.id}, '\${member.name}', '\${member.inmate_number || ''}')" 
+                             class="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0">
+                            <div class="font-medium">\${member.name}</div>
+                            <div class="text-sm text-gray-600">
+                                수용번호: \${member.inmate_number || '-'} | 
+                                기관: \${member.institution || '-'}
+                            </div>
+                        </div>
+                    \`).join('')
+                    
+                    dropdown.classList.remove('hidden')
+                } catch (error) {
+                    console.error('회원 검색 오류:', error)
+                    alert('회원 검색 실패: ' + (error.response?.data?.error || error.message))
+                }
+            }, 300)
+        }
+        
+        async function selectChangeMember(memberId, memberName, inmateNumber) {
+            if (!currentTicketForMemberChange) {
+                alert('오류: 티켓 정보가 없습니다.')
+                return
+            }
+            
+            const ticketId = currentTicketForMemberChange.id
+            const oldMemberName = currentTicketForMemberChange.currentMemberName
+            
+            // 동일한 회원 선택 방지
+            if (oldMemberName && oldMemberName === memberName) {
+                alert('이미 동일한 회원이 지정되어 있습니다.')
+                return
+            }
+            
+            const confirmMsg = oldMemberName 
+                ? \`회원을 변경하시겠습니까?\\n\\n현재: \${oldMemberName}\\n변경: \${memberName} (수용번호: \${inmateNumber || '-'})\`
+                : \`회원을 지정하시겠습니까?\\n\\n회원: \${memberName} (수용번호: \${inmateNumber || '-'})\`
+            
+            if (!confirm(confirmMsg)) return
+            
+            try {
+                // 승인 요청 생성
+                await axios.post(\`\${API_BASE}/modifications\`, {
+                    target_type: 'ticket',
+                    target_id: ticketId,
+                    field_name: 'member_id',
+                    old_value: oldMemberName || '미지정',
+                    new_value: memberName,
+                    reason: oldMemberName 
+                        ? \`회원 변경: \${oldMemberName} → \${memberName}\`
+                        : \`회원 지정: \${memberName}\`,
+                    requested_by: currentStaff.id
+                })
+                
+                alert('✅ 승인 요청이 생성되었습니다.\\n\\n관리자 승인 후 회원이 변경됩니다.')
+                
+                closeChangeMemberModal()
+                await showTicketDetail(ticketId) // 티켓 정보 새로고침
+                
+            } catch (error) {
+                console.error('회원 변경 오류:', error)
+                alert('회원 변경 실패: ' + (error.response?.data?.error || error.message))
+            }
         }
     </script>
 </body>
