@@ -7328,13 +7328,15 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
                 
+                const escapeHtml = (str) => String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
                 container.innerHTML = tickets.filter(t => 
                     !selectedTicketsForAssignment.find(st => st.id === t.id)
                 ).map(ticket => {
-                    const safeTitle = ticket.title.replace(/"/g, '&quot;')
-                    const safeMemberName = (ticket.member_name || '').replace(/"/g, '&quot;')
+                    const safeTitle = escapeHtml(ticket.title)
+                    const safeMemberName = escapeHtml(ticket.member_name || '')
+                    const safeTicketNumber = escapeHtml(ticket.ticket_number)
                     return \`
-                    <div class="border rounded p-2 hover:bg-gray-50 cursor-pointer" onclick='selectTicketForAssignment(\${ticket.id}, "\${ticket.ticket_number}", "\${safeTitle}", "\${safeMemberName}")'>
+                    <div class="border rounded p-2 hover:bg-gray-50 cursor-pointer" onclick="selectTicketForAssignment(\${ticket.id}, '\${safeTicketNumber}', '\${safeTitle}', '\${safeMemberName}')">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <p class="font-medium text-sm">\${ticket.ticket_number}</p>
