@@ -1176,7 +1176,7 @@ app.get('/', (c) => {
         </div>
 
         <!-- 회원 변경 모달 -->
-        <div id="change-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-60 flex items-center justify-center p-4">
+        <div id="change-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col">
                 <div class="p-6 border-b">
                     <h3 class="text-xl font-bold"><i class="fas fa-user-edit mr-2"></i>회원 변경</h3>
@@ -1195,7 +1195,7 @@ app.get('/', (c) => {
                             oninput="searchMembersForChange(event)"
                             autocomplete="off"
                         >
-                        <div id="change-member-dropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-60 overflow-y-auto mt-1"></div>
+                        <div id="change-member-dropdown" class="hidden absolute z-[110] w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-60 overflow-y-auto mt-1"></div>
                     </div>
                     
                     <!-- 신규 회원 등록 버튼 -->
@@ -1215,7 +1215,7 @@ app.get('/', (c) => {
         </div>
 
         <!-- 회원 정보 수정 모달 -->
-        <div id="edit-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-60 flex items-center justify-center p-4">
+        <div id="edit-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col">
                 <div class="p-6 border-b">
                     <h3 class="text-xl font-bold"><i class="fas fa-user-edit mr-2"></i>회원 정보 수정</h3>
@@ -2317,87 +2317,118 @@ app.get('/', (c) => {
                         <div class="flex-1 overflow-y-auto p-6">
                             <!-- 티켓 정보 탭 -->
                             <div id="ticket-tab-info" class="tab-content">
-                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <!-- 기본 정보 -->
-                                    <div class="card">
-                                        <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
-                                        <div class="space-y-2 text-sm">
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">티켓 번호:</span>
-                                                <span class="font-mono" id="detail-ticket-number"></span>
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    <!-- 좌측: 이미지 + 요약 -->
+                                    <div class="space-y-4">
+                                        <!-- 우편물 이미지 (mailroom 탭에서 옮겨옴) -->
+                                        <div id="mail-images-section" class="hidden">
+                                            <div class="card">
+                                                <h4 class="font-bold mb-3"><i class="fas fa-images mr-2"></i>우편물 이미지</h4>
+                                                <div id="mail-image-viewer" class="space-y-2">
+                                                    <!-- JavaScript로 렌더링 -->
+                                                </div>
                                             </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">제목:</span>
-                                                <span id="detail-ticket-title"></span>
+                                        </div>
+                                        
+                                        <!-- 요약 -->
+                                        <div class="card">
+                                            <h4 class="font-bold mb-3"><i class="fas fa-clipboard-list mr-2"></i>요약</h4>
+                                            <div id="ticket-summary" class="text-sm text-gray-700">
+                                                <!-- JavaScript로 요약 정보 표시 -->
                                             </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">유형:</span>
-                                                <span id="detail-ticket-type"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 중앙: 기본 정보 + 원문 -->
+                                    <div class="space-y-4">
+                                        <!-- 기본 정보 -->
+                                        <div class="card">
+                                            <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
+                                            <div class="space-y-2 text-sm">
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">티켓 번호:</span>
+                                                    <span class="font-mono" id="detail-ticket-number"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">제목:</span>
+                                                    <span id="detail-ticket-title"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">유형:</span>
+                                                    <span id="detail-ticket-type"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">상태:</span>
+                                                    <span id="detail-ticket-status"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">우선순위:</span>
+                                                    <span id="detail-ticket-priority"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">회원:</span>
+                                                    <span id="detail-ticket-member-name"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">담당자:</span>
+                                                    <span id="detail-ticket-assigned"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">생성일:</span>
+                                                    <span id="detail-ticket-created"></span>
+                                                </div>
                                             </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">상태:</span>
-                                                <span id="detail-ticket-status"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">우선순위:</span>
-                                                <span id="detail-ticket-priority"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">회원:</span>
-                                                <span id="detail-ticket-member-name"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">담당자:</span>
-                                                <span id="detail-ticket-assigned"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">생성일:</span>
-                                                <span id="detail-ticket-created"></span>
-                                            </div>
-                                            <div class="pt-2 border-t">
-                                                <p class="text-gray-600 mb-1">설명:</p>
+                                        </div>
+                                        
+                                        <!-- 원문 -->
+                                        <div class="card">
+                                            <h4 class="font-bold mb-3"><i class="fas fa-file-text mr-2"></i>원문</h4>
+                                            <div id="ticket-original-text" class="text-sm text-gray-800 whitespace-pre-wrap max-h-96 overflow-y-auto p-3 bg-gray-50 rounded border">
                                                 <p id="detail-ticket-description" class="text-gray-800"></p>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <!-- 회원 관리 -->
-                                    <div id="member-management-card">
-                                        <!-- JavaScript로 동적 렌더링됩니다 -->
-                                    </div>
+                                    <!-- 우측: 회원 관리 + 상태 변경 -->
+                                    <div class="space-y-4">
+                                        <!-- 회원 관리 -->
+                                        <div id="member-management-card">
+                                            <!-- JavaScript로 동적 렌더링됩니다 -->
+                                        </div>
 
-                                    <!-- 상태 변경 -->
-                                    <div class="card">
-                                        <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>상태 변경</h4>
-                                        <div class="space-y-3">
-                                            <div>
-                                                <label class="block text-sm font-medium mb-1">티켓 상태</label>
-                                                <select id="update-ticket-status" class="w-full px-3 py-2 border rounded">
-                                                    <option value="open">미배정</option>
-                                                    <option value="assigned">배정됨</option>
-                                                    <option value="in_progress">처리중</option>
-                                                    <option value="completed">완료</option>
-                                                    <option value="closed">종료</option>
-                                                </select>
+                                        <!-- 상태 변경 -->
+                                        <div class="card">
+                                            <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>상태 변경</h4>
+                                            <div class="space-y-3">
+                                                <div>
+                                                    <label class="block text-sm font-medium mb-1">티켓 상태</label>
+                                                    <select id="update-ticket-status" class="w-full px-3 py-2 border rounded">
+                                                        <option value="open">미배정</option>
+                                                        <option value="assigned">배정됨</option>
+                                                        <option value="in_progress">처리중</option>
+                                                        <option value="completed">완료</option>
+                                                        <option value="closed">종료</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium mb-1">우선순위</label>
+                                                    <select id="update-ticket-priority" class="w-full px-3 py-2 border rounded">
+                                                        <option value="low">낮음</option>
+                                                        <option value="normal">보통</option>
+                                                        <option value="high">높음</option>
+                                                        <option value="urgent">긴급</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium mb-1">담당자</label>
+                                                    <select id="update-ticket-assigned" class="w-full px-3 py-2 border rounded">
+                                                        <option value="">미배정</option>
+                                                    </select>
+                                                </div>
+                                                <button onclick="updateTicketInfo()" class="btn btn-primary w-full">
+                                                    <i class="fas fa-save mr-2"></i>변경사항 저장
+                                                </button>
                                             </div>
-                                            <div>
-                                                <label class="block text-sm font-medium mb-1">우선순위</label>
-                                                <select id="update-ticket-priority" class="w-full px-3 py-2 border rounded">
-                                                    <option value="low">낮음</option>
-                                                    <option value="normal">보통</option>
-                                                    <option value="high">높음</option>
-                                                    <option value="urgent">긴급</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium mb-1">담당자</label>
-                                                <select id="update-ticket-assigned" class="w-full px-3 py-2 border rounded">
-                                                    <option value="">미배정</option>
-                                                </select>
-                                            </div>
-                                            <button onclick="updateTicketInfo()" class="btn btn-primary w-full">
-                                                <i class="fas fa-save mr-2"></i>변경사항 저장
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -9314,79 +9345,79 @@ console.log('권한 관리 함수 로드 완료')
         let currentTicketForMemberChange = null
         let memberChangeDebounceTimer = null
         
-        function openChangeMemberModal() {
-            // 현재 티켓 정보 저장
-            const ticketId = document.getElementById('modal-ticket-id').textContent
-            currentTicketForMemberChange = {
-                id: ticketId,
-                currentMemberId: null,
-                currentMemberName: null,
-                currentMemberNumber: null
-            }
-            
-            // 현재 회원 정보 가져오기
-            const memberNameEl = document.getElementById('detail-ticket-member-name')
-            if (memberNameEl && memberNameEl.textContent !== '-') {
-                currentTicketForMemberChange.currentMemberName = memberNameEl.textContent
-            }
-            
-            // 모달 열기
-            document.getElementById('change-member-modal').classList.remove('hidden')
-            document.getElementById('change-member-search').value = ''
-            document.getElementById('change-member-dropdown').classList.add('hidden')
-            document.getElementById('change-member-search').focus()
-        }
-        
-        function closeChangeMemberModal() {
-            document.getElementById('change-member-modal').classList.add('hidden')
-            currentTicketForMemberChange = null
-            memberChangeDebounceTimer = null
-        }
-        
-        async function searchMembersForChange(event) {
-            const searchValue = event.target.value.trim()
-            
-            // 디바운스 처리 (300ms)
-            if (memberChangeDebounceTimer) {
-                clearTimeout(memberChangeDebounceTimer)
-            }
-            
-            if (searchValue.length < 2) {
-                document.getElementById('change-member-dropdown').classList.add('hidden')
-                return
-            }
-            
-            memberChangeDebounceTimer = setTimeout(async () => {
-                try {
-                    const response = await axios.get(\`\${API_BASE}/members?search=\${encodeURIComponent(searchValue)}\`)
-                    const members = response.data.members || []
-                    
-                    const dropdown = document.getElementById('change-member-dropdown')
-                    
-                    if (members.length === 0) {
-                        dropdown.innerHTML = '<div class="p-3 text-gray-500 text-sm">검색 결과가 없습니다.</div>'
-                        dropdown.classList.remove('hidden')
-                        return
-                    }
-                    
-                    dropdown.innerHTML = members.map(member => \`
-                        <div onclick="selectChangeMember(\${member.id}, '\${member.name}', '\${member.inmate_number || ''}')" 
-                             class="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0">
-                            <div class="font-medium">\${member.name}</div>
-                            <div class="text-sm text-gray-600">
-                                수용번호: \${member.inmate_number || '-'} | 
-                                기관: \${member.institution || '-'}
-                            </div>
-                        </div>
-                    \`).join('')
-                    
-                    dropdown.classList.remove('hidden')
-                } catch (error) {
-                    console.error('회원 검색 오류:', error)
-                    alert('회원 검색 실패: ' + (error.response?.data?.error || error.message))
-                }
-            }, 300)
-        }
+//         function openChangeMemberModal() {
+//             // 현재 티켓 정보 저장
+//             const ticketId = document.getElementById('modal-ticket-id').textContent
+//             currentTicketForMemberChange = {
+//                 id: ticketId,
+//                 currentMemberId: null,
+//                 currentMemberName: null,
+//                 currentMemberNumber: null
+//             }
+//             
+//             // 현재 회원 정보 가져오기
+//             const memberNameEl = document.getElementById('detail-ticket-member-name')
+//             if (memberNameEl && memberNameEl.textContent !== '-') {
+//                 currentTicketForMemberChange.currentMemberName = memberNameEl.textContent
+//             }
+//             
+//             // 모달 열기
+//             document.getElementById('change-member-modal').classList.remove('hidden')
+//             document.getElementById('change-member-search').value = ''
+//             document.getElementById('change-member-dropdown').classList.add('hidden')
+//             document.getElementById('change-member-search').focus()
+//         }
+//         
+//         function closeChangeMemberModal() {
+//             document.getElementById('change-member-modal').classList.add('hidden')
+//             currentTicketForMemberChange = null
+//             memberChangeDebounceTimer = null
+//         }
+//         
+//         async function searchMembersForChange(event) {
+//             const searchValue = event.target.value.trim()
+//             
+//             // 디바운스 처리 (300ms)
+//             if (memberChangeDebounceTimer) {
+//                 clearTimeout(memberChangeDebounceTimer)
+//             }
+//             
+//             if (searchValue.length < 2) {
+//                 document.getElementById('change-member-dropdown').classList.add('hidden')
+//                 return
+//             }
+//             
+//             memberChangeDebounceTimer = setTimeout(async () => {
+//                 try {
+//                     const response = await axios.get(\`\${API_BASE}/members?search=\${encodeURIComponent(searchValue)}\`)
+//                     const members = response.data.members || []
+//                     
+//                     const dropdown = document.getElementById('change-member-dropdown')
+//                     
+//                     if (members.length === 0) {
+//                         dropdown.innerHTML = '<div class="p-3 text-gray-500 text-sm">검색 결과가 없습니다.</div>'
+//                         dropdown.classList.remove('hidden')
+//                         return
+//                     }
+//                     
+//                     dropdown.innerHTML = members.map(member => \`
+//                         <div onclick="selectChangeMember(\${member.id}, '\${member.name}', '\${member.inmate_number || ''}')" 
+//                              class="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0">
+//                             <div class="font-medium">\${member.name}</div>
+//                             <div class="text-sm text-gray-600">
+//                                 수용번호: \${member.inmate_number || '-'} | 
+//                                 기관: \${member.institution || '-'}
+//                             </div>
+//                         </div>
+//                     \`).join('')
+//                     
+//                     dropdown.classList.remove('hidden')
+//                 } catch (error) {
+//                     console.error('회원 검색 오류:', error)
+//                     alert('회원 검색 실패: ' + (error.response?.data?.error || error.message))
+//                 }
+//             }, 300)
+//         }
         
         async function selectChangeMember(memberId, memberName, inmateNumber) {
             if (!currentTicketForMemberChange) {
