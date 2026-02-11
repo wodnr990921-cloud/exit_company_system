@@ -61,6 +61,7 @@ app.get('/', (c) => {
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
         /* 데스크톱 네비게이션 강제 표시 */
@@ -1549,6 +1550,10 @@ app.get('/', (c) => {
                             <div class="flex justify-between items-center mb-4">
                                 <h4 class="font-bold text-lg"><i class="fas fa-list mr-2"></i>경기 목록</h4>
                                 <div class="space-x-2">
+                                    <button onclick="document.getElementById('match-excel-upload').click()" class="btn btn-info btn-sm">
+                                        <i class="fas fa-file-excel mr-2"></i>엑셀 업로드
+                                    </button>
+                                    <input type="file" id="match-excel-upload" accept=".xlsx,.xls" style="display:none" onchange="handleMatchExcelUpload(event)">
                                     <button onclick="addMatchRow()" class="btn btn-success btn-sm">
                                         <i class="fas fa-plus mr-2"></i>경기 추가
                                     </button>
@@ -4912,6 +4917,112 @@ console.log('권한 관리 함수 로드 완료')
         }
 
         // 모든 경기 저장
+        // 엑셀 업로드 처리
+        async function handleMatchExcelUpload(event) {
+            const file = event.target.files[0]
+            if (!file) return
+            
+            try {
+                const reader = new FileReader()
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result)
+                    const workbook = XLSX.read(data, { type: 'array' })
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet)
+                    
+                    // 기존 경기 목록 초기화
+                    const tbody = document.getElementById('match-management-list')
+                    tbody.innerHTML = ''
+                    
+                    // 엑셀 데이터로 경기 추가
+                    jsonData.forEach((row, index) => {
+                        const matchData = {
+                            id: 'new-' + Date.now() + '-' + index,
+                            match_name: row['경기명'] || '',
+                            home_team: row['홈팀'] || '',
+                            away_team: row['원정팀'] || '',
+                            match_date: row['경기일시'] || '',
+                            home_odds: row['홈승'] || '',
+                            draw_odds: row['무승부'] || '',
+                            away_odds: row['원정승'] || '',
+                            over_line: row['기준점'] || '',
+                            over_odds: row['오버'] || '',
+                            under_odds: row['언더'] || ''
+                        }
+                        
+                        addMatchRowWithData(matchData)
+                    })
+                    
+                    const uploadMsg = jsonData.length + '개의 경기가 업로드되었습니다.'
+                    alert(uploadMsg)
+                }
+                reader.readAsArrayBuffer(file)
+            } catch (error) {
+                console.error('엑셀 업로드 오류:', error)
+                alert('엑셀 파일 읽기 실패')
+            }
+            
+            // 파일 입력 초기화
+            event.target.value = ''
+        }
+        
+        // 데이터로 경기 행 추가
+        function addMatchRowWithData(data) {
+            const tbody = document.getElementById('match-management-list')
+            const row = document.createElement('tr')
+            row.dataset.matchId = data.id || ('new-' + tbody.children.length)
+            
+            const matchNameVal = data.match_name || ''
+            const homeTeamVal = data.home_team || ''
+            const awayTeamVal = data.away_team || ''
+            const matchDateVal = data.match_date || ''
+            const homeOddsVal = data.home_odds || ''
+            const drawOddsVal = data.draw_odds || ''
+            const awayOddsVal = data.away_odds || ''
+            const overLineVal = data.over_line || ''
+            const overOddsVal = data.over_odds || ''
+            const underOddsVal = data.under_odds || ''
+            
+            const rowHtml = '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="text" value="' + matchNameVal + '" data-field="match_name" class="w-full px-2 py-1 text-sm border rounded" placeholder="맨유 vs 리버풀">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="text" value="' + homeTeamVal + '" data-field="home_team" class="w-full px-2 py-1 text-sm border rounded" placeholder="홈팀">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="text" value="' + awayTeamVal + '" data-field="away_team" class="w-full px-2 py-1 text-sm border rounded" placeholder="원정팀">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="datetime-local" value="' + matchDateVal + '" data-field="match_date" class="w-full px-2 py-1 text-sm border rounded">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="number" step="0.01" value="' + homeOddsVal + '" data-field="home_odds" class="w-full px-2 py-1 text-sm border rounded" placeholder="1.50">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="number" step="0.01" value="' + drawOddsVal + '" data-field="draw_odds" class="w-full px-2 py-1 text-sm border rounded" placeholder="3.20">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="number" step="0.01" value="' + awayOddsVal + '" data-field="away_odds" class="w-full px-2 py-1 text-sm border rounded" placeholder="2.10">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="number" step="0.5" value="' + overLineVal + '" data-field="over_line" class="w-full px-2 py-1 text-sm border rounded" placeholder="2.5">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="number" step="0.01" value="' + overOddsVal + '" data-field="over_odds" class="w-full px-2 py-1 text-sm border rounded" placeholder="1.85">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1">' +
+                    '<input type="number" step="0.01" value="' + underOddsVal + '" data-field="under_odds" class="w-full px-2 py-1 text-sm border rounded" placeholder="1.95">' +
+                '</td>' +
+                '<td class="border border-gray-300 px-2 py-1 text-center">' +
+                    '<button onclick="this.closest(\'tr\').remove()" class="btn btn-danger btn-xs">' +
+                        '<i class="fas fa-trash"></i>' +
+                    '</button>' +
+                '</td>'
+            
+            row.innerHTML = rowHtml
+            tbody.appendChild(row)
+        }
+        
         async function saveAllMatches() {
             try {
                 const matchDivs = document.querySelectorAll('#match-management-list > div')
@@ -10437,8 +10548,8 @@ console.log('권한 관리 함수 로드 완료')
                 const response = await axios.get(\`\${API_BASE}/responses/settings\`)
                 const settings = response.data.settings
                 
-                const settingsHtml = \`
-                    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                const settingsHtml = `
+                    <div id="response-settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                         <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                             <div class="p-6">
                                 <div class="flex justify-between items-center mb-4">
@@ -10449,24 +10560,31 @@ console.log('권한 관리 함수 로드 완료')
                                 </div>
                                 
                                 <div class="space-y-4">
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <p class="text-sm text-blue-800">
+                                            <i class="fas fa-info-circle mr-2"></i>
+                                            답변 출력 시 자동으로 상단에 <strong>"사서함주소 수용번호 이름"</strong>이 표시됩니다.
+                                        </p>
+                                    </div>
+                                    
                                     <div>
                                         <label class="block text-sm font-medium mb-2">공지사항 (상단)</label>
-                                        <textarea id="setting-header-notice" rows="3" class="w-full px-3 py-2 border rounded">\${settings.header_notice || ''}</textarea>
+                                        <textarea id="setting-header-notice" rows="3" class="w-full px-3 py-2 border rounded">${settings.header_notice || ''}</textarea>
                                     </div>
                                     
                                     <div>
                                         <label class="block text-sm font-medium mb-2">인사말</label>
-                                        <textarea id="setting-greeting" rows="3" class="w-full px-3 py-2 border rounded">\${settings.greeting || ''}</textarea>
+                                        <textarea id="setting-greeting" rows="3" class="w-full px-3 py-2 border rounded">${settings.greeting || ''}</textarea>
                                     </div>
                                     
                                     <div>
                                         <label class="block text-sm font-medium mb-2">맺음말 (하단)</label>
-                                        <textarea id="setting-footer" rows="3" class="w-full px-3 py-2 border rounded">\${settings.footer || ''}</textarea>
+                                        <textarea id="setting-footer" rows="3" class="w-full px-3 py-2 border rounded">${settings.footer || ''}</textarea>
                                     </div>
                                     
                                     <div>
                                         <label class="flex items-center gap-2">
-                                            <input type="checkbox" id="setting-show-date" \${settings.show_received_date === 'true' ? 'checked' : ''}>
+                                            <input type="checkbox" id="setting-show-date" ${settings.show_received_date === 'true' ? 'checked' : ''}>
                                             <span class="text-sm font-medium">편지 받은 날짜 표시</span>
                                         </label>
                                     </div>
@@ -10481,7 +10599,7 @@ console.log('권한 관리 함수 로드 완료')
                             </div>
                         </div>
                     </div>
-                \`
+                `
                 
                 document.body.insertAdjacentHTML('beforeend', settingsHtml)
             } catch (error) {
@@ -10492,7 +10610,10 @@ console.log('권한 관리 함수 로드 완료')
         
         // 양식 설정 닫기
         function closeResponseSettings() {
-            document.querySelector('.fixed.inset-0.bg-black').remove()
+            const modal = document.querySelector('#response-settings-modal')
+            if (modal) {
+                modal.remove()
+            }
         }
         
         // 양식 설정 저장

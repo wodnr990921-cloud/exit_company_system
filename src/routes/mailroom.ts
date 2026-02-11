@@ -264,6 +264,71 @@ mailroom.post('/ocr-simple', async (c) => {
   }
 })
 
+// 다중 편지 감지 OCR (편지봉투 자동 분리)
+mailroom.post('/ocr-detect-multiple', async (c) => {
+  try {
+    const { image_key } = await c.req.json()
+    
+    if (!image_key) {
+      return c.json({ error: '이미지 키가 필요합니다.' }, 400)
+    }
+    
+    // R2에서 이미지 가져오기
+    const object = await c.env.R2.get(image_key)
+    if (!object) {
+      return c.json({ error: '이미지를 찾을 수 없습니다.' }, 404)
+    }
+    
+    // 이미지를 ArrayBuffer로 변환
+    const imageBuffer = await object.arrayBuffer()
+    
+    // AI에게 다중 편지 감지 요청
+    let text = ''
+    
+    try {
+      // 다중 편지봉투 감지를 위한 특별한 프롬프트
+      const detectionPrompt = `이 이미지에서 편지봉투를 찾아주세요. 
+여러 개의 편지봉투가 있다면 각각 분리해서 다음 형식으로 알려주세요:
+
+[편지 1]
+받는사람: 이름
+수용번호: 번호
+기관명: 교도소/구치소명
+
+[편지 2]
+받는사람: 이름
+수용번호: 번호
+기관명: 교도소/구치소명
+
+만약 편지가 하나만 있다면 [편지 1]만 출력하세요.
+편지봉투의 텍스트를 정확히 읽어서 한국어로 출력하세요.`
+      
+      text = await callOpenAIVision(c, imageBuffer, detectionPrompt)
+    } catch (aiError: any) {
+      console.error('다중 편지 감지 OCR 오류:', aiError)
+      text = '[AI OCR 실패: ' + aiError.message + ']'
+    }
+    
+    // OCR 결과에서 편지 개수 파싱
+    const letterMatches = text.match(/\[편지 \d+\]/g)
+    const letterCount = letterMatches ? letterMatches.length : 1
+    
+    return c.json({ 
+      success: true,
+      text: text,
+      image_key: image_key,
+      letter_count: letterCount,
+      is_multiple: letterCount > 1
+    })
+  } catch (error: any) {
+    console.error('다중 편지 감지 오류:', error)
+    return c.json({ 
+      error: '다중 편지 감지 중 오류가 발생했습니다.',
+      details: error?.message || String(error)
+    }, 500)
+  }
+})
+
 // OCR 처리 (Cloudflare AI Workers 사용)
 mailroom.post('/:id/ocr', async (c) => {
   try {
@@ -1039,7 +1104,7 @@ mailroom.get('/image/:key', async (c) => {
 })
 
 // OpenAI GPT-4o Vision OCR 함수
-async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer): Promise<string> {
+async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer, customPrompt?: string): Promise<string> {
   const apiKey = c.env.OPENAI_API_KEY
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY is not configured')
@@ -1050,7 +1115,7 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer): Promise<strin
     uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')
   )
   
-  const promptText = `이 편지 이미지를 분석하세요.
+  const promptText = customPrompt || `이 편지 이미지를 분석하세요.
 
 **중요: 발신자 정보는 절대 추출하지 마세요. 수신자 정보만 추출하세요.**
 
