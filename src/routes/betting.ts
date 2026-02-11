@@ -1053,4 +1053,132 @@ betting.get('/daily-closes', async (c) => {
   }
 })
 
+// 배팅 정산 확정
+betting.post('/settlement/confirm', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    // 1. 결과가 확정된 모든 경기의 배팅 폴더 조회
+    const { results: folders } = await DB.prepare(`
+      SELECT bf.*, m.result, m.match_name
+      FROM bet_folders bf
+      JOIN bets b ON bf.id = b.folder_id
+      JOIN matches m ON b.match_id = m.id
+      WHERE bf.status = 'pending'
+      AND m.result IS NOT NULL
+      AND m.result != ''
+      GROUP BY bf.id
+    `).all()
+    
+    if (!folders || folders.length === 0) {
+      return c.json({ message: '정산할 배팅이 없습니다.' })
+    }
+    
+    let processedCount = 0
+    
+    for (const folder of folders) {
+      // 2. 각 폴더의 배팅 결과 확인
+      const { results: bets } = await DB.prepare(`
+        SELECT b.*, m.result, m.home_score, m.away_score, m.total_score
+        FROM bets b
+        JOIN matches m ON b.match_id = m.id
+        WHERE b.folder_id = ?
+      `).bind(folder.id).all()
+      
+      let isWin = true
+      
+      // 모든 배팅이 적중했는지 확인
+      for (const bet of bets) {
+        const matchResult = bet.result
+        const betType = bet.bet_type
+        
+        let betWin = false
+        
+        if (betType === 'home_win' && matchResult === 'home_win') betWin = true
+        else if (betType === 'away_win' && matchResult === 'away_win') betWin = true
+        else if (betType === 'draw' && matchResult === 'draw') betWin = true
+        else if (betType === 'over' && (bet.home_score + bet.away_score) > bet.over_line) betWin = true
+        else if (betType === 'under' && (bet.home_score + bet.away_score) < bet.over_line) betWin = true
+        
+        if (!betWin) {
+          isWin = false
+          break
+        }
+      }
+      
+      // 3. 배팅 폴더 상태 업데이트
+      const finalStatus = isWin ? 'won' : 'lost'
+      await DB.prepare(`
+        UPDATE bet_folders 
+        SET status = ?
+        WHERE id = ?
+      `).bind(finalStatus, folder.id).run()
+      
+      // 4. 승리 시 회원에게 당첨금 지급 (동결 포인트 → 일반 포인트)
+      if (isWin) {
+        const winAmount = Math.floor(folder.total_bet_amount * folder.total_odds)
+        
+        // 동결 포인트 차감 및 배팅 포인트 지급
+        await DB.prepare(`
+          UPDATE members 
+          SET frozen_points = frozen_points - ?,
+              betting_points = betting_points + ?
+          WHERE id = ?
+        `).bind(winAmount, winAmount, folder.member_id).run()
+        
+        // 포인트 거래 기록
+        await DB.prepare(`
+          INSERT INTO point_transactions (member_id, transaction_type, point_type, amount, balance, description, created_at)
+          SELECT ?, 'earned', 'betting_points', ?, betting_points, ?, datetime('now')
+          FROM members WHERE id = ?
+        `).bind(
+          folder.member_id,
+          winAmount,
+          `배팅 당첨 (폴더: ${folder.folder_number})`,
+          folder.member_id
+        ).run()
+        
+        // 알림 생성
+        const notificationMessage = `축하합니다! 배팅 폴더 ${folder.folder_number}가 당첨되었습니다. 당첨금 ${winAmount.toLocaleString()}원이 지급되었습니다.`
+        await DB.prepare(`
+          INSERT INTO notifications (member_id, type, title, message, created_at)
+          VALUES (?, 'betting_win', '배팅 당첨', ?, datetime('now'))
+        `).bind(
+          folder.member_id,
+          notificationMessage
+        ).run()
+      } else {
+        // 패배 시 동결 포인트만 차감
+        await DB.prepare(`
+          UPDATE members 
+          SET frozen_points = frozen_points - ?
+          WHERE id = ?
+        `).bind(folder.total_bet_amount, folder.member_id).run()
+        
+        // 알림 생성
+        const lostMessage = `배팅 폴더 ${folder.folder_number}가 미당첨되었습니다.`
+        await DB.prepare(`
+          INSERT INTO notifications (member_id, type, title, message, created_at)
+          VALUES (?, 'betting_lost', '배팅 미당첨', ?, datetime('now'))
+        `).bind(
+          folder.member_id,
+          lostMessage
+        ).run()
+      }
+      
+      processedCount++
+    }
+    
+    const settlementMessage = `${processedCount}건의 배팅이 정산되었습니다.`
+    return c.json({ 
+      success: true, 
+      message: settlementMessage,
+      processed: processedCount
+    })
+  } catch (error) {
+    console.error('배팅 정산 오류:', error)
+    return c.json({ error: '배팅 정산 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 export default betting

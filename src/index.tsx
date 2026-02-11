@@ -4806,58 +4806,53 @@ console.log('권한 관리 함수 로드 완료')
             document.getElementById('match-management-modal').classList.add('hidden')
         }
 
-        // 경기 관리 목록 로드
+        // 경기 관리 목록 로드 (엑셀 테이블 형태)
         async function loadMatchManagement() {
             try {
                 const response = await axios.get(\`\${API_BASE}/betting/matches\`)
                 const matches = response.data.matches || []
 
-                const html = matches.map((m, index) => \`
-                    <div class="border rounded p-4 bg-gray-50" data-match-id="\${m.id || 'new-' + index}">
-                        <div class="grid grid-cols-12 gap-4 items-center">
-                            <div class="col-span-3">
-                                <label class="text-xs text-gray-600">경기명</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="\${m.match_name || ''}" data-field="match_name">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="text-xs text-gray-600">홈팀</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="\${m.home_team || ''}" data-field="home_team">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="text-xs text-gray-600">원정팀</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="\${m.away_team || ''}" data-field="away_team">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="text-xs text-gray-600">경기일시</label>
-                                <input type="datetime-local" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="\${m.match_date ? new Date(m.match_date).toISOString().slice(0, 16) : ''}" data-field="match_date">
-                            </div>
-                            <div class="col-span-1">
-                                <label class="text-xs text-gray-600">홈승 배당</label>
-                                <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="\${m.home_odds || ''}" data-field="home_odds" placeholder="1.50">
-                            </div>
-                            <div class="col-span-1">
-                                <label class="text-xs text-gray-600">무승부 배당</label>
-                                <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="\${m.draw_odds || ''}" data-field="draw_odds" placeholder="3.20">
-                            </div>
-                            <div class="col-span-1">
-                                <label class="text-xs text-gray-600">원정승 배당</label>
-                                <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="\${m.away_odds || ''}" data-field="away_odds" placeholder="2.10">
-                            </div>
-                        </div>
-                        <div class="flex justify-end mt-2 space-x-2">
-                            \${m.id && isAdmin() ? \`<button onclick="deleteMatch(\${m.id})" class="btn btn-danger btn-sm">삭제</button>\` : ''}
-                        </div>
-                    </div>
+                const tbody = document.getElementById('match-management-list')
+                tbody.innerHTML = matches.map(m => \`
+                    <tr data-match-id="\${m.id}">
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="text" class="w-full px-1 py-1 text-xs" value="\${m.match_name || ''}" data-field="match_name">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="text" class="w-full px-1 py-1 text-xs" value="\${m.home_team || ''}" data-field="home_team">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="text" class="w-full px-1 py-1 text-xs" value="\${m.away_team || ''}" data-field="away_team">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="datetime-local" class="w-full px-1 py-1 text-xs" value="\${m.match_date ? new Date(m.match_date).toISOString().slice(0, 16) : ''}" data-field="match_date">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.home_odds || ''}" data-field="home_odds" placeholder="1.50">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.draw_odds || ''}" data-field="draw_odds" placeholder="3.20">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.away_odds || ''}" data-field="away_odds" placeholder="2.10">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="number" step="0.5" class="w-full px-1 py-1 text-xs" value="\${m.over_line || ''}" data-field="over_line" placeholder="2.5">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.over_odds || ''}" data-field="over_odds" placeholder="1.85">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1">
+                            <input type="number" step="0.01" class="w-full px-1 py-1 text-xs" value="\${m.under_odds || ''}" data-field="under_odds" placeholder="1.95">
+                        </td>
+                        <td class="border border-gray-300 px-1 py-1 text-center">
+                            \${m.id && isAdmin() ? \`<button onclick="deleteMatch(\${m.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>\` : ''}
+                        </td>
+                    </tr>
                 \`).join('')
-
-                document.getElementById('match-management-list').innerHTML = html || '<p class="text-gray-500 text-center py-4">등록된 경기가 없습니다.</p>'
+                
+                // 완료된 경기 목록도 로드 (우측 패널)
+                await loadCompletedMatchesForResult()
             } catch (error) {
                 console.error('경기 관리 목록 로드 오류:', error)
             }
@@ -10074,6 +10069,145 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('dashboard-bet-count').textContent = \`\${betCount}건\`
             } catch (error) {
                 console.error('배팅 통계 로드 오류:', error)
+            }
+        }
+        
+        // 완료된 경기 목록 로드 (결과 등록용)
+        async function loadCompletedMatchesForResult() {
+            try {
+                const res = await axios.get(\`\${API_BASE}/betting/matches?status=completed\`)
+                const matches = res.data.matches || []
+                
+                const html = matches.length > 0 ? matches.map(m => \`
+                    <div class="border rounded p-3 bg-white" data-match-id="\${m.id}">
+                        <div class="mb-2">
+                            <p class="font-bold text-sm">\${m.match_name}</p>
+                            <p class="text-xs text-gray-600">\${m.home_team} vs \${m.away_team}</p>
+                        </div>
+                        <div class="space-y-2">
+                            <div>
+                                <label class="text-xs text-gray-600">경기 결과</label>
+                                <select class="w-full px-2 py-1 border rounded text-xs" data-match-id="\${m.id}" data-field="result">
+                                    <option value="">선택</option>
+                                    <option value="home_win" \${m.result === 'home_win' ? 'selected' : ''}>홈 승</option>
+                                    <option value="away_win" \${m.result === 'away_win' ? 'selected' : ''}>원정 승</option>
+                                    <option value="draw" \${m.result === 'draw' ? 'selected' : ''}>무승부</option>
+                                    <option value="cancelled" \${m.result === 'cancelled' ? 'selected' : ''}>취소</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-xs text-gray-600">홈 스코어</label>
+                                    <input type="number" class="w-full px-2 py-1 border rounded text-xs" 
+                                           value="\${m.home_score || ''}" data-match-id="\${m.id}" data-field="home_score">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">원정 스코어</label>
+                                    <input type="number" class="w-full px-2 py-1 border rounded text-xs" 
+                                           value="\${m.away_score || ''}" data-match-id="\${m.id}" data-field="away_score">
+                                </div>
+                            </div>
+                            <button onclick="saveMatchResult(\${m.id})" class="btn btn-primary btn-sm w-full">
+                                <i class="fas fa-save mr-1"></i>결과 저장
+                            </button>
+                        </div>
+                    </div>
+                \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">완료된 경기가 없습니다.</p>'
+                
+                document.getElementById('settlement-matches-list').innerHTML = html
+            } catch (error) {
+                console.error('완료된 경기 로드 오류:', error)
+            }
+        }
+        
+        // 경기 결과 저장
+        async function saveMatchResult(matchId) {
+            try {
+                const resultSelect = document.querySelector(\`select[data-match-id="\${matchId}"][data-field="result"]\`)
+                const homeScoreInput = document.querySelector(\`input[data-match-id="\${matchId}"][data-field="home_score"]\`)
+                const awayScoreInput = document.querySelector(\`input[data-match-id="\${matchId}"][data-field="away_score"]\`)
+                
+                const result = resultSelect.value
+                const homeScore = parseInt(homeScoreInput.value) || 0
+                const awayScore = parseInt(awayScoreInput.value) || 0
+                
+                if (!result) {
+                    alert('경기 결과를 선택해주세요.')
+                    return
+                }
+                
+                await axios.post(\`\${API_BASE}/betting/matches/\${matchId}/result\`, {
+                    result,
+                    home_score: homeScore,
+                    away_score: awayScore
+                })
+                
+                alert('경기 결과가 저장되었습니다.')
+                await loadCompletedMatchesForResult()
+            } catch (error) {
+                console.error('경기 결과 저장 오류:', error)
+                alert('경기 결과 저장 중 오류가 발생했습니다.')
+            }
+        }
+        
+        // 배팅 정산 모달 열기
+        async function openBettingSettlementModal() {
+            try {
+                // 완료된 경기 조회
+                const res = await axios.get(\`\${API_BASE}/betting/matches?status=completed\`)
+                const matches = res.data.matches || []
+                
+                // 결과가 등록되지 않은 경기 필터링
+                const pendingMatches = matches.filter(m => !m.result || m.result === '')
+                
+                if (pendingMatches.length === 0) {
+                    alert('정산할 경기가 없습니다. 모든 경기의 결과가 등록되었습니다.')
+                    return
+                }
+                
+                const html = pendingMatches.map(m => \`
+                    <div class="border rounded p-3 bg-gray-50">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-bold">\${m.match_name}</p>
+                                <p class="text-sm text-gray-600">\${m.home_team} vs \${m.away_team}</p>
+                                <p class="text-xs text-gray-500 mt-1">\${new Date(m.match_date).toLocaleString()}</p>
+                            </div>
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">결과 대기</span>
+                        </div>
+                    </div>
+                \`).join('')
+                
+                document.getElementById('settlement-match-list').innerHTML = html
+                document.getElementById('betting-settlement-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('정산 모달 열기 오류:', error)
+                alert('정산 모달 열기 중 오류가 발생했습니다.')
+            }
+        }
+        
+        // 배팅 정산 모달 닫기
+        function closeBettingSettlementModal() {
+            document.getElementById('betting-settlement-modal').classList.add('hidden')
+        }
+        
+        // 배팅 정산 확정
+        async function confirmBettingSettlement() {
+            if (!confirm('정산을 확정하시겠습니까? 모든 배팅 결과가 확정되고 동결된 포인트가 해제됩니다.')) {
+                return
+            }
+            
+            try {
+                // 정산 API 호출
+                await axios.post(\`\${API_BASE}/betting/settlement/confirm\`)
+                
+                alert('정산이 완료되었습니다.')
+                closeBettingSettlementModal()
+                await refreshBettingStats()
+                await loadBetting()
+            } catch (error) {
+                console.error('정산 확정 오류:', error)
+                alert('정산 확정 중 오류가 발생했습니다: ' + (error.response?.data?.error || error.message))
             }
         }
 
