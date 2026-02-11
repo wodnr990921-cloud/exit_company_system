@@ -441,9 +441,22 @@ app.get('/', (c) => {
             <div id="members-view" class="view-content hidden">
                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
                     <h2 class="text-xl md:text-2xl font-bold"><i class="fas fa-users mr-2"></i>회원 관리</h2>
-                    <button id="create-member-btn" onclick="showNewMemberModal()" class="btn btn-primary w-full sm:w-auto" data-permission="staff">
-                        <i class="fas fa-user-plus mr-2"></i>회원 등록
-                    </button>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <!-- 목록 형태 토글 -->
+                        <div class="flex gap-1 bg-gray-100 rounded-lg p-1">
+                            <button id="view-card-btn" onclick="setMemberViewType('card')" 
+                                    class="px-3 py-1.5 rounded bg-white text-gray-700 transition text-sm">
+                                <i class="fas fa-th mr-1"></i>카드
+                            </button>
+                            <button id="view-list-btn" onclick="setMemberViewType('list')" 
+                                    class="px-3 py-1.5 rounded text-gray-600 hover:text-gray-800 transition text-sm">
+                                <i class="fas fa-list mr-1"></i>목록
+                            </button>
+                        </div>
+                        <button id="create-member-btn" onclick="showNewMemberModal()" class="btn btn-primary flex-1 sm:flex-none" data-permission="staff">
+                            <i class="fas fa-user-plus mr-2"></i>회원 등록
+                        </button>
+                    </div>
                 </div>
 
                 <div class="card mb-6">
@@ -3603,6 +3616,32 @@ console.log('권한 관리 함수 로드 완료')
             container.innerHTML = html
         }
 
+        // 회원 목록 뷰 타입 (카드형/리스트형)
+        let memberViewType = 'card' // 'card' 또는 'list'
+        
+        function setMemberViewType(type) {
+            memberViewType = type
+            
+            // 버튼 스타일 업데이트
+            const cardBtn = document.getElementById('view-card-btn')
+            const listBtn = document.getElementById('view-list-btn')
+            
+            if (type === 'card') {
+                cardBtn.classList.add('bg-white', 'text-gray-700')
+                cardBtn.classList.remove('text-gray-600', 'hover:text-gray-800')
+                listBtn.classList.remove('bg-white', 'text-gray-700')
+                listBtn.classList.add('text-gray-600', 'hover:text-gray-800')
+            } else {
+                listBtn.classList.add('bg-white', 'text-gray-700')
+                listBtn.classList.remove('text-gray-600', 'hover:text-gray-800')
+                cardBtn.classList.remove('bg-white', 'text-gray-700')
+                cardBtn.classList.add('text-gray-600', 'hover:text-gray-800')
+            }
+            
+            // 목록 다시 로드
+            loadMembers()
+        }
+
         // 회원 목록 로드
         async function loadMembers(page = 1) {
             const search = document.getElementById('member-search').value
@@ -3618,33 +3657,89 @@ console.log('권한 관리 함수 로드 완료')
                     pagination.members = { ...pagination.members, ...paginationInfo }
                 }
 
-                const html = members.length > 0 ? members.map(m => \`
-                    <div class="card hover:shadow-lg transition">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex-1" onclick="showMemberDetail(\${m.id})" style="cursor: pointer;">
-                                <h3 class="font-bold text-lg">\${m.name}</h3>
-                                <p class="text-sm text-gray-600">
-                                    <i class="fas fa-building mr-1"></i>수용기관: \${m.institution || '미지정'}
-                                </p>
-                                <p class="text-sm text-gray-600">
-                                    <i class="fas fa-id-card mr-1"></i>수용번호: \${m.member_number || m.inmate_number || '-'}
-                                </p>
+                const membersList = document.getElementById('members-list')
+                
+                if (members.length === 0) {
+                    membersList.innerHTML = '<p class="text-gray-500 text-center py-8">회원이 없습니다.</p>'
+                    membersList.className = ''
+                } else if (memberViewType === 'card') {
+                    // 카드형 뷰
+                    membersList.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+                    membersList.innerHTML = members.map(m => \`
+                        <div class="card hover:shadow-lg transition">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1" onclick="showMemberDetail(\${m.id})" style="cursor: pointer;">
+                                    <h3 class="font-bold text-lg">\${m.name}</h3>
+                                    <p class="text-sm text-gray-600">
+                                        <i class="fas fa-building mr-1"></i>수용기관: \${m.institution || '미지정'}
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        <i class="fas fa-id-card mr-1"></i>수용번호: \${m.member_number || m.inmate_number || '-'}
+                                    </p>
+                                </div>
+                                <button onclick="event.stopPropagation(); showEditMemberModal(\${m.id})" 
+                                        class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
+                                    <i class="fas fa-edit"></i>
+                                </button>
                             </div>
-                            <button onclick="event.stopPropagation(); showEditMemberModal(\${m.id})" 
-                                    class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
-                                <i class="fas fa-edit"></i>
-                            </button>
+                            <div class="mt-3 space-y-1">
+                                <p class="text-sm"><span class="font-bold">일반 포인트:</span> \${m.points.toLocaleString()}원</p>
+                                <p class="text-sm"><span class="font-bold">배팅 포인트:</span> \${m.betting_points.toLocaleString()}원</p>
+                                \${m.frozen_points > 0 ? \`<p class="text-sm text-yellow-600"><span class="font-bold">동결:</span> \${m.frozen_points.toLocaleString()}원</p>\` : ''}
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">가입일: \${new Date(m.created_at).toLocaleDateString()}</p>
                         </div>
-                        <div class="mt-3 space-y-1">
-                            <p class="text-sm"><span class="font-bold">일반 포인트:</span> \${m.points.toLocaleString()}원</p>
-                            <p class="text-sm"><span class="font-bold">배팅 포인트:</span> \${m.betting_points.toLocaleString()}원</p>
-                            \${m.frozen_points > 0 ? \`<p class="text-sm text-yellow-600"><span class="font-bold">동결:</span> \${m.frozen_points.toLocaleString()}원</p>\` : ''}
-                        </div>
-                        <p class="text-xs text-gray-400 mt-2">가입일: \${new Date(m.created_at).toLocaleDateString()}</p>
-                    </div>
-                \`).join('') : '<p class="text-gray-500 text-center py-8">회원이 없습니다.</p>'
-
-                document.getElementById('members-list').innerHTML = html
+                    \`).join('')
+                } else {
+                    // 리스트형 뷰
+                    membersList.className = 'overflow-x-auto'
+                    membersList.innerHTML = \`
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 border-b">
+                                    <th class="text-left p-3 text-sm font-semibold">이름</th>
+                                    <th class="text-left p-3 text-sm font-semibold">수용기관</th>
+                                    <th class="text-left p-3 text-sm font-semibold">수용번호</th>
+                                    <th class="text-right p-3 text-sm font-semibold">일반 포인트</th>
+                                    <th class="text-right p-3 text-sm font-semibold">배팅 포인트</th>
+                                    <th class="text-center p-3 text-sm font-semibold">가입일</th>
+                                    <th class="text-center p-3 text-sm font-semibold">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                \${members.map(m => \`
+                                    <tr class="border-b hover:bg-gray-50 transition cursor-pointer" 
+                                        onclick="showMemberDetail(\${m.id})">
+                                        <td class="p-3">
+                                            <div class="font-medium text-gray-800">\${m.name}</div>
+                                        </td>
+                                        <td class="p-3 text-sm text-gray-600">
+                                            <i class="fas fa-building mr-1"></i>\${m.institution || '미지정'}
+                                        </td>
+                                        <td class="p-3 text-sm text-gray-600">
+                                            \${m.member_number || m.inmate_number || '-'}
+                                        </td>
+                                        <td class="p-3 text-right text-sm">
+                                            \${m.points.toLocaleString()}원
+                                        </td>
+                                        <td class="p-3 text-right text-sm">
+                                            \${m.betting_points.toLocaleString()}원
+                                        </td>
+                                        <td class="p-3 text-center text-xs text-gray-500">
+                                            \${new Date(m.created_at).toLocaleDateString()}
+                                        </td>
+                                        <td class="p-3 text-center">
+                                            <button onclick="event.stopPropagation(); showEditMemberModal(\${m.id})" 
+                                                    class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                \`).join('')}
+                            </tbody>
+                        </table>
+                    \`
+                }
                 
                 // 페이지네이션 UI 렌더링
                 renderPagination('members', 'members-pagination', 'loadMembers')
@@ -5167,7 +5262,7 @@ console.log('권한 관리 함수 로드 완료')
                             </div>
                         \`
                     } else {
-                        // 기존 회원: 정보 표시 + 회원 변경 버튼
+                        // 기존 회원: 정보 표시 + 회원 변경 + 회원 정보 수정 버튼
                         memberManagementCard.innerHTML = \`
                             <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
                                 <div class="flex items-center justify-between mb-3">
@@ -5198,11 +5293,18 @@ console.log('권한 관리 함수 로드 완료')
                                         </div>
                                     \` : ''}
                                 </div>
-                                <button onclick="openChangeMemberModal()" 
-                                        class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
-                                    <i class="fas fa-exchange-alt mr-1"></i>
-                                    회원 변경
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="openChangeMemberModal()" 
+                                            class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
+                                        <i class="fas fa-exchange-alt mr-1"></i>
+                                        회원 변경
+                                    </button>
+                                    <button onclick="showEditMemberModal(\${ticket.member_id})" 
+                                            class="flex-1 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition text-sm">
+                                        <i class="fas fa-edit mr-1"></i>
+                                        정보 수정
+                                    </button>
+                                </div>
                             </div>
                         \`
                     }
@@ -5971,14 +6073,18 @@ console.log('권한 관리 함수 로드 완료')
 
                 document.getElementById('member-point-transactions').innerHTML = transactionsHtml
 
-                // 티켓 이력
+                // 티켓 이력 (클릭 시 티켓 상세 모달 열림)
                 const ticketsHtml = tickets.length > 0 ? tickets.map(t => \`
-                    <div class="flex justify-between items-center py-2 border-b">
+                    <div class="flex justify-between items-center py-2 border-b hover:bg-gray-50 cursor-pointer transition" 
+                         onclick="showTicketDetail(\${t.id})">
                         <div>
                             <p class="text-sm font-medium">\${t.title}</p>
                             <p class="text-xs text-gray-500">\${t.ticket_number} - \${new Date(t.created_at).toLocaleDateString()}</p>
                         </div>
-                        <span class="status-badge status-\${t.status}">\${t.status}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="status-badge status-\${t.status}">\${getStatusText(t.status)}</span>
+                            <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+                        </div>
                     </div>
                 \`).join('') : '<p class="text-gray-500 text-sm text-center py-4">티켓 이력이 없습니다.</p>'
 
