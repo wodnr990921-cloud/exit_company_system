@@ -7331,7 +7331,7 @@ console.log('권한 관리 함수 로드 완료')
                 container.innerHTML = tickets.filter(t => 
                     !selectedTicketsForAssignment.find(st => st.id === t.id)
                 ).map(ticket => \`
-                    <div class="border rounded p-2 hover:bg-gray-50 cursor-pointer" onclick="selectTicketForAssignment(\${ticket.id}, '\${ticket.ticket_number}', '\${ticket.title.replace(/'/g, "\\\\'")}', '\${ticket.member_name || ""}')">
+                    <div class="border rounded p-2 hover:bg-gray-50 cursor-pointer" onclick="selectTicketForAssignment(\${ticket.id}, '\${ticket.ticket_number}', '\${ticket.title.replace(/'/g, "\\'")}', '\${ticket.member_name || ""}')">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <p class="font-medium text-sm">\${ticket.ticket_number}</p>
