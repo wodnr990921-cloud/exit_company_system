@@ -7328,7 +7328,10 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
                 
-                const escapeHtml = (str) => String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+                const escapeHtml = (str) => {
+                    if (!str) return ''
+                    return String(str).split('"').join('&quot;').split("'").join('&#39;')
+                }
                 container.innerHTML = tickets.filter(t => 
                     !selectedTicketsForAssignment.find(st => st.id === t.id)
                 ).map(ticket => {
