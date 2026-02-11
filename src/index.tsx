@@ -1133,8 +1133,22 @@ app.get('/', (c) => {
                             
                             <div>
                                 <label class="block text-sm font-medium mb-2">
-                                    편지 내용
-                                    <span class="text-xs text-gray-500 ml-1">(AI 추출)</span>
+                                    편지 요약 카테고리
+                                </label>
+                                <select id="inspection-category" class="w-full px-3 py-2 border rounded">
+                                    <option value="">-- 카테고리 선택 --</option>
+                                    <option value="도서">도서</option>
+                                    <option value="베팅">베팅</option>
+                                    <option value="문의">문의</option>
+                                    <option value="이체">이체</option>
+                                    <option value="충전">충전</option>
+                                    <option value="기타">기타</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">
+                                    편지 내용 (AI 추출)
                                 </label>
                                 <textarea id="inspection-letter-content" class="w-full px-3 py-2 border rounded h-32" readonly></textarea>
                             </div>

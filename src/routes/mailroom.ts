@@ -488,10 +488,42 @@ mailroom.post('/:id/ocr', async (c) => {
       WHERE id = ?
     `).bind(JSON.stringify(ocrData), id).run()
     
+    // 회원 자동 매칭 (봉투가 있는 경우에만)
+    let matchedMemberId = null
+    if (hasAnyEnvelope) {
+      const envelopeResult = ocrResults.find(r => r.has_envelope && r.sender_info)
+      if (envelopeResult?.sender_info) {
+        const { sender_name, inmate_number } = envelopeResult.sender_info
+        
+        if (sender_name && inmate_number) {
+          // 이름 + 수용번호로 회원 검색
+          const { results: members } = await c.env.DB.prepare(`
+            SELECT id FROM members 
+            WHERE name = ? AND inmate_number = ?
+            LIMIT 1
+          `).bind(sender_name, inmate_number).all()
+          
+          if (members.length > 0) {
+            matchedMemberId = (members[0] as any).id
+            
+            // 자동으로 회원 연결
+            await c.env.DB.prepare(`
+              UPDATE mailroom_items 
+              SET member_id = ?, updated_at = CURRENT_TIMESTAMP
+              WHERE id = ?
+            `).bind(matchedMemberId, id).run()
+            
+            console.log(`Auto-matched member ${matchedMemberId} for mail ${id}`)
+          }
+        }
+      }
+    }
+    
     return c.json({
       success: true,
       case_type: caseType,
       has_envelope: hasAnyEnvelope,
+      matched_member_id: matchedMemberId,
       ocr_results: ocrResults,
       summary: {
         total_images: imageKeys.length,
@@ -784,6 +816,13 @@ function extractSenderInfo(text: string): any {
         break
       }
     }
+  }
+  
+  // 3. 편지 내용 추출
+  const contentPattern = /내용:\s*(.+)/s
+  const contentMatch = text.match(contentPattern)
+  if (contentMatch) {
+    senderInfo.letter_content = contentMatch[1].trim()
   }
   
   return Object.keys(senderInfo).length > 0 ? senderInfo : null
