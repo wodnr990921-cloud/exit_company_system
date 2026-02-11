@@ -1176,7 +1176,7 @@ app.get('/', (c) => {
         </div>
 
         <!-- 회원 변경 모달 -->
-        <div id="change-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div id="change-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-60 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col">
                 <div class="p-6 border-b">
                     <h3 class="text-xl font-bold"><i class="fas fa-user-edit mr-2"></i>회원 변경</h3>
@@ -1215,7 +1215,7 @@ app.get('/', (c) => {
         </div>
 
         <!-- 회원 정보 수정 모달 -->
-        <div id="edit-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div id="edit-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-60 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col">
                 <div class="p-6 border-b">
                     <h3 class="text-xl font-bold"><i class="fas fa-user-edit mr-2"></i>회원 정보 수정</h3>
