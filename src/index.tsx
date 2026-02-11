@@ -7617,7 +7617,7 @@ console.log('권한 관리 함수 로드 완료')
                 const ocrText = ocrResults.map(r => r.text).join('\\n\\n')
                 
                 // 편지 요약 추출
-                const summaryMatch = ocrText.match(/요약:\s*(.+?)(?=\n카테고리:|$)/s)
+                const summaryMatch = ocrText.match(/요약:\s*(.+?)(?=\\n카테고리:|$)/s)
                 const letterSummary = summaryMatch ? summaryMatch[1].trim() : letterContents
                 
                 // 카테고리 자동 추출
