@@ -421,4 +421,31 @@ tickets.get('/stats/dashboard', async (c) => {
   }
 })
 
+// 티켓 삭제 (관리자만)
+tickets.delete('/:id', async (c) => {
+  const { DB } = c.env
+  const id = c.req.param('id')
+  
+  try {
+    // 티켓 존재 확인
+    const ticket = await DB.prepare('SELECT id FROM tickets WHERE id = ?').bind(id).first()
+    
+    if (!ticket) {
+      return c.json({ error: '티켓을 찾을 수 없습니다.' }, 404)
+    }
+    
+    // 관련 데이터 삭제 (CASCADE 효과)
+    await DB.prepare('DELETE FROM ticket_comments WHERE ticket_id = ?').bind(id).run()
+    await DB.prepare('DELETE FROM ticket_items WHERE ticket_id = ?').bind(id).run()
+    
+    // 티켓 삭제
+    await DB.prepare('DELETE FROM tickets WHERE id = ?').bind(id).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('티켓 삭제 오류:', error)
+    return c.json({ error: '티켓 삭제 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 export default tickets
