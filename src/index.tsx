@@ -1231,16 +1231,28 @@ app.get('/', (c) => {
                         </div>
                     </div>
                     
-                    <!-- 이름 (읽기 전용) -->
+                    <!-- 이름 (관리자는 수정 가능) -->
                     <div>
                         <label class="block text-sm font-medium mb-1">회원 이름</label>
                         <input 
                             type="text" 
                             id="edit-member-name" 
-                            class="w-full px-3 py-2 border rounded bg-gray-100"
-                            readonly
+                            class="w-full px-3 py-2 border rounded"
+                            placeholder="예: 홍길동"
                         >
-                        <p class="text-xs text-gray-500 mt-1">이름은 변경할 수 없습니다</p>
+                        <p class="text-xs text-gray-500 mt-1">⚠️ 관리자만 수정 가능</p>
+                    </div>
+                    
+                    <!-- 회원 고유번호 (관리자는 수정 가능 - 재배정) -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">회원 고유번호</label>
+                        <input 
+                            type="text" 
+                            id="edit-member-unique-number" 
+                            class="w-full px-3 py-2 border rounded"
+                            placeholder="예: M20240215001"
+                        >
+                        <p class="text-xs text-gray-500 mt-1">⚠️ 시스템 자동 생성 번호 (재배정 시 수정 가능)</p>
                     </div>
                     
                     <!-- 수용번호 -->
@@ -1248,10 +1260,11 @@ app.get('/', (c) => {
                         <label class="block text-sm font-medium mb-1">수용번호</label>
                         <input 
                             type="text" 
-                            id="edit-member-number" 
+                            id="edit-member-inmate-number" 
                             class="w-full px-3 py-2 border rounded"
                             placeholder="예: 1234"
                         >
+                        <p class="text-xs text-gray-500 mt-1">수용 시설에서 부여한 번호 (1~9999)</p>
                     </div>
                     
                     <!-- 수용기관 -->
@@ -7483,13 +7496,13 @@ console.log('권한 관리 함수 로드 완료')
                     document.getElementById('inspection-name').value = senderInfo.sender_name || ''
                     document.getElementById('inspection-number').value = senderInfo.inmate_number || ''
                     document.getElementById('inspection-institution').value = senderInfo.institution || ''
-                    document.getElementById('inspection-address').value = senderInfo.mailbox_address || senderInfo.full_address || ''
+                    document.getElementById('inspection-address').value = senderInfo.po_box_address || senderInfo.mailbox_address || senderInfo.full_address || ''
                 } else {
                     // OCR 실패 시 기존 정보 표시
                     document.getElementById('inspection-name').value = item.member_name || ''
                     document.getElementById('inspection-number').value = item.member_number || ''
                     document.getElementById('inspection-institution').value = item.institution || ''
-                    document.getElementById('inspection-address').value = item.mailbox_address || ''
+                    document.getElementById('inspection-address').value = item.po_box_address || item.mailbox_address || ''
                 }
                 
                 document.getElementById('inspection-ocr-text').value = ocrText
@@ -7585,7 +7598,7 @@ console.log('권한 관리 함수 로드 완료')
                     
                     dropdown.innerHTML = memberSearchResults.map(m => \`
                         <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b" 
-                             onclick="selectMember(\${m.id}, '\${m.name}', '\${m.inmate_number}', '\${m.institution}', '\${m.mailbox_address || ''}')">
+                             onclick="selectMember(\${m.id}, '\${m.name}', '\${m.inmate_number}', '\${m.institution}', '\${m.po_box_address || ''}')">
                             <p class="font-medium text-sm">\${m.name}</p>
                             <p class="text-xs text-gray-600">수용번호: \${m.inmate_number} | \${m.institution}</p>
                         </div>
@@ -7690,7 +7703,7 @@ console.log('권한 관리 함수 로드 완료')
                         const instDiv = member.institution ? \`<div class="text-sm text-gray-500">수용기관: \${member.institution}</div>\` : ''
                         return \`
                             <div class="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0" 
-                                 onclick="selectChangeMember(\${member.id}, '\${member.name}', '\${member.member_number || ''}', '\${member.institution || ''}', '\${member.mailbox_address || ''}')">
+                                 onclick="selectChangeMember(\${member.id}, '\${member.name}', '\${member.member_number || ''}', '\${member.institution || ''}', '\${member.po_box_address || ''}')">
                                 <div class="font-medium text-gray-800">\${member.name}</div>
                                 \${numberDiv}
                                 \${instDiv}
@@ -7771,7 +7784,7 @@ console.log('권한 관리 함수 로드 완료')
                     member_number: memberNumber.trim(),
                     inmate_number: memberNumber.trim(),
                     institution: institution.trim(),
-                    mailbox_address: mailboxAddress.trim(),
+                    po_box_address: mailboxAddress.trim(),
                     depositor_name: '',
                     status: 'active',
                     notes: \`티켓에서 신규 등록\`
@@ -7821,17 +7834,19 @@ console.log('권한 관리 함수 로드 완료')
                 const currentInfo = document.getElementById('edit-member-current-info')
                 currentInfo.innerHTML = \`
                     <div><strong>이름:</strong> \${member.name}</div>
-                    <div><strong>수용번호:</strong> \${member.member_number || '-'}</div>
+                    <div><strong>회원 고유번호:</strong> \${member.member_number || '미배정'}</div>
+                    <div><strong>수용번호:</strong> \${member.inmate_number || '-'}</div>
                     <div><strong>수용기관:</strong> \${member.institution || '미지정'}</div>
-                    <div><strong>사서함:</strong> \${member.mailbox_address || '-'}</div>
+                    <div><strong>사서함:</strong> \${member.po_box_address || '-'}</div>
                     <div><strong>입금자명:</strong> \${member.depositor_name || '-'}</div>
                 \`
                 
                 // 폼 필드 채우기
                 document.getElementById('edit-member-name').value = member.name
-                document.getElementById('edit-member-number').value = member.member_number || ''
+                document.getElementById('edit-member-unique-number').value = member.member_number || ''
+                document.getElementById('edit-member-inmate-number').value = member.inmate_number || ''
                 document.getElementById('edit-member-institution').value = member.institution || ''
-                document.getElementById('edit-member-mailbox').value = member.mailbox_address || ''
+                document.getElementById('edit-member-mailbox').value = member.po_box_address || ''
                 document.getElementById('edit-member-depositor').value = member.depositor_name || ''
                 document.getElementById('edit-member-reason').value = ''
                 
@@ -7850,11 +7865,13 @@ console.log('권한 관리 함수 로드 완료')
             currentEditingMemberData = null
         }
         
-        // 회원 정보 수정 제출
+        // 회원 정보 수정 제출 (관리자용 - 모든 필드 수정 가능)
         async function submitMemberEdit() {
             if (!currentEditingMemberId || !currentEditingMemberData) return
             
-            const newNumber = document.getElementById('edit-member-number').value.trim()
+            const newName = document.getElementById('edit-member-name').value.trim()
+            const newMemberNumber = document.getElementById('edit-member-unique-number').value.trim()
+            const newInmateNumber = document.getElementById('edit-member-inmate-number').value.trim()
             const newInstitution = document.getElementById('edit-member-institution').value.trim()
             const newMailbox = document.getElementById('edit-member-mailbox').value.trim()
             const newDepositor = document.getElementById('edit-member-depositor').value.trim()
@@ -7862,14 +7879,20 @@ console.log('권한 관리 함수 로드 완료')
             
             // 변경 사항 확인
             const changes = []
-            if (newNumber !== (currentEditingMemberData.member_number || '')) {
-                changes.push(\`수용번호: \${currentEditingMemberData.member_number || '-'} → \${newNumber || '-'}\`)
+            if (newName !== (currentEditingMemberData.name || '')) {
+                changes.push(\`이름: \${currentEditingMemberData.name || '-'} → \${newName || '-'}\`)
+            }
+            if (newMemberNumber !== (currentEditingMemberData.member_number || '')) {
+                changes.push(\`회원 고유번호: \${currentEditingMemberData.member_number || '미배정'} → \${newMemberNumber || '미배정'}\`)
+            }
+            if (newInmateNumber !== (currentEditingMemberData.inmate_number || '')) {
+                changes.push(\`수용번호: \${currentEditingMemberData.inmate_number || '-'} → \${newInmateNumber || '-'}\`)
             }
             if (newInstitution !== (currentEditingMemberData.institution || '')) {
                 changes.push(\`수용기관: \${currentEditingMemberData.institution || '미지정'} → \${newInstitution || '미지정'}\`)
             }
-            if (newMailbox !== (currentEditingMemberData.mailbox_address || '')) {
-                changes.push(\`사서함: \${currentEditingMemberData.mailbox_address || '-'} → \${newMailbox || '-'}\`)
+            if (newMailbox !== (currentEditingMemberData.po_box_address || '')) {
+                changes.push(\`사서함: \${currentEditingMemberData.po_box_address || '-'} → \${newMailbox || '-'}\`)
             }
             if (newDepositor !== (currentEditingMemberData.depositor_name || '')) {
                 changes.push(\`입금자명: \${currentEditingMemberData.depositor_name || '-'} → \${newDepositor || '-'}\`)
@@ -7885,17 +7908,23 @@ console.log('권한 관리 함수 로드 완료')
             if (!confirm(confirmMsg)) return
             
             try {
-                // 회원 정보 수정 요청 (승인 필요)
+                // 회원 정보 수정 요청 (관리자 전체 필드 수정)
                 await axios.put(\`\${API_BASE}/members/\${currentEditingMemberId}\`, {
-                    member_number: newNumber,
+                    name: newName,
+                    member_number: newMemberNumber,
+                    inmate_number: newInmateNumber,
                     institution: newInstitution,
-                    mailbox_address: newMailbox,
+                    po_box_address: newMailbox,
                     depositor_name: newDepositor,
                     change_reason: reason || changes.join(', '),
-                    approval_required: true
+                    approval_required: currentStaff.role !== 'admin'
                 })
                 
-                alert(\`회원 정보 수정 요청이 저장되었습니다.\\n\\n변경 내역:\\n\${changes.join('\\n')}\\n\\n※ 관리자 승인 후 반영됩니다.\`)
+                const successMsg = currentStaff.role === 'admin'
+                    ? \`회원 정보가 수정되었습니다.\\n\\n변경 내역:\\n\${changes.join('\\n')}\`
+                    : \`회원 정보 수정 요청이 저장되었습니다.\\n\\n변경 내역:\\n\${changes.join('\\n')}\\n\\n※ 관리자 승인 후 반영됩니다.\`
+                
+                alert(successMsg)
                 
                 // 모달 닫고 목록 새로고침
                 closeEditMemberModal()
@@ -7945,7 +7974,7 @@ console.log('권한 관리 함수 로드 완료')
                                 member_number: number,
                                 inmate_number: number,
                                 institution: institution || '미지정',
-                                mailbox_address: mailboxAddress || '',
+                                po_box_address: mailboxAddress || '',
                                 depositor_name: name,
                                 status: 'active',
                                 notes: '우편물 검수에서 자동 등록'
@@ -8063,7 +8092,7 @@ console.log('권한 관리 함수 로드 완료')
                         name,
                         member_number: number,
                         institution: institution || '미지정',
-                        mailbox_address: '',
+                        po_box_address: '',
                         depositor_name: name,
                         status: 'active',
                         notes: '우편물 검수에서 자동 등록'
