@@ -3236,12 +3236,17 @@ console.log('권한 관리 함수 로드 완료')
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
             document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'))
 
-            document.getElementById('view-view').classList.remove('hidden')
+            const viewElement = document.getElementById(view + '-view')
+            if (viewElement) {
+                viewElement.classList.remove('hidden')
+            }
             
             // 데스크톱 네비게이션 활성화
             const desktopNavButtons = document.querySelectorAll('.nav-item')
+            const searchString = "showView('" + view + "')"
             desktopNavButtons.forEach(btn => {
-                if (btn.getAttribute('onclick')?.includes(\`showView('\${view}')\`)) {
+                const onclick = btn.getAttribute('onclick')
+                if (onclick && onclick.includes(searchString)) {
                     btn.classList.add('active')
                 }
             })
@@ -3249,7 +3254,8 @@ console.log('권한 관리 함수 로드 완료')
             // 모바일 네비게이션 활성화
             const mobileNavButtons = document.querySelectorAll('.mobile-nav-item')
             mobileNavButtons.forEach(btn => {
-                if (btn.getAttribute('onclick')?.includes(\`showView('\${view}')\`)) {
+                const onclick = btn.getAttribute('onclick')
+                if (onclick && onclick.includes(searchString)) {
                     btn.classList.add('active')
                 }
             })
