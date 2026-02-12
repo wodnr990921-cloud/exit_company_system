@@ -5560,7 +5560,7 @@ console.log('권한 관리 함수 로드 완료')
         // Transform 업데이트 (Pan 포함)
         function updateImageTransformAdvanced() {
             const imgElement = document.getElementById('current-mail-image')
-            imgElement.style.transform = \`rotate(\${imageRotation}deg) scale(\${imageScale}) translate(\${panOffsetX / imageScale}px, \${panOffsetY / imageScale}px)\`
+            imgElement.style.transform = 'rotate(' + imageRotation + 'deg) scale(' + imageScale + ') translate(' + (panOffsetX / imageScale) + 'px, ' + (panOffsetY / imageScale) + 'px)'
             imgElement.style.cursor = imageScale > 1.0 ? 'grab' : 'default'
         }
 
