@@ -3703,35 +3703,34 @@ console.log('권한 관리 함수 로드 완료')
                 const points = pointsRes.data.transactions || []
                 const settlements = settlementsRes.data.settlements || []
 
-                const html = \`
-                    <div class="space-y-2">
-                        \${points.length > 0 ? '<h4 class="font-bold text-sm mb-2">포인트 동결 승인</h4>' : ''}
-                        \${points.map(p => \`
-                            <div class="bg-yellow-50 p-3 rounded border border-yellow-200">
-                                <p class="font-bold">\${p.member_name} - \${p.point_type === 'regular' ? '일반' : '배팅'} 포인트</p>
-                                <p class="text-sm">\${p.amount.toLocaleString()}원</p>
-                                <div class="flex space-x-2 mt-2">
-                                    <button onclick="approvePoint(\${p.id}, 'approve')" class="btn btn-success btn-sm">승인</button>
-                                    <button onclick="approvePoint(\${p.id}, 'reject')" class="btn btn-danger btn-sm">거부</button>
-                                </div>
-                            </div>
-                        \`).join('')}
+                const html = 
+                    '<div class="space-y-2">' +
+                        (points.length > 0 ? '<h4 class="font-bold text-sm mb-2">포인트 동결 승인</h4>' : '') +
+                        points.map(p => 
+                            '<div class="bg-yellow-50 p-3 rounded border border-yellow-200">' +
+                                '<p class="font-bold">' + p.member_name + ' - ' + (p.point_type === 'regular' ? '일반' : '배팅') + ' 포인트</p>' +
+                                '<p class="text-sm">' + p.amount.toLocaleString() + '원</p>' +
+                                '<div class="flex space-x-2 mt-2">' +
+                                    '<button onclick="approvePoint(' + p.id + ', \'approve\')" class="btn btn-success btn-sm">승인</button>' +
+                                    '<button onclick="approvePoint(' + p.id + ', \'reject\')" class="btn btn-danger btn-sm">거부</button>' +
+                                '</div>' +
+                            '</div>'
+                        ).join('') +
                         
-                        \${settlements.length > 0 ? '<h4 class="font-bold text-sm mb-2 mt-4">배팅 정산 승인</h4>' : ''}
-                        \${settlements.map(s => \`
-                            <div class="bg-green-50 p-3 rounded border border-green-200">
-                                <p class="font-bold">\${s.member_name} - \${s.folder_number}</p>
-                                <p class="text-sm">정산액: \${s.settlement_amount.toLocaleString()}원</p>
-                                <div class="flex space-x-2 mt-2">
-                                    <button onclick="approveSettlement(\${s.id})" class="btn btn-success btn-sm">승인</button>
-                                    <button onclick="rejectSettlement(\${s.id})" class="btn btn-danger btn-sm">거부</button>
-                                </div>
-                            </div>
-                        \`).join('')}
+                        (settlements.length > 0 ? '<h4 class="font-bold text-sm mb-2 mt-4">배팅 정산 승인</h4>' : '') +
+                        settlements.map(s => 
+                            '<div class="bg-green-50 p-3 rounded border border-green-200">' +
+                                '<p class="font-bold">' + s.member_name + ' - ' + s.folder_number + '</p>' +
+                                '<p class="text-sm">정산액: ' + s.settlement_amount.toLocaleString() + '원</p>' +
+                                '<div class="flex space-x-2 mt-2">' +
+                                    '<button onclick="approveSettlement(' + s.id + ')" class="btn btn-success btn-sm">승인</button>' +
+                                    '<button onclick="rejectSettlement(' + s.id + ')" class="btn btn-danger btn-sm">거부</button>' +
+                                '</div>' +
+                            '</div>'
+                        ).join('') +
                         
-                        \${points.length === 0 && settlements.length === 0 ? '<p class="text-gray-500 text-sm">승인 대기 중인 항목이 없습니다.</p>' : ''}
-                    </div>
-                \`
+                        (points.length === 0 && settlements.length === 0 ? '<p class="text-gray-500 text-sm">승인 대기 중인 항목이 없습니다.</p>' : '') +
+                    '</div>'
 
                 document.getElementById('pending-approvals').innerHTML = html
             } catch (error) {
@@ -4058,26 +4057,26 @@ console.log('권한 관리 함수 로드 완료')
                 const response = await axios.get(API_BASE + '/books?search= + search)
                 const books = response.data.books
 
-                const html = books.length > 0 ? books.map(b => \`
-                    <div class="card hover:shadow-lg transition cursor-pointer" onclick="showBookDetail(\${b.id})">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <h3 class="font-bold text-lg">\${b.title}</h3>
-                                <p class="text-sm text-gray-600 mt-1">\${b.author || '저자 미상'} | \${b.publisher || '출판사 미상'}</p>
-                                <p class="text-sm text-gray-500 mt-1">ISBN: \${b.isbn || 'N/A'}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-lg font-bold text-blue-600">\${b.price.toLocaleString()}원</p>
-                                <p class="text-sm \${b.stock > 0 ? 'text-green-600' : 'text-red-600'}">
-                                    재고: \${b.stock}권
-                                </p>
-                                <span class="text-xs px-2 py-1 rounded \${b.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                    \${b.status === 'available' ? '판매중' : '품절'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                \`).join('') : '<p class="text-gray-500 text-center py-8">도서가 없습니다.</p>'
+                const html = books.length > 0 ? books.map(b => 
+                    '<div class="card hover:shadow-lg transition cursor-pointer" onclick="showBookDetail(' + b.id + ')">' +
+                        '<div class="flex justify-between items-start">' +
+                            '<div class="flex-1">' +
+                                '<h3 class="font-bold text-lg">' + b.title + '</h3>' +
+                                '<p class="text-sm text-gray-600 mt-1">' + (b.author || '저자 미상') + ' | ' + (b.publisher || '출판사 미상') + '</p>' +
+                                '<p class="text-sm text-gray-500 mt-1">ISBN: ' + (b.isbn || 'N/A') + '</p>' +
+                            '</div>' +
+                            '<div class="text-right">' +
+                                '<p class="text-lg font-bold text-blue-600">' + b.price.toLocaleString() + '원</p>' +
+                                '<p class="text-sm ' + (b.stock > 0 ? 'text-green-600' : 'text-red-600') + '">' +
+                                    '재고: ' + b.stock + '권' +
+                                '</p>' +
+                                '<span class="text-xs px-2 py-1 rounded ' + (b.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') + '">' +
+                                    (b.status === 'available' ? '판매중' : '품절') +
+                                '</span>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>'
+                ).join('') : '<p class="text-gray-500 text-center py-8">도서가 없습니다.</p>'
 
                 document.getElementById('books-list').innerHTML = html
             } catch (error) {
@@ -4333,22 +4332,22 @@ console.log('권한 관리 함수 로드 완료')
                 return badges[role] || role
             }
             
-            const html = filteredStaff.length > 0 ? filteredStaff.map(s => \`
-                <div class="card hover:shadow-lg transition cursor-pointer" onclick="showStaffDetail(\${s.id})">
-                    <div class="flex flex-col space-y-3">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="font-bold text-lg">\${s.name}</h3>
-                                <p class="text-sm text-gray-600">\${s.email}</p>
-                            </div>
-                            \${getRoleBadge(s.role)}
-                        </div>
-                        <div class="text-sm text-gray-500 pt-2 border-t">
-                            <i class="fas fa-calendar mr-1"></i>등록: \${new Date(s.created_at).toLocaleDateString()}
-                        </div>
-                    </div>
-                </div>
-            \`).join('') : '<p class="text-gray-500 text-center py-8 col-span-full">직원이 없습니다.</p>'
+            const html = filteredStaff.length > 0 ? filteredStaff.map(s => 
+                '<div class="card hover:shadow-lg transition cursor-pointer" onclick="showStaffDetail(' + s.id + ')">' +
+                    '<div class="flex flex-col space-y-3">' +
+                        '<div class="flex justify-between items-start">' +
+                            '<div>' +
+                                '<h3 class="font-bold text-lg">' + s.name + '</h3>' +
+                                '<p class="text-sm text-gray-600">' + s.email + '</p>' +
+                            '</div>' +
+                            getRoleBadge(s.role) +
+                        '</div>' +
+                        '<div class="text-sm text-gray-500 pt-2 border-t">' +
+                            '<i class="fas fa-calendar mr-1"></i>등록: ' + new Date(s.created_at).toLocaleDateString() +
+                        '</div>' +
+                    '</div>' +
+                '</div>'
+            ).join('') : '<p class="text-gray-500 text-center py-8 col-span-full">직원이 없습니다.</p>'
             
             document.getElementById('staff-list').innerHTML = html
         }
@@ -4403,20 +4402,20 @@ console.log('권한 관리 함수 로드 완료')
                     return roles[role] || role
                 }
                 
-                const changesHtml = changes.length > 0 ? changes.map(change => \`
-                    <div class="p-2 bg-gray-50 rounded text-sm">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="font-medium">\${getRoleTextLocal(change.old_role)}</span>
-                                <i class="fas fa-arrow-right mx-1 text-gray-400"></i>
-                                <span class="font-medium">\${getRoleTextLocal(change.new_role)}</span>
-                            </div>
-                            <span class="text-xs text-gray-500">\${new Date(change.created_at).toLocaleDateString()}</span>
-                        </div>
-                        \${change.reason ? \`<p class="text-xs text-gray-600 mt-1">사유: \${change.reason}</p>\` : ''}
-                        <p class="text-xs text-gray-500 mt-1">변경자: \${change.changed_by_name}</p>
-                    </div>
-                \`).join('') : '<p class="text-sm text-gray-500">권한 변경 이력이 없습니다.</p>'
+                const changesHtml = changes.length > 0 ? changes.map(change => 
+                    '<div class="p-2 bg-gray-50 rounded text-sm">' +
+                        '<div class="flex justify-between items-start">' +
+                            '<div>' +
+                                '<span class="font-medium">' + getRoleTextLocal(change.old_role) + '</span>' +
+                                '<i class="fas fa-arrow-right mx-1 text-gray-400"></i>' +
+                                '<span class="font-medium">' + getRoleTextLocal(change.new_role) + '</span>' +
+                            '</div>' +
+                            '<span class="text-xs text-gray-500">' + new Date(change.created_at).toLocaleDateString() + '</span>' +
+                        '</div>' +
+                        (change.reason ? '<p class="text-xs text-gray-600 mt-1">사유: ' + change.reason + '</p>' : '') +
+                        '<p class="text-xs text-gray-500 mt-1">변경자: ' + change.changed_by_name + '</p>' +
+                    '</div>'
+                ).join('') : '<p class="text-sm text-gray-500">권한 변경 이력이 없습니다.</p>'
                 
                 document.getElementById('staff-role-changes').innerHTML = changesHtml
                 
@@ -4606,22 +4605,20 @@ console.log('권한 관리 함수 로드 완료')
                 
                 // 마감 상태 표시
                 if (data.is_closed) {
-                    document.getElementById('closing-status').innerHTML = \`
-                        <div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded">
-                            <i class="fas fa-check-circle mr-2"></i>
-                            \${data.closed_at ? new Date(data.closed_at).toLocaleString() : ''} 마감 완료
-                            \${data.closed_by ? \` (담당: \${data.closed_by})\` : ''}
-                        </div>
-                    \`
+                    document.getElementById('closing-status').innerHTML = 
+                        '<div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded">' +
+                            '<i class="fas fa-check-circle mr-2"></i>' +
+                            (data.closed_at ? new Date(data.closed_at).toLocaleString() : '') + ' 마감 완료' +
+                            (data.closed_by ? ' (담당: ' + data.closed_by + ')' : '') +
+                        '</div>'
                     document.getElementById('execute-closing-btn').disabled = true
                     document.getElementById('execute-closing-btn').classList.add('opacity-50', 'cursor-not-allowed')
                 } else {
-                    document.getElementById('closing-status').innerHTML = \`
-                        <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
-                            아직 마감되지 않았습니다.
-                        </div>
-                    \`
+                    document.getElementById('closing-status').innerHTML = 
+                        '<div class="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded">' +
+                            '<i class="fas fa-exclamation-triangle mr-2"></i>' +
+                            '아직 마감되지 않았습니다.' +
+                        '</div>'
                     document.getElementById('execute-closing-btn').disabled = false
                     document.getElementById('execute-closing-btn').classList.remove('opacity-50', 'cursor-not-allowed')
                 }
@@ -4641,7 +4638,7 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
 
-                if (!confirm(\`\${date} 일일 마감을 실행하시겠습니까?\\n\\n마감 후에는 수정할 수 없습니다.\`)) {
+                if (!confirm(date + ' 일일 마감을 실행하시겠습니까?\n\n마감 후에는 수정할 수 없습니다.')) {
                     return
                 }
 
@@ -4672,85 +4669,70 @@ console.log('권한 관리 함수 로드 완료')
             }
             
             const printWindow = window.open('', '', 'width=800,height=600')
-            const content = \`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>일일 마감 리포트 - \${date}</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; padding: 20px; }
-                        h1 { text-align: center; color: #333; }
-                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-                        th { background-color: #f4f4f4; font-weight: bold; }
-                        .summary { background-color: #e8f4f8; }
-                        .total { background-color: #4299e1; color: white; font-weight: bold; }
-                        @media print {
-                            button { display: none; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h1>📊 일일 마감 리포트</h1>
-                    <p style="text-align: center; color: #666;">마감 일자: \${date}</p>
-                    
-                    <h2>티켓 처리 현황</h2>
-                    <table>
-                        <tr><th>항목</th><th>수량</th></tr>
-                        <tr><td>총 티켓 수</td><td>\${document.getElementById('closing-total-tickets').textContent}</td></tr>
-                        <tr><td>처리 완료</td><td>\${document.getElementById('closing-completed-tickets').textContent}</td></tr>
-                        <tr><td>미처리</td><td>\${document.getElementById('closing-pending-tickets').textContent}</td></tr>
-                    </table>
-                    
-                    <h2>포인트 현황</h2>
-                    <table>
-                        <tr><th>항목</th><th>금액</th></tr>
-                        <tr><td>포인트 적립</td><td>\${document.getElementById('closing-earned-points').textContent}</td></tr>
-                        <tr><td>포인트 사용</td><td>\${document.getElementById('closing-used-points').textContent}</td></tr>
-                        <tr class="summary"><td>순 포인트</td><td>\${document.getElementById('closing-net-points').textContent}</td></tr>
-                    </table>
-                    
-                    <h2>배팅 현황</h2>
-                    <table>
-                        <tr><th>항목</th><th>금액</th></tr>
-                        <tr><td>배팅 금액</td><td>\${document.getElementById('closing-bet-amount').textContent}</td></tr>
-                        <tr><td>당첨 금액</td><td>\${document.getElementById('closing-win-amount').textContent}</td></tr>
-                        <tr class="summary"><td>배팅 마진</td><td>\${document.getElementById('closing-bet-margin').textContent}</td></tr>
-                    </table>
-                    
-                    <h2>도서 판매 현황</h2>
-                    <table>
-                        <tr><th>항목</th><th>수량/금액</th></tr>
-                        <tr><td>주문 건수</td><td>\${document.getElementById('closing-book-orders').textContent}</td></tr>
-                        <tr><td>판매 금액</td><td>\${document.getElementById('closing-book-sales').textContent}</td></tr>
-                        <tr><td>발송 완료</td><td>\${document.getElementById('closing-book-shipped').textContent}</td></tr>
-                        <tr><td>미발송</td><td>\${document.getElementById('closing-book-pending').textContent}</td></tr>
-                    </table>
-                    
-                    <h2>종합 요약</h2>
-                    <table>
-                        <tr class="total"><th>항목</th><th>금액</th></tr>
-                        <tr><td><strong>총 매출</strong></td><td><strong>\${document.getElementById('closing-total-revenue').textContent}</strong></td></tr>
-                        <tr><td><strong>총 마진</strong></td><td><strong>\${document.getElementById('closing-total-margin').textContent}</strong></td></tr>
-                    </table>
-                    
-                    <p style="text-align: center; margin-top: 40px; color: #999;">
-                        생성 일시: \${new Date().toLocaleString()}<br>
-                        EXIT System - 엑시트 관리 시스템
-                    </p>
-                    
-                    <div style="text-align: center; margin-top: 20px;">
-                        <button onclick="window.print()" style="padding: 10px 20px; background: #4299e1; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                            인쇄하기
-                        </button>
-                        <button onclick="window.close()" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">
-                            닫기
-                        </button>
-                    </div>
-                </body>
-                </html>
-            \`
+            const content = '<!DOCTYPE html>' +
+                '<html>' +
+                '<head>' +
+                    '<meta charset="UTF-8">' +
+                    '<title>일일 마감 리포트 - ' + date + '</title>' +
+                    '<style>' +
+                        'body { font-family: Arial, sans-serif; padding: 20px; }' +
+                        'h1 { text-align: center; color: #333; }' +
+                        'table { width: 100%; border-collapse: collapse; margin: 20px 0; }' +
+                        'th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }' +
+                        'th { background-color: #f4f4f4; font-weight: bold; }' +
+                        '.summary { background-color: #e8f4f8; }' +
+                        '.total { background-color: #4299e1; color: white; font-weight: bold; }' +
+                        '@media print { button { display: none; } }' +
+                    '</style>' +
+                '</head>' +
+                '<body>' +
+                    '<h1>📊 일일 마감 리포트</h1>' +
+                    '<p style="text-align: center; color: #666;">마감 일자: ' + date + '</p>' +
+                    '<h2>티켓 처리 현황</h2>' +
+                    '<table>' +
+                        '<tr><th>항목</th><th>수량</th></tr>' +
+                        '<tr><td>총 티켓 수</td><td>' + document.getElementById('closing-total-tickets').textContent + '</td></tr>' +
+                        '<tr><td>처리 완료</td><td>' + document.getElementById('closing-completed-tickets').textContent + '</td></tr>' +
+                        '<tr><td>미처리</td><td>' + document.getElementById('closing-pending-tickets').textContent + '</td></tr>' +
+                    '</table>' +
+                    '<h2>포인트 현황</h2>' +
+                    '<table>' +
+                        '<tr><th>항목</th><th>금액</th></tr>' +
+                        '<tr><td>포인트 적립</td><td>' + document.getElementById('closing-earned-points').textContent + '</td></tr>' +
+                        '<tr><td>포인트 사용</td><td>' + document.getElementById('closing-used-points').textContent + '</td></tr>' +
+                        '<tr class="summary"><td>순 포인트</td><td>' + document.getElementById('closing-net-points').textContent + '</td></tr>' +
+                    '</table>' +
+                    '<h2>배팅 현황</h2>' +
+                    '<table>' +
+                        '<tr><th>항목</th><th>금액</th></tr>' +
+                        '<tr><td>배팅 금액</td><td>' + document.getElementById('closing-bet-amount').textContent + '</td></tr>' +
+                        '<tr><td>당첨 금액</td><td>' + document.getElementById('closing-win-amount').textContent + '</td></tr>' +
+                        '<tr class="summary"><td>배팅 마진</td><td>' + document.getElementById('closing-bet-margin').textContent + '</td></tr>' +
+                    '</table>' +
+                    '<h2>도서 판매 현황</h2>' +
+                    '<table>' +
+                        '<tr><th>항목</th><th>수량/금액</th></tr>' +
+                        '<tr><td>주문 건수</td><td>' + document.getElementById('closing-book-orders').textContent + '</td></tr>' +
+                        '<tr><td>판매 금액</td><td>' + document.getElementById('closing-book-sales').textContent + '</td></tr>' +
+                        '<tr><td>발송 완료</td><td>' + document.getElementById('closing-book-shipped').textContent + '</td></tr>' +
+                        '<tr><td>미발송</td><td>' + document.getElementById('closing-book-pending').textContent + '</td></tr>' +
+                    '</table>' +
+                    '<h2>종합 요약</h2>' +
+                    '<table>' +
+                        '<tr class="total"><th>항목</th><th>금액</th></tr>' +
+                        '<tr><td><strong>총 매출</strong></td><td><strong>' + document.getElementById('closing-total-revenue').textContent + '</strong></td></tr>' +
+                        '<tr><td><strong>총 마진</strong></td><td><strong>' + document.getElementById('closing-total-margin').textContent + '</strong></td></tr>' +
+                    '</table>' +
+                    '<p style="text-align: center; margin-top: 40px; color: #999;">' +
+                        '생성 일시: ' + new Date().toLocaleString() + '<br>' +
+                        'EXIT System - 엑시트 관리 시스템' +
+                    '</p>' +
+                    '<div style="text-align: center; margin-top: 20px;">' +
+                        '<button onclick="window.print()" style="padding: 10px 20px; background: #4299e1; color: white; border: none; border-radius: 5px; cursor: pointer;">인쇄하기</button>' +
+                        '<button onclick="window.close()" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">닫기</button>' +
+                    '</div>' +
+                '</body>' +
+                '</html>'
             
             printWindow.document.write(content)
             printWindow.document.close()
@@ -5110,35 +5092,35 @@ console.log('권한 관리 함수 로드 완료')
                 const stats = statsRes.data
 
                 // 완료된 경기 목록
-                const html = matches.length > 0 ? matches.map(m => \`
-                    <div class="bg-white border p-4 rounded">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <p class="font-bold text-lg">\${m.match_name}</p>
-                                <p class="text-sm text-gray-600">\${m.home_team} vs \${m.away_team}</p>
-                                <p class="text-xs text-gray-500 mt-1">\${new Date(m.match_date).toLocaleString()}</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="status-badge status-\${m.status}">\${getStatusText(m.status)}</span>
-                                <p class="text-sm mt-2">결과: <strong>\${getBetTypeText(m.result)}</strong></p>
-                            </div>
-                        </div>
-                        <div class="mt-3 grid grid-cols-3 gap-2 text-sm">
-                            <div class="bg-blue-50 p-2 rounded">
-                                <p class="text-xs text-gray-600">총 배팅금</p>
-                                <p class="font-bold text-blue-600">\${(m.total_bet_amount || 0).toLocaleString()}원</p>
-                            </div>
-                            <div class="bg-green-50 p-2 rounded">
-                                <p class="text-xs text-gray-600">당첨금</p>
-                                <p class="font-bold text-green-600">\${(m.total_win_amount || 0).toLocaleString()}원</p>
-                            </div>
-                            <div class="bg-purple-50 p-2 rounded">
-                                <p class="text-xs text-gray-600">수익</p>
-                                <p class="font-bold text-purple-600">\${((m.total_bet_amount || 0) - (m.total_win_amount || 0)).toLocaleString()}원</p>
-                            </div>
-                        </div>
-                    </div>
-                \`).join('') : '<p class="text-gray-500 text-center py-4">완료된 경기가 없습니다.</p>'
+                const html = matches.length > 0 ? matches.map(m => 
+                    '<div class="bg-white border p-4 rounded">' +
+                        '<div class="flex justify-between items-start">' +
+                            '<div class="flex-1">' +
+                                '<p class="font-bold text-lg">' + m.match_name + '</p>' +
+                                '<p class="text-sm text-gray-600">' + m.home_team + ' vs ' + m.away_team + '</p>' +
+                                '<p class="text-xs text-gray-500 mt-1">' + new Date(m.match_date).toLocaleString() + '</p>' +
+                            '</div>' +
+                            '<div class="text-right">' +
+                                '<span class="status-badge status-' + m.status + '">' + getStatusText(m.status) + '</span>' +
+                                '<p class="text-sm mt-2">결과: <strong>' + getBetTypeText(m.result) + '</strong></p>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="mt-3 grid grid-cols-3 gap-2 text-sm">' +
+                            '<div class="bg-blue-50 p-2 rounded">' +
+                                '<p class="text-xs text-gray-600">총 배팅금</p>' +
+                                '<p class="font-bold text-blue-600">' + (m.total_bet_amount || 0).toLocaleString() + '원</p>' +
+                            '</div>' +
+                            '<div class="bg-green-50 p-2 rounded">' +
+                                '<p class="text-xs text-gray-600">당첨금</p>' +
+                                '<p class="font-bold text-green-600">' + (m.total_win_amount || 0).toLocaleString() + '원</p>' +
+                            '</div>' +
+                            '<div class="bg-purple-50 p-2 rounded">' +
+                                '<p class="text-xs text-gray-600">수익</p>' +
+                                '<p class="font-bold text-purple-600">' + ((m.total_bet_amount || 0) - (m.total_win_amount || 0)).toLocaleString() + '원</p>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>'
+                ).join('') : '<p class="text-gray-500 text-center py-4">완료된 경기가 없습니다.</p>'
 
                 document.getElementById('completed-matches-list').innerHTML = html
 
@@ -5362,13 +5344,13 @@ console.log('권한 관리 함수 로드 완료')
 
             currentMailImages.forEach((imageKey, index) => {
                 const thumbnail = document.createElement('div')
-                thumbnail.className = \`w-16 h-16 border-2 rounded cursor-pointer overflow-hidden \${index === currentImageIndex ? 'border-blue-500' : 'border-gray-300'}\`
+                thumbnail.className = 'w-16 h-16 border-2 rounded cursor-pointer overflow-hidden ' + (index === currentImageIndex ? 'border-blue-500' : 'border-gray-300')
                 thumbnail.onclick = () => showMailImageAtIndex(index)
 
                 const img = document.createElement('img')
                 img.src = API_BASE + '/mailroom/image/ + imageKey
                 img.className = 'w-full h-full object-cover'
-                img.alt = \`썸네일 \${index + 1}\`
+                img.alt = '썸네일 ' + (index + 1)
 
                 thumbnail.appendChild(img)
                 thumbnailsContainer.appendChild(thumbnail)
@@ -5392,7 +5374,7 @@ console.log('권한 관리 함수 로드 완료')
             imgElement.style.cursor = 'default'
 
             // 카운터 업데이트
-            document.getElementById('image-counter').textContent = \`\${index + 1}/\${currentMailImages.length}\`
+            document.getElementById('image-counter').textContent = (index + 1) + '/' + currentMailImages.length
 
             // 버튼 상태 업데이트
             document.getElementById('prev-image-btn').disabled = (index === 0)
@@ -5444,7 +5426,7 @@ console.log('권한 관리 함수 로드 완료')
         // Transform 업데이트
         function updateImageTransform() {
             const imgElement = document.getElementById('current-mail-image')
-            imgElement.style.transform = \`rotate(\${imageRotation}deg) scale(\${imageScale})\`
+            imgElement.style.transform = 'rotate(' + imageRotation + 'deg) scale(' + imageScale + ')'
         }
 
         // 이벤트 리스너 설정
