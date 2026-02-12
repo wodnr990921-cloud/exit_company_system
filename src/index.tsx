@@ -3444,7 +3444,7 @@ console.log('권한 관리 함수 로드 완료')
                                     const value = context.parsed || 0
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0)
                                     const percentage = ((value / total) * 100).toFixed(1)
-                                    return \`\${label}: \${value}건 (\${percentage}%)\`
+                                    return label + ': ' + value + '건 (' + percentage + '%)'
                                 }
                             }
                         }
@@ -3515,7 +3515,7 @@ console.log('권한 관리 함수 로드 완료')
                 const now = new Date()
                 for (let i = 5; i >= 0; i--) {
                     const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-                    const key = \`\${date.getFullYear()}-\${String(date.getMonth() + 1).padStart(2, '0')}\`
+                    const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0')
                     monthlyData[key] = { created: 0, completed: 0 }
                 }
 
@@ -3531,7 +3531,7 @@ console.log('권한 관리 함수 로드 완료')
 
                 const labels = Object.keys(monthlyData).map(key => {
                     const [year, month] = key.split('-')
-                    return \`\${year}년 \${month}월\`
+                    return year + '년 ' + month + '월'
                 })
                 const createdData = Object.values(monthlyData).map(d => d.created)
                 const completedData = Object.values(monthlyData).map(d => d.completed)
@@ -3648,7 +3648,7 @@ console.log('권한 관리 함수 로드 완료')
                 for (let i = 6; i >= 0; i--) {
                     const date = new Date()
                     date.setDate(date.getDate() - i)
-                    labels.push(\`\${date.getMonth() + 1}/\${date.getDate()}\`)
+                    labels.push((date.getMonth() + 1) + '/' + date.getDate())
                     addData.push(Math.floor(Math.random() * 10))
                     deductData.push(Math.floor(Math.random() * 10))
                 }
@@ -3793,8 +3793,8 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 let url = API_BASE + '/tickets?page= + page + '&limit= + pagination.tickets.limit + '&'
-                if (status !== 'all') url += \`status=\${status}&\`
-                if (type !== 'all') url += \`ticket_type=\${type}&\`
+                if (status !== 'all') url += 'status=' + status + '&'
+                if (type !== 'all') url += 'ticket_type=' + type + '&'
 
                 const response = await axios.get(url)
                 let tickets = response.data.tickets
@@ -3809,30 +3809,30 @@ console.log('권한 관리 함수 로드 완료')
                     pagination.tickets = { ...pagination.tickets, ...paginationInfo }
                 }
 
-                const html = tickets.length > 0 ? tickets.map(t => \`
-                    <div class="card hover:shadow-lg transition">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1 cursor-pointer" onclick="showTicketDetail(\${t.id})">
-                                <h3 class="font-bold text-lg">\${t.ticket_number}: \${t.title}</h3>
-                                <p class="text-sm text-gray-600 mt-1">\${t.member_name || '회원 없음'}</p>
-                                <div class="flex space-x-2 mt-2">
-                                    <span class="status-badge status-\${t.status}">\${getStatusText(t.status)}</span>
-                                    <span class="status-badge priority-\${t.priority}">\${getPriorityText(t.priority)}</span>
-                                    <span class="status-badge">\${getTypeText(t.ticket_type)}</span>
-                                </div>
-                            </div>
-                            <div class="text-right text-sm text-gray-500">
-                                <p>담당: \${t.assigned_to_name || '미배정'}</p>
-                                <p>\${new Date(t.created_at).toLocaleDateString()}</p>
-                                \${currentStaff.role === 'admin' ? \`
-                                    <button onclick="deleteTicket(\${t.id}, event)" class="mt-2 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs">
-                                        <i class="fas fa-trash mr-1"></i>삭제
-                                    </button>
-                                \` : ''}
-                            </div>
-                        </div>
-                    </div>
-                \`).join('') : '<p class="text-gray-500 text-center py-8">티켓이 없습니다.</p>'
+                const html = tickets.length > 0 ? tickets.map(t => 
+                    '<div class="card hover:shadow-lg transition">' +
+                        '<div class="flex justify-between items-start">' +
+                            '<div class="flex-1 cursor-pointer" onclick="showTicketDetail(' + t.id + ')">' +
+                                '<h3 class="font-bold text-lg">' + t.ticket_number + ': ' + t.title + '</h3>' +
+                                '<p class="text-sm text-gray-600 mt-1">' + (t.member_name || '회원 없음') + '</p>' +
+                                '<div class="flex space-x-2 mt-2">' +
+                                    '<span class="status-badge status-' + t.status + '">' + getStatusText(t.status) + '</span>' +
+                                    '<span class="status-badge priority-' + t.priority + '">' + getPriorityText(t.priority) + '</span>' +
+                                    '<span class="status-badge">' + getTypeText(t.ticket_type) + '</span>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="text-right text-sm text-gray-500">' +
+                                '<p>담당: ' + (t.assigned_to_name || '미배정') + '</p>' +
+                                '<p>' + new Date(t.created_at).toLocaleDateString() + '</p>' +
+                                (currentStaff.role === 'admin' ? 
+                                    '<button onclick="deleteTicket(' + t.id + ', event)" class="mt-2 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs">' +
+                                        '<i class="fas fa-trash mr-1"></i>삭제' +
+                                    '</button>'
+                                : '') +
+                            '</div>' +
+                        '</div>' +
+                    '</div>'
+                ).join('') : '<p class="text-gray-500 text-center py-8">티켓이 없습니다.</p>'
 
                 document.getElementById('tickets-list').innerHTML = html
                 
@@ -3881,9 +3881,9 @@ console.log('권한 관리 함수 로드 완료')
             
             // 이전 버튼
             if (page > 1) {
-                html += \`<button onclick="\${onPageChange}(\${page - 1})" class="btn btn-secondary px-3 py-1">
-                    <i class="fas fa-chevron-left"></i> 이전
-                </button>\`
+                html += '<button onclick="' + onPageChange + '(' + (page - 1) + ')" class="btn btn-secondary px-3 py-1">' +
+                    '<i class="fas fa-chevron-left"></i> 이전' +
+                '</button>'
             }
             
             // 페이지 번호
@@ -3891,28 +3891,28 @@ console.log('권한 관리 함수 로드 완료')
             const endPage = Math.min(totalPages, page + 2)
             
             if (startPage > 1) {
-                html += \`<button onclick="\${onPageChange}(1)" class="btn btn-secondary px-3 py-1">1</button>\`
+                html += '<button onclick="' + onPageChange + '(1)" class="btn btn-secondary px-3 py-1">1</button>'
                 if (startPage > 2) html += '<span class="px-2">...</span>'
             }
             
             for (let i = startPage; i <= endPage; i++) {
                 if (i === page) {
-                    html += \`<button class="btn btn-primary px-3 py-1">\${i}</button>\`
+                    html += '<button class="btn btn-primary px-3 py-1">' + i + '</button>'
                 } else {
-                    html += \`<button onclick="\${onPageChange}(\${i})" class="btn btn-secondary px-3 py-1">\${i}</button>\`
+                    html += '<button onclick="' + onPageChange + '(' + i + ')" class="btn btn-secondary px-3 py-1">' + i + '</button>'
                 }
             }
             
             if (endPage < totalPages) {
                 if (endPage < totalPages - 1) html += '<span class="px-2">...</span>'
-                html += \`<button onclick="\${onPageChange}(\${totalPages})" class="btn btn-secondary px-3 py-1">\${totalPages}</button>\`
+                html += '<button onclick="' + onPageChange + '(' + totalPages + ')" class="btn btn-secondary px-3 py-1">' + totalPages + '</button>'
             }
             
             // 다음 버튼
             if (page < totalPages) {
-                html += \`<button onclick="\${onPageChange}(\${page + 1})" class="btn btn-secondary px-3 py-1">
-                    다음 <i class="fas fa-chevron-right"></i>
-                </button>\`
+                html += '<button onclick="' + onPageChange + '(' + (page + 1) + ')" class="btn btn-secondary px-3 py-1">' +
+                    '다음 <i class="fas fa-chevron-right"></i>' +
+                '</button>'
             }
             
             html += '</div>'
@@ -3968,80 +3968,79 @@ console.log('권한 관리 함수 로드 완료')
                 } else if (memberViewType === 'card') {
                     // 카드형 뷰
                     membersList.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-                    membersList.innerHTML = members.map(m => \`
-                        <div class="card hover:shadow-lg transition">
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="flex-1" onclick="showMemberDetail(\${m.id})" style="cursor: pointer;">
-                                    <h3 class="font-bold text-lg">\${m.name}</h3>
-                                    <p class="text-sm text-gray-600">
-                                        <i class="fas fa-building mr-1"></i>수용기관: \${m.institution || '미지정'}
-                                    </p>
-                                    <p class="text-sm text-gray-600">
-                                        <i class="fas fa-id-card mr-1"></i>수용번호: \${m.inmate_number || '-'}
-                                    </p>
-                                </div>
-                                <button onclick="event.stopPropagation(); showEditMemberModal(\${m.id})" 
-                                        class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                            </div>
-                            <div class="mt-3 space-y-1">
-                                <p class="text-sm"><span class="font-bold">일반 포인트:</span> \${m.points.toLocaleString()}원</p>
-                                <p class="text-sm"><span class="font-bold">배팅 포인트:</span> \${m.betting_points.toLocaleString()}원</p>
-                                \${m.frozen_points > 0 ? \`<p class="text-sm text-yellow-600"><span class="font-bold">동결:</span> \${m.frozen_points.toLocaleString()}원</p>\` : ''}
-                            </div>
-                            <p class="text-xs text-gray-400 mt-2">가입일: \${new Date(m.created_at).toLocaleDateString()}</p>
-                        </div>
-                    \`).join('')
+                    membersList.innerHTML = members.map(m => 
+                        '<div class="card hover:shadow-lg transition">' +
+                            '<div class="flex justify-between items-start mb-2">' +
+                                '<div class="flex-1" onclick="showMemberDetail(' + m.id + ')" style="cursor: pointer;">' +
+                                    '<h3 class="font-bold text-lg">' + m.name + '</h3>' +
+                                    '<p class="text-sm text-gray-600">' +
+                                        '<i class="fas fa-building mr-1"></i>수용기관: ' + (m.institution || '미지정') +
+                                    '</p>' +
+                                    '<p class="text-sm text-gray-600">' +
+                                        '<i class="fas fa-id-card mr-1"></i>수용번호: ' + (m.inmate_number || '-') +
+                                    '</p>' +
+                                '</div>' +
+                                '<button onclick="event.stopPropagation(); showEditMemberModal(' + m.id + ')" ' +
+                                        'class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">' +
+                                    '<i class="fas fa-edit"></i>' +
+                                '</button>' +
+                            '</div>' +
+                            '<div class="mt-3 space-y-1">' +
+                                '<p class="text-sm"><span class="font-bold">일반 포인트:</span> ' + m.points.toLocaleString() + '원</p>' +
+                                '<p class="text-sm"><span class="font-bold">배팅 포인트:</span> ' + m.betting_points.toLocaleString() + '원</p>' +
+                                (m.frozen_points > 0 ? '<p class="text-sm text-yellow-600"><span class="font-bold">동결:</span> ' + m.frozen_points.toLocaleString() + '원</p>' : '') +
+                            '</div>' +
+                            '<p class="text-xs text-gray-400 mt-2">가입일: ' + new Date(m.created_at).toLocaleDateString() + '</p>' +
+                        '</div>'
+                    ).join('')
                 } else {
                     // 리스트형 뷰
                     membersList.className = 'overflow-x-auto'
-                    membersList.innerHTML = \`
-                        <table class="w-full border-collapse">
-                            <thead>
-                                <tr class="bg-gray-100 border-b">
-                                    <th class="text-left p-3 text-sm font-semibold">이름</th>
-                                    <th class="text-left p-3 text-sm font-semibold">수용기관</th>
-                                    <th class="text-left p-3 text-sm font-semibold">수용번호</th>
-                                    <th class="text-right p-3 text-sm font-semibold">일반 포인트</th>
-                                    <th class="text-right p-3 text-sm font-semibold">배팅 포인트</th>
-                                    <th class="text-center p-3 text-sm font-semibold">가입일</th>
-                                    <th class="text-center p-3 text-sm font-semibold">관리</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                \${members.map(m => \`
-                                    <tr class="border-b hover:bg-gray-50 transition cursor-pointer" 
-                                        onclick="showMemberDetail(\${m.id})">
-                                        <td class="p-3">
-                                            <div class="font-medium text-gray-800">\${m.name}</div>
-                                        </td>
-                                        <td class="p-3 text-sm text-gray-600">
-                                            <i class="fas fa-building mr-1"></i>\${m.institution || '미지정'}
-                                        </td>
-                                        <td class="p-3 text-sm text-gray-600">
-                                            \${m.inmate_number || '-'}
-                                        </td>
-                                        <td class="p-3 text-right text-sm">
-                                            \${m.points.toLocaleString()}원
-                                        </td>
-                                        <td class="p-3 text-right text-sm">
-                                            \${m.betting_points.toLocaleString()}원
-                                        </td>
-                                        <td class="p-3 text-center text-xs text-gray-500">
-                                            \${new Date(m.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td class="p-3 text-center">
-                                            <button onclick="event.stopPropagation(); showEditMemberModal(\${m.id})" 
-                                                    class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                \`).join('')}
-                            </tbody>
-                        </table>
-                    \`
+                    membersList.innerHTML = 
+                        '<table class="w-full border-collapse">' +
+                            '<thead>' +
+                                '<tr class="bg-gray-100 border-b">' +
+                                    '<th class="text-left p-3 text-sm font-semibold">이름</th>' +
+                                    '<th class="text-left p-3 text-sm font-semibold">수용기관</th>' +
+                                    '<th class="text-left p-3 text-sm font-semibold">수용번호</th>' +
+                                    '<th class="text-right p-3 text-sm font-semibold">일반 포인트</th>' +
+                                    '<th class="text-right p-3 text-sm font-semibold">배팅 포인트</th>' +
+                                    '<th class="text-center p-3 text-sm font-semibold">가입일</th>' +
+                                    '<th class="text-center p-3 text-sm font-semibold">관리</th>' +
+                                '</tr>' +
+                            '</thead>' +
+                            '<tbody>' +
+                                members.map(m => 
+                                    '<tr class="border-b hover:bg-gray-50 transition cursor-pointer" ' +
+                                        'onclick="showMemberDetail(' + m.id + ')">' +
+                                        '<td class="p-3">' +
+                                            '<div class="font-medium text-gray-800">' + m.name + '</div>' +
+                                        '</td>' +
+                                        '<td class="p-3 text-sm text-gray-600">' +
+                                            '<i class="fas fa-building mr-1"></i>' + (m.institution || '미지정') +
+                                        '</td>' +
+                                        '<td class="p-3 text-sm text-gray-600">' +
+                                            (m.inmate_number || '-') +
+                                        '</td>' +
+                                        '<td class="p-3 text-right text-sm">' +
+                                            m.points.toLocaleString() + '원' +
+                                        '</td>' +
+                                        '<td class="p-3 text-right text-sm">' +
+                                            m.betting_points.toLocaleString() + '원' +
+                                        '</td>' +
+                                        '<td class="p-3 text-center text-xs text-gray-500">' +
+                                            new Date(m.created_at).toLocaleDateString() +
+                                        '</td>' +
+                                        '<td class="p-3 text-center">' +
+                                            '<button onclick="event.stopPropagation(); showEditMemberModal(' + m.id + ')" ' +
+                                                    'class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">' +
+                                                '<i class="fas fa-edit"></i>' +
+                                            '</button>' +
+                                        '</td>' +
+                                    '</tr>'
+                                ).join('') +
+                            '</tbody>' +
+                        '</table>'
                 }
                 
                 // 페이지네이션 UI 렌더링
