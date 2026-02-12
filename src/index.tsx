@@ -32,8 +32,8 @@ app.use('/api/*', cors())
 // 정적 파일 서빙
 app.use('/static/*', serveStatic({ root: './public' }))
 
-// 루트 경로는 index.html 제공
-app.get('/', serveStatic({ path: './public/index.html' }))
+// 루트 경로는 app.html 제공
+app.get('/', serveStatic({ path: './public/app.html' }))
 
 // API 라우트 등록
 app.route('/api/auth', auth)
