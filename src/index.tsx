@@ -2954,7 +2954,7 @@ function safeSetText(elementId, text) {
     el.textContent = text
     return true
   }
-  console.warn(\`Element not found: \${elementId}\`)
+  console.warn('Element not found: ' + elementId)
   return false
 }
 
@@ -2965,7 +2965,7 @@ function safeSetHTML(elementId, html) {
     el.innerHTML = html
     return true
   }
-  console.warn(\`Element not found: \${elementId}\`)
+  console.warn('Element not found: ' + elementId)
   return false
 }
 
@@ -2975,7 +2975,7 @@ function safeGetValue(elementId, defaultValue = '') {
   if (el) {
     return el.value
   }
-  console.warn(\`Element not found: \${elementId}\`)
+  console.warn('Element not found: ' + elementId)
   return defaultValue
 }
 
