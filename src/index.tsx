@@ -26,14 +26,10 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-// CORS 설정
+// CORS 설정 - 모든 origin 허용 (개발 환경)
 app.use('/api/*', cors({
-  origin: [
-    'http://localhost:5173',
-    'https://5173-izz2akoud4rd9s8t7plxq-b32ec7bb.sandbox.novita.ai',
-    'https://exit-frontend.pages.dev'
-  ],
-  credentials: true,
+  origin: '*',
+  credentials: false,
 }))
 
 // 정적 파일 서빙
