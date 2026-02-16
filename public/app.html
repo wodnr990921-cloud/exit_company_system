@@ -8106,9 +8106,9 @@ console.log('권한 관리 함수 로드 완료')
                 
                 const staffSelect = document.getElementById('inspection-staff')
                 staffSelect.innerHTML = '<option value="">-- 담당자를 선택하세요 --</option>' +
-                    staffList.map(staff => \`
-                        <option value="\${staff.id}">\${staff.name} (\${staff.role === 'admin' ? '관리자' : staff.role === 'manager' ? '매니저' : '직원'})</option>
-                    \`).join('')
+                    staffList.map(staff => 
+                        '<option value="' + staff.id + '">' + staff.name + ' (' + (staff.role === 'admin' ? '관리자' : staff.role === 'manager' ? '매니저' : '직원') + ')</option>'
+                    ).join('')
             } catch (error) {
                 console.error('담당자 목록 로드 오류:', error)
             }
@@ -8117,26 +8117,24 @@ console.log('권한 관리 함수 로드 완료')
         // 회원 자동 매칭 (수용번호 기반)
         async function searchAndMatchMember(inmateNumber) {
             try {
-                const res = await axios.get(API_BASE + '/members?search= + inmateNumber)
+                const res = await axios.get(API_BASE + '/members?search=' + inmateNumber)
                 const members = res.data.members || []
                 
                 if (members.length > 0) {
                     // 회원 찾음
                     const member = members[0]
-                    document.getElementById('member-match-status').innerHTML = \`
-                        <div class="bg-green-50 border border-green-200 rounded p-2 text-sm">
-                            <i class="fas fa-check-circle text-green-600 mr-1"></i>
-                            <strong>기존 회원 매칭:</strong> \${member.name} (수용번호: \${member.inmate_number})
-                        </div>
-                    \`
+                    document.getElementById('member-match-status').innerHTML = 
+                        '<div class="bg-green-50 border border-green-200 rounded p-2 text-sm">' +
+                            '<i class="fas fa-check-circle text-green-600 mr-1"></i>' +
+                            '<strong>기존 회원 매칭:</strong> ' + member.name + ' (수용번호: ' + member.inmate_number + ')' +
+                        '</div>'
                 } else {
                     // 신규 회원
-                    document.getElementById('member-match-status').innerHTML = \`
-                        <div class="bg-yellow-50 border border-yellow-200 rounded p-2 text-sm">
-                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-1"></i>
-                            <strong>신규 회원:</strong> 티켓 생성 시 자동 등록됩니다.
-                        </div>
-                    \`
+                    document.getElementById('member-match-status').innerHTML = 
+                        '<div class="bg-yellow-50 border border-yellow-200 rounded p-2 text-sm">' +
+                            '<i class="fas fa-exclamation-triangle text-yellow-600 mr-1"></i>' +
+                            '<strong>신규 회원:</strong> 티켓 생성 시 자동 등록됩니다.' +
+                        '</div>'
                 }
             } catch (error) {
                 console.error('회원 검색 오류:', error)
@@ -8159,7 +8157,7 @@ console.log('권한 관리 함수 로드 완료')
             
             memberSearchTimeout = setTimeout(async () => {
                 try {
-                    const res = await axios.get(API_BASE + '/members?search= + query)
+                    const res = await axios.get(API_BASE + '/members?search=' + query)
                     memberSearchResults = res.data.members || []
                     
                     const dropdown = document.getElementById('member-search-dropdown')
@@ -8169,13 +8167,13 @@ console.log('권한 관리 함수 로드 완료')
                         return
                     }
                     
-                    dropdown.innerHTML = memberSearchResults.map(m => \`
-                        <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b" 
-                             onclick="selectMember(\${m.id}, '\${m.name}', '\${m.inmate_number}', '\${m.institution}', '\${m.po_box_address || ''}')">
-                            <p class="font-medium text-sm">\${m.name}</p>
-                            <p class="text-xs text-gray-600">수용번호: \${m.inmate_number} | \${m.institution}</p>
-                        </div>
-                    \`).join('')
+                    dropdown.innerHTML = memberSearchResults.map(m => 
+                        '<div class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b" ' +
+                             'onclick="selectMember(' + m.id + ', \'' + m.name + '\', \'' + m.inmate_number + '\', \'' + m.institution + '\', \'' + (m.po_box_address || '') + '\')">' +
+                            '<p class="font-medium text-sm">' + m.name + '</p>' +
+                            '<p class="text-xs text-gray-600">수용번호: ' + m.inmate_number + ' | ' + m.institution + '</p>' +
+                        '</div>'
+                    ).join('')
                     
                     dropdown.classList.remove('hidden')
                 } catch (error) {
