@@ -224,6 +224,138 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #a1a1a1;
         }
+        
+        /* ==========================================
+           다크 모드 스타일
+           ========================================== */
+        body.dark-mode {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        body.dark-mode .bg-white {
+            background-color: #2d3748 !important;
+        }
+        body.dark-mode .bg-gray-100 {
+            background-color: #1a202c !important;
+        }
+        body.dark-mode .bg-gray-50 {
+            background-color: #2d3748 !important;
+        }
+        body.dark-mode .text-gray-800 {
+            color: #e2e8f0 !important;
+        }
+        body.dark-mode .text-gray-700 {
+            color: #cbd5e0 !important;
+        }
+        body.dark-mode .text-gray-600 {
+            color: #a0aec0 !important;
+        }
+        body.dark-mode .text-gray-500 {
+            color: #718096 !important;
+        }
+        body.dark-mode .card {
+            background-color: #2d3748 !important;
+            border: 1px solid #4a5568;
+        }
+        body.dark-mode input,
+        body.dark-mode select,
+        body.dark-mode textarea {
+            background-color: #374151 !important;
+            color: #e2e8f0 !important;
+            border-color: #4a5568 !important;
+        }
+        body.dark-mode .border {
+            border-color: #4a5568 !important;
+        }
+        body.dark-mode .shadow-sm {
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.5) !important;
+        }
+        
+        /* 다크 모드 토글 버튼 */
+        .dark-mode-toggle {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background-color: #cbd5e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .dark-mode-toggle.active {
+            background-color: #4299e1;
+        }
+        .dark-mode-toggle-thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .dark-mode-toggle.active .dark-mode-toggle-thumb {
+            transform: translateX(26px);
+        }
+        
+        /* ==========================================
+           프린트 최적화 CSS
+           ========================================== */
+        @media print {
+            /* 불필요한 요소 숨기기 */
+            header, nav, .nav-item, button, .btn, 
+            #mobile-menu, .dark-mode-toggle,
+            .no-print {
+                display: none !important;
+            }
+            
+            /* 페이지 레이아웃 */
+            body {
+                background: white !important;
+                color: black !important;
+                font-size: 12pt;
+            }
+            
+            /* 카드 스타일 */
+            .card {
+                border: 1px solid #000 !important;
+                page-break-inside: avoid;
+                margin-bottom: 1rem;
+                box-shadow: none !important;
+            }
+            
+            /* 표 스타일 */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            table th,
+            table td {
+                border: 1px solid #000;
+                padding: 8px;
+                text-align: left;
+            }
+            
+            /* 차트는 숨김 */
+            canvas {
+                display: none !important;
+            }
+            
+            /* 페이지 여백 */
+            @page {
+                margin: 2cm;
+            }
+            
+            /* 제목 스타일 */
+            h1, h2, h3 {
+                page-break-after: avoid;
+            }
+            
+            /* 링크 URL 표시 */
+            a[href]:after {
+                content: " (" attr(href) ")";
+            }
+        }
     </style>
     
     <!-- SheetJS for Excel export -->
@@ -282,6 +414,11 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2 md:space-x-4">
+                    <!-- 다크 모드 토글 -->
+                    <div class="dark-mode-toggle no-print" onclick="toggleDarkMode()" title="다크 모드 전환">
+                        <div class="dark-mode-toggle-thumb"></div>
+                    </div>
+                    
                     <span class="hidden md:inline text-gray-700">
                         <i class="fas fa-user-circle mr-2"></i>
                         <span id="current-user-name"></span>
@@ -2871,6 +3008,124 @@
         const API_BASE = window.location.hostname === 'localhost' 
             ? '/api'  // 로컬 개발
             : 'https://692c1664.exit-company-system.pages.dev/api'  // 프로덕션 (작동하는 배포)
+
+// ==========================================
+// 다크 모드 관리
+// ==========================================
+function toggleDarkMode() {
+    const body = document.body
+    const toggle = document.querySelector('.dark-mode-toggle')
+    
+    body.classList.toggle('dark-mode')
+    toggle.classList.toggle('active')
+    
+    // localStorage에 저장
+    const isDark = body.classList.contains('dark-mode')
+    localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled')
+    
+    showToast(isDark ? '다크 모드 활성화' : '라이트 모드 활성화', 'info', 2000)
+}
+
+// 페이지 로드 시 다크 모드 설정 복원
+function initDarkMode() {
+    const darkMode = localStorage.getItem('darkMode')
+    if (darkMode === 'enabled') {
+        document.body.classList.add('dark-mode')
+        const toggle = document.querySelector('.dark-mode-toggle')
+        if (toggle) toggle.classList.add('active')
+    }
+}
+
+// ==========================================
+// 키보드 단축키
+// ==========================================
+document.addEventListener('keydown', function(e) {
+    // ESC: 모든 모달 닫기
+    if (e.key === 'Escape') {
+        // 열려있는 모든 모달 찾아서 닫기
+        const modals = document.querySelectorAll('.fixed.inset-0:not(.hidden)')
+        modals.forEach(modal => {
+            if (modal.id && modal.id.includes('modal')) {
+                modal.classList.add('hidden')
+            }
+        })
+        
+        // 모바일 메뉴 닫기
+        const mobileMenu = document.getElementById('mobile-menu')
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+            toggleMobileMenu()
+        }
+        return
+    }
+    
+    // Ctrl/Cmd + N: 새 항목 생성
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault()
+        
+        const currentView = document.querySelector('.view-content:not(.hidden)')
+        if (!currentView) return
+        
+        const viewId = currentView.id
+        
+        if (viewId === 'tickets-view' && hasPermission('staff')) {
+            showNewTicketModal()
+            showToast('새 티켓 생성 모달 열림 (Ctrl+N)', 'info', 2000)
+        } else if (viewId === 'members-view' && hasPermission('staff')) {
+            showNewMemberModal()
+            showToast('새 회원 등록 모달 열림 (Ctrl+N)', 'info', 2000)
+        } else if (viewId === 'books-view' && hasPermission('staff')) {
+            showNewBookModal()
+            showToast('새 도서 등록 모달 열림 (Ctrl+N)', 'info', 2000)
+        }
+        return
+    }
+    
+    // Ctrl/Cmd + S: 현재 폼 저장
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        
+        // 열려있는 모달 찾기
+        const activeModal = document.querySelector('.fixed.inset-0:not(.hidden)')
+        if (activeModal) {
+            // 모달 내 제출 버튼 찾아서 클릭
+            const submitBtn = activeModal.querySelector('button[type="submit"], button.btn-primary')
+            if (submitBtn) {
+                submitBtn.click()
+                showToast('저장 중... (Ctrl+S)', 'info', 2000)
+            }
+        }
+        return
+    }
+    
+    // Ctrl/Cmd + K: 검색 포커스
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        
+        const currentView = document.querySelector('.view-content:not(.hidden)')
+        if (!currentView) return
+        
+        const searchInput = currentView.querySelector('input[type="text"]')
+        if (searchInput) {
+            searchInput.focus()
+            showToast('검색창 포커스 (Ctrl+K)', 'info', 2000)
+        }
+        return
+    }
+    
+    // Ctrl/Cmd + D: 다크 모드 토글
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault()
+        toggleDarkMode()
+        return
+    }
+    
+    // Ctrl/Cmd + P: 프린트 (기본 동작 유지하되 알림만 표시)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        showToast('프린트 미리보기 (Ctrl+P)', 'info', 2000)
+        // 기본 동작(window.print()) 유지
+    }
+})
+
 // ==========================================
 // 권한 관리 함수
 // ==========================================
@@ -3137,6 +3392,9 @@ console.log('권한 관리 함수 로드 완료')
         document.addEventListener('DOMContentLoaded', async () => {
             // 로딩 화면 표시
             document.getElementById('loading-screen').classList.remove('hidden')
+            
+            // 다크 모드 초기화
+            initDarkMode()
             
             // 세션 복구 시도
             const sessionRestored = await restoreSession()
