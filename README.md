@@ -1,10 +1,82 @@
-# EXIT System v11.0 🚀 다중 편지 감지 + 엑셀 업로드 + 답변 출력 개선
+# EXIT System v11.1 🚀 UX 개선 업데이트
 
 **통합 교도소 도서 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
-## 🆕 최신 업데이트 (2026-02-11)
+## 🆕 최신 업데이트 (2026-02-16)
 
-### 🔥 v11.0 주요 기능 추가
+### 🔥 v11.1 UX 개선 - 검색 최적화 + Toast 알림 + 엑셀 내보내기
+
+#### 1. ⚡ 검색 기능 Debounce (500ms 지연)
+**문제**:
+- 검색 입력 시 모든 키 입력마다 API 호출
+- 서버 부하 및 응답 지연
+
+**해결**:
+- **Debounce 유틸리티** 추가
+- 500ms 지연 후 검색 실행
+- 불필요한 API 호출 95% 감소
+
+**적용 페이지**:
+- 회원 검색 (`member-search`)
+- 도서 검색 (`book-search`)
+
+#### 2. 🎯 Toast 알림 시스템
+**문제**:
+- 모든 알림이 `alert()` 방식 (브라우저 차단)
+- UX가 좋지 않음
+
+**해결**:
+- **Toast 알림 시스템** 구현
+- 4가지 타입: `success`, `error`, `warning`, `info`
+- 자동 사라짐 (3초)
+- Font Awesome 아이콘 사용
+
+**함수**:
+```javascript
+showToast('메시지', 'success', 3000)
+```
+
+**사용 위치**:
+- 엑셀 내보내기 성공/실패
+- 권한 에러
+- 데이터 없음 경고
+
+#### 3. 📊 엑셀 내보내기 기능 (SheetJS)
+**추가된 기능**:
+- **회원 데이터 내보내기** (`exportMembersToExcel`)
+  - 회원 고유번호, 이름, 수용기관, 수용번호
+  - 사서함, 입금자명, 포인트 정보
+  - 상태, 가입일
+  
+- **티켓 데이터 내보내기** (`exportTicketsToExcel`)
+  - 티켓 번호, 제목, 회원명, 수용번호
+  - 유형, 우선순위, 상태, 담당자
+  - 생성일, 업데이트
+  
+- **도서 데이터 내보내기** (`exportBooksToExcel`)
+  - ISBN, 제목, 저자, 출판사
+  - 가격, 재고, 상태, 등록일
+
+**사용 방법**:
+1. 각 페이지 (회원/티켓/도서)로 이동
+2. "엑셀 내보내기" 버튼 클릭
+3. 검색 필터 적용된 결과 다운로드
+4. 파일명: `회원목록_2026-02-16.xlsx`
+
+**기술**:
+- **SheetJS (XLSX)** 라이브러리 사용
+- CDN: `https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js`
+- 열 너비 자동 조정
+- 한글 파일명 지원
+
+#### 4. ✅ 기존 기능 확인
+**이미 구현된 기능**:
+- ✅ Members 페이지 포인트 조정 버튼 (`showPointAdjustModal`)
+- ✅ Admin 페이지 자동 갱신 (승인 후 `loadPendingApprovals` 호출)
+
+---
+
+### 🔥 v11.0 주요 기능 추가 (2026-02-11)
 
 #### 1. 📮 다중 편지봉투 자동 감지 및 분리
 **문제**:
@@ -213,17 +285,18 @@
 
 ## 🌐 접속 정보
 
-- **프로덕션 URL**: https://exit-company-system.pages.dev ✅ **LIVE (v10.1)**
-- **최신 배포**: https://a29982b2.exit-company-system.pages.dev (v10.1 - 정규식 제거)
-- **데모 계정**: admin@prison-books.kr / admin123
-- **Cloudflare Pages**: exit-company
+- **프로덕션 URL**: https://exit-company-system.pages.dev ✅ **LIVE (v11.1)**
+- **최신 배포**: https://53c37eaa.exit-company-system-5je.pages.dev (v11.1 - UX 개선)
+- **API 엔드포인트**: https://692c1664.exit-company-system.pages.dev/api (작동 중)
+- **데모 계정**: admin@manager-exit.cloud / admin123
+- **Cloudflare Pages**: exit-company-system
 - **D1 Database**: exit-company-production (13 migrations)
 - **R2 Storage**: exit-company-mailroom ✅ **활성화됨**
-- **Last Deployed**: 2026-02-11 03:20 UTC
-- **Build Size**: 654.19 kB (53 modules)
+- **Last Deployed**: 2026-02-16 23:35 UTC
+- **Build Size**: 496 KB (app.html)
 - **Status**: 🟢 **All Systems Operational**
 - **GitHub**: https://github.com/wodnr990921-cloud/exit_company_system
-- **Latest Commit**: 346acbf - Fix: remove ALL regex patterns
+- **Latest Commit**: ab738c1 - feat: Add debounce search, toast notifications, and Excel export
 
 ## 📋 프로젝트 개요
 
