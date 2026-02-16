@@ -1,8 +1,62 @@
-# EXIT System v11.1 🚀 UX 개선 업데이트
+# EXIT System v11.2 🚀 다크 모드 + 키보드 단축키 + 프린트 최적화
 
 **통합 교도소 도서 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
 ## 🆕 최신 업데이트 (2026-02-16)
+
+### 🔥 v11.2 사용성 개선 - 다크 모드 + 단축키 + 프린트
+
+#### 1. 🌙 다크 모드 지원
+**기능**:
+- **토글 버튼**: 헤더 우측 상단에 토글 스위치 추가
+- **localStorage 저장**: 사용자 설정 영구 저장
+- **자동 복원**: 페이지 새로고침 시 설정 유지
+- **즉각 전환**: 모든 UI 요소 실시간 변경
+
+**사용 방법**:
+- 헤더 우측 토글 스위치 클릭
+- 키보드 단축키: `Ctrl+D` (또는 `Cmd+D`)
+- Toast 알림으로 상태 표시
+
+**적용 범위**:
+- 배경색, 텍스트, 카드, 입력 필드
+- 버튼, 네비게이션, 모달
+- 차트, 테이블, 아이콘
+
+#### 2. ⌨️ 키보드 단축키
+**전역 단축키**:
+- `ESC`: 모든 모달 닫기, 모바일 메뉴 닫기
+- `Ctrl+N` (또는 `Cmd+N`): 새 항목 생성 (티켓/회원/도서)
+- `Ctrl+S` (또는 `Cmd+S`): 현재 폼 저장
+- `Ctrl+K` (또는 `Cmd+K`): 검색창 포커스
+- `Ctrl+D` (또는 `Cmd+D`): 다크 모드 토글
+- `Ctrl+P` (또는 `Cmd+P`): 프린트 미리보기
+
+**작동 방식**:
+- 현재 뷰 감지 후 적절한 액션 실행
+- Toast 알림으로 액션 확인
+- 권한 검증 후 실행
+
+#### 3. 🖨️ 프린트 최적화 CSS
+**기능**:
+- **불필요한 요소 제거**: 헤더, 네비게이션, 버튼 숨김
+- **레이아웃 최적화**: 흰 배경, 검은 텍스트
+- **표 스타일**: 테두리 표시, 페이지 분리 방지
+- **차트 제거**: Canvas 요소 숨김
+- **링크 URL 표시**: `href` 속성 출력
+- **페이지 여백**: 2cm 여백 설정
+
+**사용 방법**:
+1. 프린트할 페이지 열기
+2. `Ctrl+P` 또는 브라우저 프린트 메뉴
+3. 최적화된 레이아웃으로 출력
+
+#### 4. ✅ 기존 기능 확인
+**이미 구현된 기능**:
+- ✅ 이미지 뷰어 라이트박스 (줌, 회전, 초기화, 전체화면)
+- ✅ 모바일 반응형 UI (햄버거 메뉴, 반응형 그리드)
+
+---
 
 ### 🔥 v11.1 UX 개선 - 검색 최적화 + Toast 알림 + 엑셀 내보내기
 
@@ -285,18 +339,18 @@ showToast('메시지', 'success', 3000)
 
 ## 🌐 접속 정보
 
-- **프로덕션 URL**: https://exit-company-system.pages.dev ✅ **LIVE (v11.1)**
-- **최신 배포**: https://53c37eaa.exit-company-system-5je.pages.dev (v11.1 - UX 개선)
+- **프로덕션 URL**: https://exit-company-system.pages.dev ✅ **LIVE (v11.2)**
+- **최신 배포**: https://59375c7d.exit-company-system-5je.pages.dev (v11.2 - 다크 모드 + 단축키)
 - **API 엔드포인트**: https://692c1664.exit-company-system.pages.dev/api (작동 중)
 - **데모 계정**: admin@manager-exit.cloud / admin123
 - **Cloudflare Pages**: exit-company-system
 - **D1 Database**: exit-company-production (13 migrations)
 - **R2 Storage**: exit-company-mailroom ✅ **활성화됨**
-- **Last Deployed**: 2026-02-16 23:35 UTC
-- **Build Size**: 496 KB (app.html)
+- **Last Deployed**: 2026-02-17 00:05 UTC
+- **Build Size**: 508 KB (app.html)
 - **Status**: 🟢 **All Systems Operational**
 - **GitHub**: https://github.com/wodnr990921-cloud/exit_company_system
-- **Latest Commit**: ab738c1 - feat: Add debounce search, toast notifications, and Excel export
+- **Latest Commit**: 29387b5 - feat: Add dark mode, keyboard shortcuts, and print CSS
 
 ## 📋 프로젝트 개요
 
