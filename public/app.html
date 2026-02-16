@@ -225,6 +225,9 @@
             background: #a1a1a1;
         }
     </style>
+    
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-100">
     <!-- 로딩 화면 -->
@@ -530,9 +533,14 @@
             <div id="tickets-view" class="view-content hidden">
                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
                     <h2 class="text-xl md:text-2xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>티켓 관리</h2>
-                    <button id="create-ticket-btn" onclick="showNewTicketModal()" class="btn btn-primary w-full sm:w-auto" data-permission="staff">
-                        <i class="fas fa-plus mr-2"></i>새 티켓 생성
-                    </button>
+                    <div class="flex gap-2">
+                        <button id="create-ticket-btn" onclick="showNewTicketModal()" class="btn btn-primary w-full sm:w-auto" data-permission="staff">
+                            <i class="fas fa-plus mr-2"></i>새 티켓 생성
+                        </button>
+                        <button onclick="exportTicketsToExcel()" class="btn btn-success w-full sm:w-auto">
+                            <i class="fas fa-file-excel mr-2"></i>엑셀 내보내기
+                        </button>
+                    </div>
                 </div>
 
                 <div class="card mb-6">
@@ -592,10 +600,15 @@
                 <div class="card mb-6">
                     <div class="flex gap-2">
                         <input type="text" id="member-search" placeholder="이름, 수감번호, 교도소 검색..."
-                               class="flex-1 px-3 md:px-4 py-2 border rounded-lg text-sm md:text-base">
+                               class="flex-1 px-3 md:px-4 py-2 border rounded-lg text-sm md:text-base"
+                               oninput="debouncedLoadMembers()">
                         <button onclick="loadMembers()" class="btn btn-primary px-3 md:px-4">
                             <i class="fas fa-search"></i>
                             <span class="hidden sm:inline ml-2">검색</span>
+                        </button>
+                        <button onclick="exportMembersToExcel()" class="btn btn-success px-3 md:px-4">
+                            <i class="fas fa-file-excel"></i>
+                            <span class="hidden sm:inline ml-2">엑셀 내보내기</span>
                         </button>
                     </div>
                 </div>
@@ -616,9 +629,14 @@
                 <div class="card mb-6">
                     <div class="flex space-x-2">
                         <input type="text" id="book-search" placeholder="제목, 저자, 출판사, ISBN 검색..."
-                               class="flex-1 px-4 py-2 border rounded-lg">
+                               class="flex-1 px-4 py-2 border rounded-lg"
+                               oninput="debouncedLoadBooks()">
                         <button onclick="loadBooks()" class="btn btn-primary">
                             <i class="fas fa-search"></i>
+                        </button>
+                        <button onclick="exportBooksToExcel()" class="btn btn-success">
+                            <i class="fas fa-file-excel"></i>
+                            <span class="hidden sm:inline ml-2">엑셀 내보내기</span>
                         </button>
                     </div>
                 </div>
@@ -2917,6 +2935,67 @@ function safeGetValue(elementId, defaultValue = '') {
   return defaultValue
 }
 
+// ==========================================
+// Debounce 유틸리티
+// ==========================================
+function debounce(func, wait) {
+  let timeout
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
+// ==========================================
+// Toast 알림 시스템
+// ==========================================
+function showToast(message, type = 'info', duration = 3000) {
+  const toastContainer = document.getElementById('toast-container') || createToastContainer()
+  
+  const toast = document.createElement('div')
+  toast.className = `toast toast-${type} animate-fade-in`
+  
+  const icons = {
+    success: 'fa-check-circle',
+    error: 'fa-exclamation-circle',
+    warning: 'fa-exclamation-triangle',
+    info: 'fa-info-circle'
+  }
+  
+  const colors = {
+    success: 'bg-green-500',
+    error: 'bg-red-500',
+    warning: 'bg-yellow-500',
+    info: 'bg-blue-500'
+  }
+  
+  toast.innerHTML = `
+    <div class="${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3">
+      <i class="fas ${icons[type]} text-xl"></i>
+      <span class="font-medium">${message}</span>
+    </div>
+  `
+  
+  toastContainer.appendChild(toast)
+  
+  setTimeout(() => {
+    toast.classList.add('animate-fade-out')
+    setTimeout(() => toast.remove(), 300)
+  }, duration)
+}
+
+function createToastContainer() {
+  const container = document.createElement('div')
+  container.id = 'toast-container'
+  container.className = 'fixed top-4 right-4 z-[9999] space-y-2'
+  document.body.appendChild(container)
+  return container
+}
+
 // Admin 권한 체크
 function isAdmin() {
   return currentStaff?.role === ROLES.ADMIN
@@ -3841,6 +3920,10 @@ console.log('권한 관리 함수 로드 완료')
             // 목록 다시 로드
             loadMembers()
         }
+
+        // Debounced 검색 함수들
+        const debouncedLoadMembers = debounce(() => loadMembers(1), 500)
+        const debouncedLoadBooks = debounce(() => loadBooks(), 500)
 
         // 회원 목록 로드
         async function loadMembers(page = 1) {
@@ -9688,6 +9771,219 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('회원 변경 오류:', error)
                 alert('회원 변경 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // ==========================================
+        // 엑셀 내보내기 기능
+        // ==========================================
+        
+        // 회원 데이터 엑셀 내보내기
+        async function exportMembersToExcel() {
+            try {
+                showToast('엑셀 파일을 생성 중입니다...', 'info')
+                
+                // 모든 회원 데이터 가져오기 (검색 필터 적용)
+                const search = document.getElementById('member-search').value
+                const response = await axios.get(`${API_BASE}/members?search=${search}&page=1&limit=10000`)
+                const members = response.data.members || []
+                
+                if (members.length === 0) {
+                    showToast('내보낼 데이터가 없습니다.', 'warning')
+                    return
+                }
+                
+                // 엑셀 데이터 준비
+                const data = members.map(m => ({
+                    '회원 고유번호': m.member_number || '-',
+                    '이름': m.name,
+                    '수용기관': m.institution || '-',
+                    '수용번호': m.inmate_number || '-',
+                    '사서함': m.address || '-',
+                    '입금자명': m.depositor || '-',
+                    '일반 포인트': m.points || 0,
+                    '배팅 포인트': m.betting_points || 0,
+                    '동결 포인트': m.frozen_points || 0,
+                    '상태': m.status === 'active' ? '활성' : '비활성',
+                    '가입일': new Date(m.created_at).toLocaleDateString('ko-KR')
+                }))
+                
+                // 워크북 생성
+                const wb = XLSX.utils.book_new()
+                const ws = XLSX.utils.json_to_sheet(data)
+                
+                // 열 너비 설정
+                ws['!cols'] = [
+                    { wch: 15 }, // 회원 고유번호
+                    { wch: 10 }, // 이름
+                    { wch: 15 }, // 수용기관
+                    { wch: 12 }, // 수용번호
+                    { wch: 25 }, // 사서함
+                    { wch: 10 }, // 입금자명
+                    { wch: 12 }, // 일반 포인트
+                    { wch: 12 }, // 배팅 포인트
+                    { wch: 12 }, // 동결 포인트
+                    { wch: 8 },  // 상태
+                    { wch: 12 }  // 가입일
+                ]
+                
+                XLSX.utils.book_append_sheet(wb, ws, '회원 목록')
+                
+                // 파일 다운로드
+                const filename = `회원목록_${new Date().toISOString().split('T')[0]}.xlsx`
+                XLSX.writeFile(wb, filename)
+                
+                showToast(`${members.length}명의 회원 데이터를 내보냈습니다.`, 'success')
+            } catch (error) {
+                console.error('엑셀 내보내기 오류:', error)
+                showToast('엑셀 내보내기 실패: ' + (error.response?.data?.error || error.message), 'error')
+            }
+        }
+        
+        // 티켓 데이터 엑셀 내보내기
+        async function exportTicketsToExcel() {
+            try {
+                showToast('엑셀 파일을 생성 중입니다...', 'info')
+                
+                // 모든 티켓 데이터 가져오기 (필터 적용)
+                const status = document.getElementById('ticket-status-filter').value
+                const type = document.getElementById('ticket-type-filter').value
+                const priority = document.getElementById('ticket-priority-filter').value
+                
+                let url = `${API_BASE}/tickets?page=1&limit=10000`
+                if (status !== 'all') url += `&status=${status}`
+                if (type !== 'all') url += `&type=${type}`
+                if (priority !== 'all') url += `&priority=${priority}`
+                
+                const response = await axios.get(url)
+                const tickets = response.data.tickets || []
+                
+                if (tickets.length === 0) {
+                    showToast('내보낼 데이터가 없습니다.', 'warning')
+                    return
+                }
+                
+                // 엑셀 데이터 준비
+                const statusNames = {
+                    'open': '미배정',
+                    'assigned': '배정됨',
+                    'in_progress': '처리중',
+                    'completed': '완료',
+                    'closed': '종료'
+                }
+                
+                const typeNames = {
+                    'ORDER': '주문',
+                    'INQUIRY': '문의',
+                    'PURCHASE_ORDER': '발주',
+                    'POINT_ADJUSTMENT': '포인트 조정',
+                    'MEMBER': '회원 관리'
+                }
+                
+                const priorityNames = {
+                    'urgent': '긴급',
+                    'high': '높음',
+                    'normal': '보통',
+                    'low': '낮음'
+                }
+                
+                const data = tickets.map(t => ({
+                    '티켓 번호': t.ticket_number,
+                    '제목': t.title,
+                    '회원명': t.member_name || '-',
+                    '수용번호': t.inmate_number || '-',
+                    '유형': typeNames[t.type] || t.type,
+                    '우선순위': priorityNames[t.priority] || t.priority,
+                    '상태': statusNames[t.status] || t.status,
+                    '담당자': t.assigned_to_name || '미배정',
+                    '생성일': new Date(t.created_at).toLocaleDateString('ko-KR'),
+                    '업데이트': t.updated_at ? new Date(t.updated_at).toLocaleDateString('ko-KR') : '-'
+                }))
+                
+                // 워크북 생성
+                const wb = XLSX.utils.book_new()
+                const ws = XLSX.utils.json_to_sheet(data)
+                
+                // 열 너비 설정
+                ws['!cols'] = [
+                    { wch: 15 }, // 티켓 번호
+                    { wch: 30 }, // 제목
+                    { wch: 10 }, // 회원명
+                    { wch: 12 }, // 수용번호
+                    { wch: 12 }, // 유형
+                    { wch: 10 }, // 우선순위
+                    { wch: 10 }, // 상태
+                    { wch: 10 }, // 담당자
+                    { wch: 12 }, // 생성일
+                    { wch: 12 }  // 업데이트
+                ]
+                
+                XLSX.utils.book_append_sheet(wb, ws, '티켓 목록')
+                
+                // 파일 다운로드
+                const filename = `티켓목록_${new Date().toISOString().split('T')[0]}.xlsx`
+                XLSX.writeFile(wb, filename)
+                
+                showToast(`${tickets.length}개의 티켓 데이터를 내보냈습니다.`, 'success')
+            } catch (error) {
+                console.error('엑셀 내보내기 오류:', error)
+                showToast('엑셀 내보내기 실패: ' + (error.response?.data?.error || error.message), 'error')
+            }
+        }
+        
+        // 도서 데이터 엑셀 내보내기
+        async function exportBooksToExcel() {
+            try {
+                showToast('엑셀 파일을 생성 중입니다...', 'info')
+                
+                // 모든 도서 데이터 가져오기 (검색 필터 적용)
+                const search = document.getElementById('book-search').value
+                const response = await axios.get(`${API_BASE}/books?search=${search}`)
+                const books = response.data.books || []
+                
+                if (books.length === 0) {
+                    showToast('내보낼 데이터가 없습니다.', 'warning')
+                    return
+                }
+                
+                // 엑셀 데이터 준비
+                const data = books.map(b => ({
+                    'ISBN': b.isbn || '-',
+                    '제목': b.title,
+                    '저자': b.author || '-',
+                    '출판사': b.publisher || '-',
+                    '가격': b.price || 0,
+                    '재고': b.stock || 0,
+                    '상태': b.status === 'available' ? '판매중' : b.status === 'out_of_stock' ? '품절' : '단종',
+                    '등록일': new Date(b.created_at).toLocaleDateString('ko-KR')
+                }))
+                
+                // 워크북 생성
+                const wb = XLSX.utils.book_new()
+                const ws = XLSX.utils.json_to_sheet(data)
+                
+                // 열 너비 설정
+                ws['!cols'] = [
+                    { wch: 15 }, // ISBN
+                    { wch: 30 }, // 제목
+                    { wch: 15 }, // 저자
+                    { wch: 15 }, // 출판사
+                    { wch: 10 }, // 가격
+                    { wch: 8 },  // 재고
+                    { wch: 10 }, // 상태
+                    { wch: 12 }  // 등록일
+                ]
+                
+                XLSX.utils.book_append_sheet(wb, ws, '도서 목록')
+                
+                // 파일 다운로드
+                const filename = `도서목록_${new Date().toISOString().split('T')[0]}.xlsx`
+                XLSX.writeFile(wb, filename)
+                
+                showToast(`${books.length}개의 도서 데이터를 내보냈습니다.`, 'success')
+            } catch (error) {
+                console.error('엑셀 내보내기 오류:', error)
+                showToast('엑셀 내보내기 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
     </script>
