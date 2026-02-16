@@ -1,10 +1,93 @@
 import { Hono } from 'hono'
+import { streamSSE } from 'hono/streaming'
 
 type Bindings = {
   DB: D1Database
 }
 
 const notifications = new Hono<{ Bindings: Bindings }>()
+
+// SSE 실시간 알림 스트림
+notifications.get('/stream', async (c) => {
+  const staff_id = c.req.query('staff_id')
+  
+  if (!staff_id) {
+    return c.json({ error: '직원 ID가 필요합니다.' }, 400)
+  }
+
+  return streamSSE(c, async (stream) => {
+    let id = 0
+    
+    // 초기 연결 메시지
+    await stream.writeSSE({
+      data: JSON.stringify({
+        type: 'connected',
+        message: '실시간 알림이 연결되었습니다.',
+        timestamp: new Date().toISOString()
+      }),
+      event: 'connected',
+      id: String(id++)
+    })
+
+    // 30초마다 읽지 않은 알림 확인
+    const intervalId = setInterval(async () => {
+      try {
+        // 읽지 않은 알림 개수 조회
+        const countResult = await c.env.DB.prepare(
+          'SELECT COUNT(*) as count FROM notifications WHERE staff_id = ? AND is_read = 0'
+        ).bind(staff_id).first()
+        
+        const unreadCount = (countResult as any)?.count || 0
+        
+        // 읽지 않은 알림이 있으면 전송
+        if (unreadCount > 0) {
+          const { results } = await c.env.DB.prepare(
+            `SELECT * FROM notifications 
+             WHERE staff_id = ? AND is_read = 0 
+             ORDER BY created_at DESC LIMIT 1`
+          ).bind(staff_id).all()
+          
+          const latestNotification = results?.[0]
+          
+          if (latestNotification) {
+            await stream.writeSSE({
+              data: JSON.stringify({
+                type: 'notification',
+                notification: latestNotification,
+                unreadCount: unreadCount,
+                timestamp: new Date().toISOString()
+              }),
+              event: 'notification',
+              id: String(id++)
+            })
+          }
+        }
+        
+        // Heartbeat (연결 유지)
+        await stream.writeSSE({
+          data: JSON.stringify({
+            type: 'heartbeat',
+            unreadCount: unreadCount,
+            timestamp: new Date().toISOString()
+          }),
+          event: 'heartbeat',
+          id: String(id++)
+        })
+      } catch (error) {
+        console.error('SSE 알림 전송 오류:', error)
+      }
+    }, 30000) // 30초마다
+
+    // 클라이언트 연결 종료 시 interval 정리
+    stream.onAbort(() => {
+      clearInterval(intervalId)
+      console.log(`SSE stream closed for staff_id: ${staff_id}`)
+    })
+    
+    // 연결 유지 (무한 대기)
+    await stream.sleep(Number.MAX_SAFE_INTEGER)
+  })
+})
 
 // 알림 목록 조회
 notifications.get('/', async (c) => {
