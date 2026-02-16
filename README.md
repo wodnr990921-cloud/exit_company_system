@@ -1,8 +1,100 @@
-# EXIT System v11.2 🚀 다크 모드 + 키보드 단축키 + 프린트 최적화
+# EXIT System v11.3 🚀 모바일 제스처 + 활동 로그 + 대시보드 커스터마이징
 
 **통합 교도소 도서 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
-## 🆕 최신 업데이트 (2026-02-16)
+## 🆕 최신 업데이트 (2026-02-17)
+
+### 🔥 v11.3 고급 기능 - 모바일 + 로그 + 커스터마이징
+
+#### 1. 📱 모바일 터치 제스처
+**기능**:
+- **스와이프 우측**: 모바일 메뉴 열기
+- **스와이프 좌측**: 모바일 메뉴 닫기
+- **최소 스와이프 거리**: 50px
+- **자동 감지**: 가로/세로 스와이프 구분
+
+**작동 방식**:
+```javascript
+// 터치 이벤트 감지
+touchstart → touchmove → touchend
+// 스와이프 방향 계산
+if (diffX > 50px) → 오른쪽 스와이프 → 메뉴 열기
+if (diffX < -50px) → 왼쪽 스와이프 → 메뉴 닫기
+```
+
+**로깅**:
+- 모든 제스처 활동 로그 기록
+- 방향, 액션 정보 저장
+
+#### 2. 📊 사용자 활동 로그 시스템
+**기능**:
+- **자동 로깅**: 모든 주요 액션 자동 기록
+- **localStorage 저장**: 최대 1000개 로그 보관
+- **CSV 내보내기**: Excel 호환 (BOM 포함)
+- **필터링**: 액션, 직원, 날짜별 필터
+
+**기록되는 활동**:
+- 로그인/로그아웃
+- 대시보드 조회
+- 위젯 토글
+- 제스처 사용
+- 기타 주요 액션
+
+**로그 구조**:
+```javascript
+{
+  timestamp: "2026-02-17T00:30:00.000Z",
+  staff_id: 1,
+  staff_name: "관리자",
+  staff_role: "admin",
+  action: "login",
+  details: { email: "admin@...", role: "admin" },
+  page: "/",
+  view: "dashboard"
+}
+```
+
+**함수**:
+- `logActivity(action, details)`: 활동 로그 기록
+- `getActivityLogs(limit, filter)`: 로그 조회
+- `exportActivityLogs()`: CSV 내보내기
+
+**CSV 내보내기**:
+1. 대시보드 또는 설정 페이지에서
+2. 개발자 콘솔에서 `exportActivityLogs()` 호출
+3. `활동로그_2026-02-17.csv` 다운로드
+4. Excel에서 열기 (한글 깨짐 없음)
+
+#### 3. 🎨 대시보드 위젯 커스터마이징
+**기능**:
+- **위젯 표시/숨김**: 토글 스위치로 개별 제어
+- **설정 저장**: localStorage에 영구 저장
+- **실시간 반영**: 변경 즉시 적용
+- **초기화**: 기본 설정으로 복원
+
+**위젯 목록**:
+1. 내 배정 티켓 (파란색)
+2. 미배정 티켓 (노란색)
+3. 긴급 티켓 (빨간색)
+4. 오늘 완료 (초록색)
+
+**사용 방법**:
+1. 대시보드 우측 상단 "위젯 설정" 버튼 클릭
+2. 토글 스위치로 위젯 표시/숨김
+3. 설정 자동 저장
+4. "완료" 버튼으로 닫기
+5. "초기화" 버튼으로 기본 설정 복원
+
+**저장 구조**:
+```javascript
+[
+  { id: 'my-tickets', name: '내 배정 티켓', icon: 'clipboard-list', color: 'blue', visible: true },
+  { id: 'open-tickets', name: '미배정 티켓', icon: 'exclamation-triangle', color: 'yellow', visible: false },
+  // ...
+]
+```
+
+---
 
 ### 🔥 v11.2 사용성 개선 - 다크 모드 + 단축키 + 프린트
 
@@ -339,18 +431,18 @@ showToast('메시지', 'success', 3000)
 
 ## 🌐 접속 정보
 
-- **프로덕션 URL**: https://exit-company-system.pages.dev ✅ **LIVE (v11.2)**
-- **최신 배포**: https://59375c7d.exit-company-system-5je.pages.dev (v11.2 - 다크 모드 + 단축키)
+- **프로덕션 URL**: https://exit-company-system.pages.dev ✅ **LIVE (v11.3)**
+- **최신 배포**: https://d78593c9.exit-company-system-5je.pages.dev (v11.3 - 모바일 + 로그 + 커스터마이징)
 - **API 엔드포인트**: https://692c1664.exit-company-system.pages.dev/api (작동 중)
 - **데모 계정**: admin@manager-exit.cloud / admin123
 - **Cloudflare Pages**: exit-company-system
 - **D1 Database**: exit-company-production (13 migrations)
 - **R2 Storage**: exit-company-mailroom ✅ **활성화됨**
-- **Last Deployed**: 2026-02-17 00:05 UTC
-- **Build Size**: 508 KB (app.html)
+- **Last Deployed**: 2026-02-17 00:30 UTC
+- **Build Size**: 532 KB (app.html)
 - **Status**: 🟢 **All Systems Operational**
 - **GitHub**: https://github.com/wodnr990921-cloud/exit_company_system
-- **Latest Commit**: 29387b5 - feat: Add dark mode, keyboard shortcuts, and print CSS
+- **Latest Commit**: 4726d32 - feat: Add mobile gestures, activity logging, and dashboard customization
 
 ## 📋 프로젝트 개요
 
