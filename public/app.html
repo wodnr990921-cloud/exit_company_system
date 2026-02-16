@@ -523,7 +523,15 @@
         <main class="max-w-7xl mx-auto px-4 py-6">
             <!-- 대시보드 뷰 -->
             <div id="dashboard-view" class="view-content">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- 대시보드 헤더 -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold"><i class="fas fa-tachometer-alt mr-2"></i>대시보드</h2>
+                    <button onclick="showDashboardSettings()" class="btn btn-secondary no-print">
+                        <i class="fas fa-cog mr-2"></i>위젯 설정
+                    </button>
+                </div>
+                
+                <div id="dashboard-widgets" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     <div class="card">
                         <div class="flex items-center justify-between">
                             <div>
@@ -2058,6 +2066,37 @@
             </div>
         </div>
 
+        <!-- 대시보드 위젯 설정 모달 -->
+        <div id="dashboard-settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>대시보드 위젯 설정</h3>
+                        <button onclick="closeDashboardSettings()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <p class="text-sm text-gray-600">위젯의 표시 여부를 설정하세요. 설정은 자동으로 저장됩니다.</p>
+                        
+                        <div id="widget-settings-list" class="space-y-3">
+                            <!-- JavaScript로 채워짐 -->
+                        </div>
+                        
+                        <div class="flex justify-end space-x-2 pt-4 border-t">
+                            <button onclick="resetDashboardSettings()" class="btn btn-secondary">
+                                <i class="fas fa-undo mr-2"></i>초기화
+                            </button>
+                            <button onclick="closeDashboardSettings()" class="btn btn-primary">
+                                <i class="fas fa-check mr-2"></i>완료
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 회원 상세 모달 -->
         <div id="member-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -3450,6 +3489,9 @@ console.log('권한 관리 함수 로드 완료')
                 initializePermissions()
 
                 await loadDashboard()
+                
+                // 활동 로그 기록
+                logActivity('login', { email: email, role: currentStaff.role })
             } catch (error) {
                 alert('로그인 실패: ' + (error.response?.data?.error || error.message))
             }
@@ -3457,6 +3499,9 @@ console.log('권한 관리 함수 로드 완료')
 
         // 로그아웃
         function logout() {
+            // 로그아웃 활동 로그 기록
+            logActivity('logout', { email: currentStaff?.email })
+            
             currentStaff = null
             // localStorage에서 세션 정보 삭제
             localStorage.removeItem('exit_system_session')
@@ -3544,6 +3589,9 @@ console.log('권한 관리 함수 로드 완료')
         // 대시보드 로드
         async function loadDashboard() {
             try {
+                // 위젯 렌더링
+                renderDashboardWidgets()
+                
                 // 출근 상태 확인
                 const attendanceRes = await axios.get(`${API_BASE}/attendance/status/${currentStaff.id}`)
                 if (attendanceRes.data.checkedIn) {
@@ -3588,9 +3636,111 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 차트 렌더링
                 await renderDashboardCharts()
+                
+                // 활동 로그
+                logActivity('view_dashboard', {})
             } catch (error) {
                 console.error('대시보드 로드 오류:', error)
             }
+        }
+        
+        // ==========================================
+        // 대시보드 위젯 관리
+        // ==========================================
+        
+        // 기본 위젯 설정
+        const DEFAULT_WIDGETS = [
+            { id: 'my-tickets', name: '내 배정 티켓', icon: 'clipboard-list', color: 'blue', visible: true },
+            { id: 'open-tickets', name: '미배정 티켓', icon: 'exclamation-triangle', color: 'yellow', visible: true },
+            { id: 'urgent-tickets', name: '긴급 티켓', icon: 'fire', color: 'red', visible: true },
+            { id: 'today-completed', name: '오늘 완료', icon: 'check-circle', color: 'green', visible: true }
+        ]
+        
+        // 위젯 설정 가져오기
+        function getWidgetSettings() {
+            const saved = localStorage.getItem('dashboard_widgets')
+            return saved ? JSON.parse(saved) : DEFAULT_WIDGETS
+        }
+        
+        // 위젯 설정 저장
+        function saveWidgetSettings(widgets) {
+            localStorage.setItem('dashboard_widgets', JSON.stringify(widgets))
+        }
+        
+        // 대시보드 위젯 렌더링
+        function renderDashboardWidgets() {
+            const widgets = getWidgetSettings()
+            const container = document.getElementById('dashboard-widgets')
+            
+            if (!container) return
+            
+            container.innerHTML = widgets
+                .filter(w => w.visible)
+                .map(w => `
+                    <div class="card widget-card" data-widget-id="${w.id}">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">${w.name}</p>
+                                <p id="${w.id}-count" class="text-3xl font-bold text-${w.color}-600">0</p>
+                            </div>
+                            <i class="fas fa-${w.icon} text-4xl text-${w.color}-200"></i>
+                        </div>
+                    </div>
+                `).join('')
+        }
+        
+        // 대시보드 설정 모달 열기
+        function showDashboardSettings() {
+            const widgets = getWidgetSettings()
+            const list = document.getElementById('widget-settings-list')
+            
+            list.innerHTML = widgets.map((w, index) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-${w.icon} text-${w.color}-500"></i>
+                        <span class="font-medium">${w.name}</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" 
+                               class="sr-only peer" 
+                               ${w.visible ? 'checked' : ''} 
+                               onchange="toggleWidget('${w.id}')">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            `).join('')
+            
+            document.getElementById('dashboard-settings-modal').classList.remove('hidden')
+            logActivity('open_dashboard_settings', {})
+        }
+        
+        // 대시보드 설정 모달 닫기
+        function closeDashboardSettings() {
+            document.getElementById('dashboard-settings-modal').classList.add('hidden')
+            renderDashboardWidgets()
+            loadDashboard() // 새로고침
+        }
+        
+        // 위젯 토글
+        function toggleWidget(widgetId) {
+            const widgets = getWidgetSettings()
+            const widget = widgets.find(w => w.id === widgetId)
+            if (widget) {
+                widget.visible = !widget.visible
+                saveWidgetSettings(widgets)
+                logActivity('toggle_widget', { widget_id: widgetId, visible: widget.visible })
+                showToast(`${widget.name} 위젯이 ${widget.visible ? '표시' : '숨김'} 되었습니다.`, 'info', 2000)
+            }
+        }
+        
+        // 대시보드 설정 초기화
+        function resetDashboardSettings() {
+            if (!confirm('대시보드 설정을 초기화하시겠습니까?')) return
+            
+            saveWidgetSettings(DEFAULT_WIDGETS)
+            showDashboardSettings() // 모달 새로고침
+            logActivity('reset_dashboard_settings', {})
+            showToast('대시보드 설정이 초기화되었습니다.', 'success')
         }
 
         // 출근
@@ -4178,6 +4328,169 @@ console.log('권한 관리 함수 로드 완료')
             // 목록 다시 로드
             loadMembers()
         }
+
+        // ==========================================
+        // 사용자 활동 로그 시스템
+        // ==========================================
+        
+        // 활동 로그 저장
+        function logActivity(action, details = {}) {
+            if (!currentStaff) return
+            
+            const log = {
+                timestamp: new Date().toISOString(),
+                staff_id: currentStaff.id,
+                staff_name: currentStaff.name,
+                staff_role: currentStaff.role,
+                action: action,
+                details: details,
+                page: window.location.pathname,
+                view: currentView || 'unknown'
+            }
+            
+            // localStorage에 저장 (최대 1000개)
+            let logs = JSON.parse(localStorage.getItem('activity_logs') || '[]')
+            logs.unshift(log) // 최신 로그를 앞에 추가
+            
+            // 1000개 제한
+            if (logs.length > 1000) {
+                logs = logs.slice(0, 1000)
+            }
+            
+            localStorage.setItem('activity_logs', JSON.stringify(logs))
+            
+            // 콘솔에도 출력 (개발용)
+            console.log('[Activity Log]', action, details)
+        }
+        
+        // 활동 로그 조회
+        function getActivityLogs(limit = 100, filter = {}) {
+            let logs = JSON.parse(localStorage.getItem('activity_logs') || '[]')
+            
+            // 필터 적용
+            if (filter.action) {
+                logs = logs.filter(log => log.action === filter.action)
+            }
+            if (filter.staff_id) {
+                logs = logs.filter(log => log.staff_id === filter.staff_id)
+            }
+            if (filter.startDate) {
+                logs = logs.filter(log => new Date(log.timestamp) >= new Date(filter.startDate))
+            }
+            if (filter.endDate) {
+                logs = logs.filter(log => new Date(log.timestamp) <= new Date(filter.endDate))
+            }
+            
+            return logs.slice(0, limit)
+        }
+        
+        // 활동 로그 내보내기 (CSV)
+        function exportActivityLogs() {
+            const logs = getActivityLogs(1000)
+            
+            if (logs.length === 0) {
+                showToast('내보낼 로그가 없습니다.', 'warning')
+                return
+            }
+            
+            // CSV 생성
+            const headers = ['시간', '직원명', '역할', '액션', '상세정보', '페이지', '뷰']
+            const rows = logs.map(log => [
+                new Date(log.timestamp).toLocaleString('ko-KR'),
+                log.staff_name,
+                log.staff_role,
+                log.action,
+                JSON.stringify(log.details),
+                log.page,
+                log.view
+            ])
+            
+            const csv = [
+                headers.join(','),
+                ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n')
+            
+            // BOM 추가 (Excel 한글 깨짐 방지)
+            const bom = '\uFEFF'
+            const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' })
+            const link = document.createElement('a')
+            link.href = URL.createObjectURL(blob)
+            link.download = `활동로그_${new Date().toISOString().split('T')[0]}.csv`
+            link.click()
+            
+            showToast(`${logs.length}개의 활동 로그를 내보냈습니다.`, 'success')
+        }
+        
+        // ==========================================
+        // 모바일 터치 제스처
+        // ==========================================
+        
+        // 스와이프 감지 유틸리티
+        let touchStartX = 0
+        let touchStartY = 0
+        let touchEndX = 0
+        let touchEndY = 0
+        
+        function handleTouchStart(e) {
+            touchStartX = e.touches[0].clientX
+            touchStartY = e.touches[0].clientY
+        }
+        
+        function handleTouchMove(e) {
+            touchEndX = e.touches[0].clientX
+            touchEndY = e.touches[0].clientY
+        }
+        
+        function handleTouchEnd(e, element) {
+            const diffX = touchEndX - touchStartX
+            const diffY = touchEndY - touchStartY
+            
+            // 최소 스와이프 거리
+            const minSwipeDistance = 50
+            
+            // 가로 스와이프가 세로보다 크면
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > minSwipeDistance) {
+                    if (diffX > 0) {
+                        // 오른쪽 스와이프
+                        onSwipeRight(element)
+                    } else {
+                        // 왼쪽 스와이프
+                        onSwipeLeft(element)
+                    }
+                }
+            }
+        }
+        
+        function onSwipeRight(element) {
+            // 모바일 메뉴 열기
+            if (!element.closest('#mobile-menu')) {
+                const mobileMenu = document.getElementById('mobile-menu')
+                if (mobileMenu && mobileMenu.classList.contains('hidden')) {
+                    toggleMobileMenu()
+                    logActivity('gesture_swipe', { direction: 'right', action: 'open_menu' })
+                }
+            }
+        }
+        
+        function onSwipeLeft(element) {
+            // 모바일 메뉴 닫기
+            const mobileMenu = document.getElementById('mobile-menu')
+            if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+                toggleMobileMenu()
+                logActivity('gesture_swipe', { direction: 'left', action: 'close_menu' })
+            }
+        }
+        
+        // 터치 이벤트 리스너 등록
+        document.addEventListener('DOMContentLoaded', () => {
+            const appScreen = document.getElementById('app-screen')
+            if (appScreen) {
+                appScreen.addEventListener('touchstart', handleTouchStart, { passive: true })
+                appScreen.addEventListener('touchmove', handleTouchMove, { passive: true })
+                appScreen.addEventListener('touchend', (e) => handleTouchEnd(e, e.target), { passive: true })
+            }
+        })
 
         // Debounced 검색 함수들
         const debouncedLoadMembers = debounce(() => loadMembers(1), 500)
