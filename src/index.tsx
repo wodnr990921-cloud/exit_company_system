@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { serveStatic } from 'hono/cloudflare-workers'
 
 // API 라우트
 import auth from './routes/auth'
@@ -21,7 +20,6 @@ import responses from './routes/responses'
 type Bindings = {
   DB: D1Database
   R2: R2Bucket
-  AI: any
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -32,11 +30,21 @@ app.use('/api/*', cors({
   credentials: false,
 }))
 
-// 정적 파일 서빙
-app.use('/static/*', serveStatic({ root: './public' }))
-
-// 루트 경로는 app.html 제공
-app.get('/', serveStatic({ path: './public/app.html' }))
+// HTML 파일 내용을 변수로 저장 (빌드 시 포함됨)
+// 프로덕션에서는 Cloudflare Pages가 직접 서빙하므로 이 코드는 실행되지 않음
+app.get('/', async (c) => {
+  // 로컬 개발 환경용 - 단순 메시지 반환
+  return c.html(`
+    <html>
+    <head><title>EXIT System</title></head>
+    <body>
+      <h1>EXIT System</h1>
+      <p>API is running. Access <a href="/app.html">/app.html</a> for the full application.</p>
+      <p>Or use the API endpoints at <code>/api/*</code></p>
+    </body>
+    </html>
+  `)
+})
 
 // API 라우트 등록
 app.route('/api/auth', auth)
