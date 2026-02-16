@@ -1,8 +1,72 @@
-# EXIT System v11.3 🚀 모바일 제스처 + 활동 로그 + 대시보드 커스터마이징
+# EXIT System v12.0 🚀 실시간 알림 시스템 (SSE) + 모바일 최적화
 
 **통합 교도소 도서 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
 ## 🆕 최신 업데이트 (2026-02-17)
+
+### 🔥 v12.0 실시간 알림 + 모바일 UX 개선
+
+#### 1. 🔔 실시간 알림 시스템 (Server-Sent Events)
+**백엔드 구현**:
+- **SSE 엔드포인트**: `GET /api/notifications/stream?staff_id={id}`
+- **30초 폴링**: 읽지 않은 알림 자동 확인
+- **Heartbeat**: 연결 유지 (30초마다)
+- **자동 재연결**: 에러 발생 시 10초 후 재시도
+
+**프론트엔드 구현**:
+- **알림 벨 아이콘**: 헤더 우측 상단
+- **배지 표시**: 읽지 않은 알림 개수 (99+ 제한)
+- **드롭다운**: 최근 알림 목록 표시
+- **자동 로드**: 로그인/세션 복구 시 SSE 연결
+- **Toast 알림**: 새 알림 수신 시 자동 표시
+
+**알림 타입**:
+- `ticket_assigned`: 티켓 배정
+- `ticket_urgent`: 긴급 티켓
+- `betting_result`: 배팅 결과
+- `point_approved`: 포인트 승인
+- `system`: 시스템 알림
+
+**작동 방식**:
+```javascript
+// SSE 연결
+EventSource → /api/notifications/stream?staff_id=1
+
+// 이벤트 수신
+- connected: 연결 성공
+- notification: 새 알림
+- heartbeat: 연결 유지
+
+// 읽음 처리
+PATCH /api/notifications/:id/read
+
+// 모두 읽음
+POST /api/notifications/read-all
+```
+
+**기능**:
+- ✅ 로그인 시 자동 연결
+- ✅ 새 알림 자동 수신
+- ✅ Toast 알림 표시
+- ✅ 배지 실시간 업데이트
+- ✅ 클릭하여 읽음 처리
+- ✅ 모두 읽음 처리
+- ✅ 로그아웃 시 자동 종료
+- ✅ 에러 시 자동 재연결
+
+#### 2. 📱 모바일 UX 최적화
+**변경사항**:
+- **헤더 숨김**: 모바일(md 미만)에서 헤더 완전 숨김
+- **햄버거 메뉴만**: 모바일에서는 햄버거 메뉴만 표시
+- **화면 공간 최대화**: 콘텐츠 영역 확대
+- **터치 제스처**: 스와이프로 메뉴 제어
+
+**적용 코드**:
+```html
+<header class="hidden md:block bg-white shadow-sm">
+```
+
+---
 
 ### 🔥 v11.3 고급 기능 - 모바일 + 로그 + 커스터마이징
 
@@ -431,18 +495,19 @@ showToast('메시지', 'success', 3000)
 
 ## 🌐 접속 정보
 
-- **프로덕션 URL**: https://exit-company-system.pages.dev ✅ **LIVE (v11.3)**
-- **최신 배포**: https://d78593c9.exit-company-system-5je.pages.dev (v11.3 - 모바일 + 로그 + 커스터마이징)
+- **프로덕션 URL**: https://exit-company-system.pages.dev ✅ **LIVE (v12.0)**
+- **최신 배포**: https://4e419bb9.exit-company-system-5je.pages.dev (v12.0 - 실시간 알림 + 모바일)
 - **API 엔드포인트**: https://692c1664.exit-company-system.pages.dev/api (작동 중)
+- **SSE 엔드포인트**: https://692c1664.exit-company-system.pages.dev/api/notifications/stream
 - **데모 계정**: admin@manager-exit.cloud / admin123
 - **Cloudflare Pages**: exit-company-system
 - **D1 Database**: exit-company-production (13 migrations)
 - **R2 Storage**: exit-company-mailroom ✅ **활성화됨**
-- **Last Deployed**: 2026-02-17 00:30 UTC
-- **Build Size**: 532 KB (app.html)
+- **Last Deployed**: 2026-02-17 01:00 UTC
+- **Build Size**: 548 KB (app.html)
 - **Status**: 🟢 **All Systems Operational**
 - **GitHub**: https://github.com/wodnr990921-cloud/exit_company_system
-- **Latest Commit**: 4726d32 - feat: Add mobile gestures, activity logging, and dashboard customization
+- **Latest Commit**: dcce290 - feat: Add real-time notifications (SSE) and hide header on mobile
 
 ## 📋 프로젝트 개요
 
