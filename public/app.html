@@ -18,32 +18,212 @@
             }
         }
         .hidden { display: none !important; }
+        
+        /* 로딩 애니메이션 개선 */
         .loading { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .nav-item { transition: all 0.3s; }
-        .nav-item.active { background: #3b82f6; color: white; }
-        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        
+        /* 페이드인 애니메이션 */
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(-10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        @keyframes slideIn { 
+            from { transform: translateX(-20px); opacity: 0; } 
+            to { transform: translateX(0); opacity: 1; } 
+        }
+        
+        /* 네비게이션 아이템 호버 효과 */
+        .nav-item { 
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: #3b82f6;
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+        .nav-item:hover {
+            background: #eff6ff;
+            padding-left: 20px;
+        }
+        .nav-item:hover::before {
+            transform: scaleY(1);
+        }
+        .nav-item.active { 
+            background: #3b82f6; 
+            color: white; 
+        }
+        .nav-item.active::before {
+            display: none;
+        }
+        
+        /* 상태 배지 */
+        .status-badge { 
+            display: inline-block; 
+            padding: 2px 8px; 
+            border-radius: 4px; 
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        .status-badge:hover {
+            transform: scale(1.05);
+        }
         .status-open { background: #dbeafe; color: #1e40af; }
         .status-assigned { background: #fef3c7; color: #92400e; }
         .status-in_progress { background: #fef9c3; color: #854d0e; }
         .status-completed { background: #d1fae5; color: #065f46; }
         .status-closed { background: #e5e7eb; color: #374151; }
+        
+        /* 우선순위 배지 */
         .priority-urgent { background: #fee2e2; color: #991b1b; }
         .priority-high { background: #fed7aa; color: #9a3412; }
         .priority-normal { background: #dbeafe; color: #1e40af; }
         .priority-low { background: #e5e7eb; color: #374151; }
-        .modal { animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; }
-        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+        
+        /* 모달 애니메이션 */
+        .modal { animation: fadeIn 0.3s ease; }
+        
+        /* 카드 호버 효과 */
+        .card { 
+            background: white; 
+            border-radius: 8px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+        
+        /* 버튼 호버 효과 개선 */
+        .btn { 
+            padding: 8px 16px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s, height 0.4s;
+        }
+        .btn:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
         .btn-primary { background: #3b82f6; color: white; }
-        .btn-primary:hover { background: #2563eb; }
+        .btn-primary:hover { 
+            background: #2563eb;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
         .btn-success { background: #10b981; color: white; }
-        .btn-success:hover { background: #059669; }
+        .btn-success:hover { 
+            background: #059669;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
         .btn-danger { background: #ef4444; color: white; }
-        .btn-danger:hover { background: #dc2626; }
+        .btn-danger:hover { 
+            background: #dc2626;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+        
         .btn-secondary { background: #6b7280; color: white; }
-        .btn-secondary:hover { background: #4b5563; }
+        .btn-secondary:hover { 
+            background: #4b5563;
+            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+        }
+        
+        /* 테이블 행 호버 효과 */
+        tbody tr {
+            transition: all 0.2s ease;
+        }
+        tbody tr:hover {
+            background: #f8fafc;
+            cursor: pointer;
+            transform: scale(1.01);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        /* 입력 필드 포커스 효과 */
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+        
+        /* 링크 호버 효과 */
+        a {
+            transition: color 0.2s ease;
+        }
+        a:hover {
+            color: #3b82f6;
+        }
+        
+        /* 아이콘 호버 효과 */
+        i.fa, i.fas, i.far {
+            transition: all 0.2s ease;
+        }
+        .hover-icon:hover i {
+            transform: scale(1.2);
+            color: #3b82f6;
+        }
+        
+        /* 스켈레톤 로딩 애니메이션 */
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+        }
+        
+        /* 스크롤바 스타일링 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -4386,18 +4566,6 @@ console.log('권한 관리 함수 로드 완료')
                 <head>
                     <meta charset="UTF-8">
                     <title>일일 마감 리포트 - ${date}</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; padding: 20px; }
-                        h1 { text-align: center; color: #333; }
-                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-                        th { background-color: #f4f4f4; font-weight: bold; }
-                        .summary { background-color: #e8f4f8; }
-                        .total { background-color: #4299e1; color: white; font-weight: bold; }
-                        @media print {
-                            button { display: none; }
-                        }
-                    </style>
                 </head>
                 <body>
                     <h1>📊 일일 마감 리포트</h1>
@@ -5554,64 +5722,6 @@ console.log('권한 관리 함수 로드 완료')
                     <head>
                         <meta charset="UTF-8">
                         <title>답변서 - ${ticket.ticket_number}</title>
-                        <style>
-                            body {
-                                font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
-                                padding: 40px;
-                                line-height: 1.8;
-                            }
-                            .header {
-                                text-align: center;
-                                border-bottom: 3px double #333;
-                                padding-bottom: 20px;
-                                margin-bottom: 30px;
-                            }
-                            .header h1 {
-                                font-size: 28px;
-                                margin: 0 0 10px 0;
-                            }
-                            .info-section {
-                                margin-bottom: 30px;
-                                background: #f5f5f5;
-                                padding: 15px;
-                                border-radius: 5px;
-                            }
-                            .info-row {
-                                display: flex;
-                                margin: 5px 0;
-                            }
-                            .info-label {
-                                font-weight: bold;
-                                width: 120px;
-                            }
-                            .response-item {
-                                margin: 20px 0;
-                                padding: 20px;
-                                border: 2px solid #333;
-                                border-radius: 5px;
-                                page-break-inside: avoid;
-                            }
-                            .response-header {
-                                font-weight: bold;
-                                margin-bottom: 10px;
-                                color: #0066cc;
-                                border-bottom: 1px solid #ddd;
-                                padding-bottom: 5px;
-                            }
-                            .response-content {
-                                white-space: pre-wrap;
-                                font-size: 15px;
-                            }
-                            .footer {
-                                margin-top: 40px;
-                                text-align: right;
-                                font-size: 14px;
-                            }
-                            @media print {
-                                body { padding: 20px; }
-                                .no-print { display: none; }
-                            }
-                        </style>
                     </head>
                     <body>
                         <div class="header">
