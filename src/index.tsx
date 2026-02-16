@@ -24,11 +24,8 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-// CORS 설정 - 모든 origin 허용 (개발 환경)
-app.use('/api/*', cors({
-  origin: '*',
-  credentials: false,
-}))
+// CORS 설정 - 기본 설정 사용
+app.use('/api/*', cors())
 
 // HTML 파일 내용을 변수로 저장 (빌드 시 포함됨)
 // 프로덕션에서는 Cloudflare Pages가 직접 서빙하므로 이 코드는 실행되지 않음
