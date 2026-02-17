@@ -12316,8 +12316,8 @@ console.log('권한 관리 함수 로드 완료')
         // 관리자 페이지 - 수정 요청 로드
         async function loadAdminModifications() {
             try {
-                const response = await axios.get(`${API_BASE}/modifications?status=pending`)
-                const modifications = response.data.modifications || []
+                const response = await axios.get(`${API_BASE}/modifications/pending`)
+                const modifications = response.data.requests || []
                 
                 const container = document.getElementById('admin-modifications-list')
                 
@@ -12331,17 +12331,17 @@ console.log('권한 관리 함수 로드 완료')
                         <div class="flex justify-between items-start mb-2">
                             <div>
                                 <span class="font-bold">${m.field_name}</span>
-                                <span class="text-sm text-gray-600 ml-2">티켓 #${m.ticket_number}</span>
+                                <span class="text-sm text-gray-600 ml-2">${m.target_type} #${m.target_id}</span>
                             </div>
                             <span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">대기중</span>
                         </div>
                         <div class="text-sm">
-                            <span class="text-red-500 line-through">${m.old_value}</span>
+                            <span class="text-red-500 line-through">${m.old_value || '(없음)'}</span>
                             <i class="fas fa-arrow-right mx-2 text-gray-400"></i>
                             <span class="text-green-500">${m.new_value}</span>
                         </div>
                         <div class="text-xs text-gray-500 mt-2">
-                            요청: ${m.requested_by_name} | ${new Date(m.requested_at).toLocaleString()}
+                            요청: ${m.requester_name} | ${new Date(m.created_at).toLocaleString()}
                         </div>
                         ${m.reason ? `<div class="text-xs text-gray-600 mt-1">사유: ${m.reason}</div>` : ''}
                         <div class="flex gap-2 mt-3">
@@ -12357,6 +12357,44 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('수정 요청 로드 오류:', error)
                 showToast('수정 요청 로드 실패', 'error')
+            }
+        }
+        
+        // 관리자 페이지 - 수정 요청 승인
+        async function approveModification(requestId) {
+            if (!confirm('이 수정 요청을 승인하시겠습니까?')) return
+            
+            try {
+                await axios.post(`${API_BASE}/modifications/${requestId}/review`, {
+                    action: 'approve',
+                    reviewed_by: currentStaff.id
+                })
+                
+                showToast('수정 요청이 승인되었습니다.', 'success')
+                loadAdminModifications()
+            } catch (error) {
+                console.error('수정 승인 오류:', error)
+                showToast('수정 승인 실패', 'error')
+            }
+        }
+        
+        // 관리자 페이지 - 수정 요청 거부
+        async function rejectModification(requestId) {
+            const reason = prompt('거부 사유를 입력하세요:')
+            if (!reason) return
+            
+            try {
+                await axios.post(`${API_BASE}/modifications/${requestId}/review`, {
+                    action: 'reject',
+                    reviewed_by: currentStaff.id,
+                    reject_reason: reason
+                })
+                
+                showToast('수정 요청이 거부되었습니다.', 'success')
+                loadAdminModifications()
+            } catch (error) {
+                console.error('수정 거부 오류:', error)
+                showToast('수정 거부 실패', 'error')
             }
         }
         
