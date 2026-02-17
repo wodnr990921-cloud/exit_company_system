@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>엑시트 시스템 - EXIT System</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+    <title>EXIT COMPANY - 교정시설 업무 대행 전문</title>
+    <link rel="icon" type="image/png" href="/exit-icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -363,10 +363,15 @@
 </head>
 <body class="bg-gray-100">
     <!-- 로딩 화면 -->
-    <div id="loading-screen" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+    <div id="loading-screen" class="fixed inset-0 bg-white flex items-center justify-center z-50">
         <div class="text-center">
-            <i class="fas fa-spinner text-white text-5xl loading"></i>
-            <p class="text-white mt-4">로딩 중...</p>
+            <img src="/exit-logo.png" alt="EXIT COMPANY" class="w-48 mx-auto mb-6 animate-pulse">
+            <div class="flex justify-center items-center space-x-2">
+                <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+                <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+            </div>
+            <p class="text-gray-600 mt-4">시스템 로딩 중...</p>
         </div>
     </div>
 
@@ -374,9 +379,8 @@
     <div id="login-screen" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
         <div class="bg-white p-8 rounded-lg shadow-2xl w-96">
             <div class="text-center mb-8">
-                <i class="fas fa-door-open text-6xl text-blue-500 mb-4"></i>
-                <h1 class="text-3xl font-bold text-gray-800">엑시트 시스템</h1>
-                <p class="text-gray-600 mt-2">EXIT System - Integrated Management</p>
+                <img src="/exit-logo.png" alt="EXIT COMPANY" class="w-64 mx-auto mb-4">
+                <p class="text-gray-600 mt-2">교정시설 업무 대행 전문</p>
             </div>
             <form id="login-form" class="space-y-4">
                 <div>
@@ -408,12 +412,8 @@
                     </button>
                     
                     <!-- 로고 (클릭 시 대시보드로 이동) -->
-                    <div class="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity" onclick="event.stopPropagation(); showView('dashboard')">
-                        <i class="fas fa-door-open text-3xl text-blue-500"></i>
-                        <div>
-                            <h1 class="text-xl md:text-2xl font-bold text-gray-800">엑시트 시스템</h1>
-                            <p class="text-xs md:text-sm text-gray-600">EXIT System</p>
-                        </div>
+                    <div class="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity" onclick="event.stopPropagation(); showView('dashboard')">
+                        <img src="/exit-logo.png" alt="EXIT COMPANY" class="h-8 md:h-10">
                     </div>
                 </div>
                 <div class="flex items-center space-x-2 md:space-x-4">
@@ -464,15 +464,16 @@
         
         <!-- 모바일 사이드 메뉴 -->
         <div id="mobile-menu" class="fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform -translate-x-full transition-transform duration-300 z-50 md:hidden">
-            <div class="p-4 border-b">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="font-bold text-gray-800" id="mobile-menu-user-name"></p>
-                        <p class="text-sm" id="mobile-menu-user-role"></p>
-                    </div>
+            <div class="p-4 border-b bg-gradient-to-r from-blue-50 to-white">
+                <div class="flex justify-between items-center mb-3">
+                    <img src="/exit-icon.png" alt="EXIT" class="h-8">
                     <button onclick="toggleMobileMenu()" class="text-gray-600 hover:text-gray-800">
                         <i class="fas fa-times text-xl"></i>
                     </button>
+                </div>
+                <div>
+                    <p class="font-bold text-gray-800 text-sm" id="mobile-menu-user-name"></p>
+                    <p class="text-xs text-gray-600" id="mobile-menu-user-role"></p>
                 </div>
             </div>
             <nav class="p-4 space-y-2">
