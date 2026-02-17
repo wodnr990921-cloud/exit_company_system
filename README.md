@@ -4,6 +4,56 @@
 
 ## 🆕 최신 업데이트 (2026-02-17)
 
+### 🔥 v12.0.3 터치 제스처 및 버튼 충돌 해결 ✅
+
+**긴급 수정**:
+- ✅ **터치 제스처 개선**: 버튼 클릭 시 스와이프 감지 방지
+- ✅ **알림 버튼 수정**: 클릭 시 모바일 메뉴 열림 방지
+- ✅ **위젯 설정 버튼 수정**: 클릭 시 모바일 메뉴 열림 방지
+- ✅ **다크모드 토글 개선**: 클릭 반응 정상화 및 이벤트 전파 방지
+
+**문제 원인**:
+```javascript
+// 이전: 모든 터치 이벤트를 스와이프로 감지
+appScreen.addEventListener('touchend', handleTouchEnd)
+
+// 결과: 버튼 클릭도 스와이프로 인식 → 메뉴 열림
+```
+
+**해결 방법**:
+```javascript
+// 1. 터치 이벤트에서 클릭 가능한 요소 제외
+function handleTouchEnd(e, element) {
+    // 버튼, 링크, 입력 요소 등 무시
+    if (element.closest('button, a, input, select, textarea, .dark-mode-toggle, .card, .modal')) {
+        return
+    }
+    // ... 스와이프 로직
+}
+
+// 2. 버튼에 이벤트 전파 방지
+<button onclick="event.stopPropagation(); toggleNotifications()">
+<div onclick="event.stopPropagation(); toggleDarkMode()">
+<button onclick="event.stopPropagation(); showDashboardSettings()">
+```
+
+**수정된 요소**:
+- 🔔 **알림 버튼**: 이벤트 전파 차단
+- ⚙️ **위젯 설정 버튼**: 이벤트 전파 차단
+- 🌙 **다크모드 토글**: 이벤트 전파 차단 + null 체크 추가
+- 📱 **터치 감지**: 클릭 가능한 모든 요소 제외
+
+**테스트 완료**:
+- ✅ 알림 버튼 클릭 → 알림 드롭다운만 표시
+- ✅ 위젯 설정 클릭 → 설정 모달만 표시
+- ✅ 다크모드 토글 → 모드 전환만 실행
+- ✅ 스와이프 제스처 → 빈 공간에서만 작동
+
+**배포 URL**:
+- 🌐 **최신 배포**: https://896efdc2.exit-company-system-5je.pages.dev
+
+---
+
 ### 🔥 v12.0.2 모바일 헤더 및 햄버거 버튼 수정 ✅
 
 **긴급 수정**:
