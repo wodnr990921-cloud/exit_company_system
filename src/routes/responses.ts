@@ -6,22 +6,52 @@ type Bindings = {
 
 const responses = new Hono<{ Bindings: Bindings }>()
 
-// 날짜별 답변 조회
+// 답변 조회 (필터링 지원)
 responses.get('/', async (c) => {
   const { DB } = c.env
   const date = c.req.query('date') // YYYY-MM-DD 형식
-  
-  if (!date) {
-    return c.json({ error: 'Date parameter is required' }, 400)
-  }
+  const startDate = c.req.query('start_date')
+  const endDate = c.req.query('end_date')
+  const status = c.req.query('status') // pending, printed, error
+  const memberId = c.req.query('member_id')
+  const page = parseInt(c.req.query('page') || '1')
+  const limit = parseInt(c.req.query('limit') || '50')
+  const offset = (page - 1) * limit
   
   try {
-    // 해당 날짜의 답변 조회
+    const conditions = []
+    const values = []
+    
+    // 날짜 필터
+    if (date) {
+      conditions.push('DATE(r.created_at) = ?')
+      values.push(date)
+    } else if (startDate && endDate) {
+      conditions.push('DATE(r.created_at) BETWEEN ? AND ?')
+      values.push(startDate, endDate)
+    }
+    
+    // 상태 필터
+    if (status) {
+      conditions.push('r.print_status = ?')
+      values.push(status)
+    }
+    
+    // 회원 필터
+    if (memberId) {
+      conditions.push('r.member_id = ?')
+      values.push(memberId)
+    }
+    
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    
+    // 답변 조회
     const query = `
       SELECT 
         r.*,
         m.name as member_name,
         m.member_number,
+        m.prison,
         t.ticket_number,
         t.title as ticket_title,
         s.name as printed_by_name
@@ -29,25 +59,39 @@ responses.get('/', async (c) => {
       LEFT JOIN members m ON r.member_id = m.id
       LEFT JOIN tickets t ON r.ticket_id = t.id
       LEFT JOIN staff s ON r.printed_by = s.id
-      WHERE DATE(r.created_at) = ?
+      ${whereClause}
       ORDER BY r.created_at DESC
+      LIMIT ? OFFSET ?
     `
     
-    const { results } = await DB.prepare(query).bind(date).all()
+    const { results } = await DB.prepare(query).bind(...values, limit, offset).all()
+    
+    // 총 개수 조회
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM responses r
+      ${whereClause}
+    `
+    const { total } = await DB.prepare(countQuery).bind(...values).first() as { total: number }
     
     // 통계 계산
-    const total = results.length
     const printed = results.filter(r => r.print_status === 'printed').length
     const pending = results.filter(r => r.print_status === 'pending').length
-    const error = results.filter(r => r.print_status === 'error').length
+    const errorCount = results.filter(r => r.print_status === 'error').length
     
     return c.json({
       responses: results,
-      stats: {
+      pagination: {
+        page,
+        limit,
         total,
+        totalPages: Math.ceil(total / limit)
+      },
+      stats: {
+        total: results.length,
         printed,
         pending,
-        error
+        error: errorCount
       }
     })
   } catch (error) {

@@ -989,6 +989,48 @@
 
                 <!-- 정산 승인 탭 -->
                 <div id="betting-settlements-tab" class="betting-tab-content hidden">
+                    <!-- 필터 및 검색 -->
+                    <div class="card mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">기간 선택</label>
+                                <div class="flex gap-2">
+                                    <input type="date" id="settlement-start-date" class="flex-1 px-3 py-2 border rounded text-sm">
+                                    <input type="date" id="settlement-end-date" class="flex-1 px-3 py-2 border rounded text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">상태</label>
+                                <select id="settlement-status-filter" class="w-full px-3 py-2 border rounded text-sm">
+                                    <option value="pending">정산 대기</option>
+                                    <option value="approved">승인 완료</option>
+                                    <option value="rejected">거부</option>
+                                    <option value="">전체</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">회원 선택</label>
+                                <select id="settlement-member-filter" class="w-full px-3 py-2 border rounded text-sm">
+                                    <option value="">전체 회원</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">폴더 유형</label>
+                                <select id="settlement-folder-type-filter" class="w-full px-3 py-2 border rounded text-sm">
+                                    <option value="">전체</option>
+                                    <option value="single">단폴더</option>
+                                    <option value="multi">다폴더</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="loadFilteredSettlements()" class="btn btn-primary w-full">
+                                    <i class="fas fa-search mr-2"></i>조회
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 정산 대기 목록 -->
                     <div class="card mb-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-bold"><i class="fas fa-check-circle mr-2 text-green-600"></i>정산 대기 목록</h3>
@@ -1310,6 +1352,9 @@
                 <button onclick="showMailroomTab('inspection')" id="mailroom-tab-inspection" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
                     <i class="fas fa-search mr-1"></i>검수 및 배당
                 </button>
+                <button onclick="showMailroomTab('responses')" id="mailroom-tab-responses" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                    <i class="fas fa-reply mr-1"></i>답변실
+                </button>
                 <button onclick="showMailroomTab('history')" id="mailroom-tab-history" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
                     <i class="fas fa-history mr-1"></i>처리 내역
                 </button>
@@ -1387,6 +1432,83 @@
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-history mr-2"></i>우편물 처리 내역</h3>
                     <div id="mail-history-list" class="space-y-2">
                         <p class="text-gray-500 text-center py-8">처리 내역이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 답변실 탭 -->
+            <div id="mailroom-responses-tab" class="mailroom-tab-content hidden">
+                <!-- 필터 및 검색 -->
+                <div class="card mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">기간 선택</label>
+                            <div class="flex gap-2">
+                                <input type="date" id="response-start-date" class="flex-1 px-3 py-2 border rounded">
+                                <input type="date" id="response-end-date" class="flex-1 px-3 py-2 border rounded">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">출력 상태</label>
+                            <select id="response-status-filter" class="w-full px-3 py-2 border rounded">
+                                <option value="">전체</option>
+                                <option value="pending">출력 대기</option>
+                                <option value="printed">출력 완료</option>
+                                <option value="error">오류</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">회원 선택</label>
+                            <select id="response-member-filter" class="w-full px-3 py-2 border rounded">
+                                <option value="">전체 회원</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <button onclick="loadResponses()" class="btn btn-primary flex-1">
+                                <i class="fas fa-search mr-2"></i>조회
+                            </button>
+                            <button onclick="showResponseSettings()" class="btn btn-secondary">
+                                <i class="fas fa-cog mr-2"></i>양식 설정
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 답변 통계 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div class="card bg-blue-50">
+                        <div class="text-sm text-blue-600">전체 답변</div>
+                        <div class="text-2xl font-bold text-blue-800" id="response-total-count">0</div>
+                    </div>
+                    <div class="card bg-yellow-50">
+                        <div class="text-sm text-yellow-600">출력 대기</div>
+                        <div class="text-2xl font-bold text-yellow-800" id="response-pending-count">0</div>
+                    </div>
+                    <div class="card bg-green-50">
+                        <div class="text-sm text-green-600">출력 완료</div>
+                        <div class="text-2xl font-bold text-green-800" id="response-printed-count">0</div>
+                    </div>
+                    <div class="card bg-red-50">
+                        <div class="text-sm text-red-600">오류</div>
+                        <div class="text-2xl font-bold text-red-800" id="response-error-count">0</div>
+                    </div>
+                </div>
+
+                <!-- 답변 목록 -->
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold"><i class="fas fa-reply mr-2"></i>답변 목록</h3>
+                        <div class="flex gap-2">
+                            <button onclick="printSelectedResponses()" class="btn btn-success" id="print-selected-btn" disabled>
+                                <i class="fas fa-print mr-2"></i>선택 출력
+                            </button>
+                            <button onclick="printAllResponses()" class="btn btn-primary">
+                                <i class="fas fa-file-alt mr-2"></i>전체 출력
+                            </button>
+                        </div>
+                    </div>
+                    <div id="responses-list" class="space-y-2 max-h-[600px] overflow-y-auto">
+                        <p class="text-gray-500 text-center py-8">조회 버튼을 클릭하여 답변을 불러오세요.</p>
                     </div>
                 </div>
             </div>
@@ -1527,6 +1649,85 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 답변 양식 설정 모달 -->
+        <div id="response-settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>답변 양식 설정</h3>
+                        <button onclick="closeResponseSettings()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- 상단 공지사항 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-bullhorn mr-1"></i>상단 공지사항
+                            </label>
+                            <textarea id="setting-header-notice" class="w-full px-3 py-2 border rounded h-24" placeholder="답변서 상단에 표시될 공지사항을 입력하세요"></textarea>
+                        </div>
+
+                        <!-- 인사말 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-smile mr-1"></i>인사말
+                            </label>
+                            <textarea id="setting-greeting" class="w-full px-3 py-2 border rounded h-24" placeholder="답변서 시작 부분의 인사말을 입력하세요"></textarea>
+                        </div>
+
+                        <!-- 맺음말 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-hand-peace mr-1"></i>맺음말
+                            </label>
+                            <textarea id="setting-footer" class="w-full px-3 py-2 border rounded h-24" placeholder="답변서 마지막 부분의 맺음말을 입력하세요"></textarea>
+                        </div>
+
+                        <!-- 날짜 표시 옵션 -->
+                        <div class="flex items-center gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="setting-show-received-date" class="form-checkbox">
+                                <span class="text-sm font-medium text-gray-700">
+                                    <i class="fas fa-calendar mr-1"></i>편지 받은 날짜 표시
+                                </span>
+                            </label>
+                        </div>
+
+                        <!-- 날짜 형식 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-calendar-alt mr-1"></i>날짜 형식
+                            </label>
+                            <select id="setting-date-format" class="w-full px-3 py-2 border rounded">
+                                <option value="YYYY년 MM월 DD일">YYYY년 MM월 DD일 (예: 2024년 02월 17일)</option>
+                                <option value="YYYY-MM-DD">YYYY-MM-DD (예: 2024-02-17)</option>
+                                <option value="MM/DD/YYYY">MM/DD/YYYY (예: 02/17/2024)</option>
+                            </select>
+                        </div>
+
+                        <!-- 미리보기 -->
+                        <div class="border rounded p-4 bg-gray-50">
+                            <div class="text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-eye mr-1"></i>미리보기
+                            </div>
+                            <div id="response-preview" class="text-sm space-y-2 bg-white p-3 rounded border">
+                                <div class="text-center font-bold text-blue-700">미리보기</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button onclick="closeResponseSettings()" class="btn btn-secondary">취소</button>
+                        <button onclick="saveResponseSettings()" class="btn btn-primary">
+                            <i class="fas fa-save mr-2"></i>저장
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2915,19 +3116,6 @@
                                         </button>
                                         <button onclick="addAndNotify()" class="btn btn-success flex-1" id="notify-btn" style="display:none;">
                                             <i class="fas fa-bell mr-2"></i>저장 + 알림 발송
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- 일괄 답변 출력 버튼 -->
-                                <div class="card mb-4 bg-blue-50">
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <h4 class="font-bold text-blue-800"><i class="fas fa-print mr-2"></i>답변 출력</h4>
-                                            <p class="text-sm text-blue-600">회원 답변으로 저장된 댓글을 일괄 출력합니다</p>
-                                        </div>
-                                        <button onclick="printAllResponses()" class="btn btn-primary">
-                                            <i class="fas fa-file-alt mr-2"></i>답변 일괄 출력
                                         </button>
                                     </div>
                                 </div>
@@ -8682,6 +8870,9 @@ console.log('권한 관리 함수 로드 완료')
                 loadPendingMail()
             } else if (tabName === 'inspection') {
                 loadProcessedMail()
+            } else if (tabName === 'responses') {
+                loadResponseSettings()
+                loadMembersForResponseFilter()
             } else if (tabName === 'history') {
                 loadMailHistory()
             }
@@ -11218,6 +11409,310 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('엑셀 내보내기 오류:', error)
                 showToast('엑셀 내보내기 실패: ' + (error.response?.data?.error || error.message), 'error')
+            }
+        }
+
+        // ==========================================
+        // 답변실 기능
+        // ==========================================
+        
+        let responseSettings = {}
+        let selectedResponseIds = []
+        
+        // 답변 양식 설정 로드
+        async function loadResponseSettings() {
+            try {
+                const response = await axios.get(`${API_BASE}/responses/settings`)
+                responseSettings = response.data.settings
+                
+                // 폼에 반영
+                if (document.getElementById('setting-header-notice')) {
+                    document.getElementById('setting-header-notice').value = responseSettings.header_notice || ''
+                    document.getElementById('setting-greeting').value = responseSettings.greeting || ''
+                    document.getElementById('setting-footer').value = responseSettings.footer || ''
+                    document.getElementById('setting-show-received-date').checked = responseSettings.show_received_date === 'true'
+                    document.getElementById('setting-date-format').value = responseSettings.date_format || 'YYYY년 MM월 DD일'
+                }
+            } catch (error) {
+                console.error('양식 설정 로드 오류:', error)
+            }
+        }
+        
+        // 답변 목록 로드
+        async function loadResponses() {
+            try {
+                const startDate = document.getElementById('response-start-date').value
+                const endDate = document.getElementById('response-end-date').value
+                const status = document.getElementById('response-status-filter').value
+                const memberId = document.getElementById('response-member-filter').value
+                
+                const params = new URLSearchParams()
+                if (startDate) params.append('start_date', startDate)
+                if (endDate) params.append('end_date', endDate)
+                if (status) params.append('status', status)
+                if (memberId) params.append('member_id', memberId)
+                
+                const response = await axios.get(`${API_BASE}/responses?${params}`)
+                const { responses, stats } = response.data
+                
+                // 통계 업데이트
+                document.getElementById('response-total-count').textContent = stats.total
+                document.getElementById('response-pending-count').textContent = stats.pending
+                document.getElementById('response-printed-count').textContent = stats.printed
+                document.getElementById('response-error-count').textContent = stats.error
+                
+                // 목록 렌더링
+                const container = document.getElementById('responses-list')
+                if (!responses || responses.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">조회된 답변이 없습니다.</p>'
+                    return
+                }
+                
+                container.innerHTML = responses.map(r => `
+                    <div class="border rounded p-3 hover:bg-gray-50">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" class="response-checkbox" value="${r.id}" onchange="updateSelectedResponses()">
+                                <span class="font-medium">${r.member_name} (${r.member_number})</span>
+                                <span class="text-xs px-2 py-1 rounded ${
+                                    r.print_status === 'printed' ? 'bg-green-100 text-green-700' :
+                                    r.print_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-red-100 text-red-700'
+                                }">
+                                    ${r.print_status === 'printed' ? '출력 완료' :
+                                      r.print_status === 'pending' ? '출력 대기' : '오류'}
+                                </span>
+                            </div>
+                            <button onclick="printResponse(${r.id})" class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-print mr-1"></i>출력
+                            </button>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            <div class="flex gap-4">
+                                <span><i class="fas fa-ticket mr-1"></i>${r.ticket_number || 'N/A'}</span>
+                                <span><i class="fas fa-building mr-1"></i>${r.prison || 'N/A'}</span>
+                                <span><i class="fas fa-calendar mr-1"></i>${new Date(r.created_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')
+                
+            } catch (error) {
+                console.error('답변 목록 로드 오류:', error)
+                showToast('답변 목록 로드 실패', 'error')
+            }
+        }
+        
+        // 회원 필터 로드
+        async function loadMembersForResponseFilter() {
+            try {
+                const response = await axios.get(`${API_BASE}/members`)
+                const members = response.data.members
+                
+                const select = document.getElementById('response-member-filter')
+                select.innerHTML = '<option value="">전체 회원</option>' +
+                    members.map(m => `<option value="${m.id}">${m.name} (${m.member_number})</option>`).join('')
+                    
+                // 정산 필터용으로도 복사
+                const settlementSelect = document.getElementById('settlement-member-filter')
+                if (settlementSelect) {
+                    settlementSelect.innerHTML = select.innerHTML
+                }
+            } catch (error) {
+                console.error('회원 목록 로드 오류:', error)
+            }
+        }
+        
+        // 선택된 답변 업데이트
+        function updateSelectedResponses() {
+            selectedResponseIds = Array.from(document.querySelectorAll('.response-checkbox:checked'))
+                .map(cb => cb.value)
+            
+            document.getElementById('print-selected-btn').disabled = selectedResponseIds.length === 0
+        }
+        
+        // 선택한 답변 출력
+        async function printSelectedResponses() {
+            if (selectedResponseIds.length === 0) {
+                showToast('출력할 답변을 선택하세요', 'warning')
+                return
+            }
+            
+            try {
+                // 선택된 답변 데이터 가져오기
+                const responses = []
+                for (const id of selectedResponseIds) {
+                    const res = await axios.get(`${API_BASE}/responses?response_id=${id}`)
+                    if (res.data.responses && res.data.responses.length > 0) {
+                        responses.push(res.data.responses[0])
+                    }
+                }
+                
+                // 출력 페이지 열기
+                printResponsesWindow(responses)
+                
+                // 출력 상태 업데이트
+                await axios.post(`${API_BASE}/responses/bulk-print`, {
+                    response_ids: selectedResponseIds,
+                    printed_by: currentStaff.id
+                })
+                
+                showToast(`${selectedResponseIds.length}개의 답변을 출력했습니다`, 'success')
+                loadResponses()
+                
+            } catch (error) {
+                console.error('답변 출력 오류:', error)
+                showToast('답변 출력 실패', 'error')
+            }
+        }
+        
+        // 전체 답변 출력
+        async function printAllResponses() {
+            try {
+                const startDate = document.getElementById('response-start-date').value
+                const endDate = document.getElementById('response-end-date').value
+                const status = document.getElementById('response-status-filter').value
+                const memberId = document.getElementById('response-member-filter').value
+                
+                const params = new URLSearchParams()
+                if (startDate) params.append('start_date', startDate)
+                if (endDate) params.append('end_date', endDate)
+                if (status) params.append('status', status)
+                if (memberId) params.append('member_id', memberId)
+                
+                const response = await axios.get(`${API_BASE}/responses?${params}`)
+                const responses = response.data.responses
+                
+                if (!responses || responses.length === 0) {
+                    showToast('출력할 답변이 없습니다', 'warning')
+                    return
+                }
+                
+                // 출력 페이지 열기
+                printResponsesWindow(responses)
+                
+                showToast(`${responses.length}개의 답변을 출력 준비했습니다`, 'success')
+                
+            } catch (error) {
+                console.error('전체 답변 출력 오류:', error)
+                showToast('전체 답변 출력 실패', 'error')
+            }
+        }
+        
+        // 답변 출력 윈도우
+        function printResponsesWindow(responses) {
+            const printWindow = window.open('', '', 'width=800,height=600')
+            
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>답변서 출력</title>
+                    <style>
+                        @page { margin: 2cm; }
+                        body { font-family: 'Noto Sans KR', sans-serif; line-height: 1.6; }
+                        .response { page-break-after: always; padding: 20px; }
+                        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+                        .notice { background: #f0f0f0; padding: 10px; margin: 10px 0; border-left: 4px solid #0066cc; }
+                        .content { margin: 20px 0; min-height: 200px; white-space: pre-wrap; }
+                        .footer { margin-top: 30px; }
+                        .recipient { text-align: right; margin-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    ${responses.map(r => `
+                        <div class="response">
+                            <div class="header">
+                                <h2>답변서</h2>
+                                <p>티켓번호: ${r.ticket_number || 'N/A'}</p>
+                            </div>
+                            
+                            ${responseSettings.header_notice ? `<div class="notice">${responseSettings.header_notice}</div>` : ''}
+                            
+                            <div class="recipient">
+                                <p>${r.recipient_name} 님 귀하</p>
+                                <p>${r.recipient_institution || ''}</p>
+                                ${responseSettings.show_received_date === 'true' ? `<p>수령일: ${new Date().toLocaleDateString()}</p>` : ''}
+                            </div>
+                            
+                            ${responseSettings.greeting ? `<div class="greeting">${responseSettings.greeting}</div>` : ''}
+                            
+                            <div class="content">${r.content}</div>
+                            
+                            ${responseSettings.footer ? `<div class="footer">${responseSettings.footer}</div>` : ''}
+                            
+                            <div class="footer">
+                                <p>EXIT COMPANY</p>
+                                <p>${new Date().toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </body>
+                </html>
+            `
+            
+            printWindow.document.write(html)
+            printWindow.document.close()
+            printWindow.onload = () => {
+                printWindow.print()
+            }
+        }
+        
+        // 단일 답변 출력
+        async function printResponse(responseId) {
+            try {
+                const response = await axios.get(`${API_BASE}/responses?response_id=${responseId}`)
+                if (response.data.responses && response.data.responses.length > 0) {
+                    printResponsesWindow([response.data.responses[0]])
+                    
+                    // 출력 상태 업데이트
+                    await axios.patch(`${API_BASE}/responses/${responseId}`, {
+                        print_status: 'printed',
+                        printed_by: currentStaff.id
+                    })
+                    
+                    loadResponses()
+                }
+            } catch (error) {
+                console.error('답변 출력 오류:', error)
+                showToast('답변 출력 실패', 'error')
+            }
+        }
+        
+        // 답변 양식 설정 모달 열기
+        function showResponseSettings() {
+            document.getElementById('response-settings-modal').classList.remove('hidden')
+        }
+        
+        // 답변 양식 설정 모달 닫기
+        function closeResponseSettings() {
+            document.getElementById('response-settings-modal').classList.add('hidden')
+        }
+        
+        // 답변 양식 설정 저장
+        async function saveResponseSettings() {
+            try {
+                const settings = {
+                    header_notice: document.getElementById('setting-header-notice').value,
+                    greeting: document.getElementById('setting-greeting').value,
+                    footer: document.getElementById('setting-footer').value,
+                    show_received_date: document.getElementById('setting-show-received-date').checked ? 'true' : 'false',
+                    date_format: document.getElementById('setting-date-format').value
+                }
+                
+                await axios.put(`${API_BASE}/responses/settings`, {
+                    settings,
+                    updated_by: currentStaff.id
+                })
+                
+                responseSettings = settings
+                showToast('답변 양식 설정이 저장되었습니다', 'success')
+                closeResponseSettings()
+                
+            } catch (error) {
+                console.error('양식 설정 저장 오류:', error)
+                showToast('양식 설정 저장 실패', 'error')
             }
         }
     </script>

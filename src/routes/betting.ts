@@ -1181,4 +1181,115 @@ betting.post('/settlement/confirm', async (c) => {
   }
 })
 
+// ==========================================
+// 배팅 통계
+// ==========================================
+
+// 대시보드용 배팅 통계
+betting.get('/stats/dashboard', async (c) => {
+  try {
+    const { DB } = c.env
+    
+    // 오늘 날짜
+    const today = new Date().toISOString().split('T')[0]
+    
+    // 총 배팅액, 총 적중금, 순수익, 배팅 건수
+    const statsQuery = await DB.prepare(`
+      SELECT 
+        COUNT(*) as total_bets,
+        SUM(total_bet_amount) as total_bet_amount,
+        SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END) as total_win_amount
+      FROM bet_folders
+      WHERE DATE(created_at) = ?
+    `).bind(today).first()
+    
+    const totalBets = Number((statsQuery as any)?.total_bets || 0)
+    const totalBetAmount = Number((statsQuery as any)?.total_bet_amount || 0)
+    const totalWinAmount = Number((statsQuery as any)?.total_win_amount || 0)
+    const netProfit = totalBetAmount - totalWinAmount
+    
+    // 정산 대기 건수
+    const pendingQuery = await DB.prepare(`
+      SELECT COUNT(*) as pending_count
+      FROM settlements
+      WHERE status = 'pending'
+    `).first()
+    const pendingCount = Number((pendingQuery as any)?.pending_count || 0)
+    
+    return c.json({
+      total_bets: totalBets,
+      total_bet_amount: totalBetAmount,
+      total_win_amount: totalWinAmount,
+      net_profit: netProfit,
+      pending_settlements: pendingCount
+    })
+  } catch (error) {
+    console.error('대시보드 통계 조회 오류:', error)
+    return c.json({ error: '통계 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// ==========================================
+// 배팅 폴더 상세 정보
+// ==========================================
+
+// 배팅 폴더 상세 조회
+betting.get('/folders/:id', async (c) => {
+  try {
+    const { DB } = c.env
+    const folderId = c.req.param('id')
+    
+    // 폴더 정보 조회
+    const folder = await DB.prepare(`
+      SELECT 
+        bf.*,
+        m.name as member_name,
+        m.member_number,
+        m.prison
+      FROM bet_folders bf
+      LEFT JOIN members m ON bf.member_id = m.id
+      WHERE bf.id = ?
+    `).bind(folderId).first()
+    
+    if (!folder) {
+      return c.json({ error: '배팅 폴더를 찾을 수 없습니다.' }, 404)
+    }
+    
+    // 배팅 상세 조회
+    const bets = await DB.prepare(`
+      SELECT 
+        b.*,
+        ma.match_name,
+        ma.home_team,
+        ma.away_team,
+        ma.match_date,
+        ma.home_score,
+        ma.away_score,
+        ma.status as match_status
+      FROM bets b
+      LEFT JOIN matches ma ON b.match_id = ma.id
+      WHERE b.folder_id = ?
+    `).bind(folderId).all()
+    
+    // 정산 정보 조회
+    const settlement = await DB.prepare(`
+      SELECT 
+        s.*,
+        st.name as approved_by_name
+      FROM settlements s
+      LEFT JOIN staff st ON s.approved_by = st.id
+      WHERE s.folder_id = ?
+    `).bind(folderId).first()
+    
+    return c.json({
+      folder,
+      bets: bets.results,
+      settlement
+    })
+  } catch (error) {
+    console.error('폴더 상세 조회 오류:', error)
+    return c.json({ error: '폴더 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 export default betting
