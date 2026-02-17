@@ -407,10 +407,13 @@
                         <i class="fas fa-bars text-2xl"></i>
                     </button>
                     
-                    <i class="fas fa-door-open text-3xl text-blue-500"></i>
-                    <div>
-                        <h1 class="text-xl md:text-2xl font-bold text-gray-800">엑시트 시스템</h1>
-                        <p class="text-xs md:text-sm text-gray-600">EXIT System</p>
+                    <!-- 로고 (클릭 시 대시보드로 이동) -->
+                    <div class="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity" onclick="event.stopPropagation(); showView('dashboard')">
+                        <i class="fas fa-door-open text-3xl text-blue-500"></i>
+                        <div>
+                            <h1 class="text-xl md:text-2xl font-bold text-gray-800">엑시트 시스템</h1>
+                            <p class="text-xs md:text-sm text-gray-600">EXIT System</p>
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center space-x-2 md:space-x-4">
