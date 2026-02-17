@@ -4066,16 +4066,22 @@ console.log('권한 관리 함수 로드 완료')
                 const attendanceRes = await axios.get(`${API_BASE}/attendance/status/${currentStaff.id}`)
                 if (attendanceRes.data.checkedIn) {
                     currentAttendanceId = attendanceRes.data.record.id
-                    document.getElementById('not-checked-in').classList.add('hidden')
-                    document.getElementById('checked-in').classList.remove('hidden')
-                    document.getElementById('checkin-time').textContent = new Date(attendanceRes.data.record.checkin_time).toLocaleString()
+                    const notCheckedIn = document.getElementById('not-checked-in')
+                    const checkedIn = document.getElementById('checked-in')
+                    const checkinTime = document.getElementById('checkin-time')
                     
-                    if (attendanceRes.data.checkedOut) {
-                        document.getElementById('checked-in').innerHTML = '<p class="text-green-600"><i class="fas fa-check-double mr-2"></i>오늘 퇴근을 완료했습니다.</p>'
+                    if (notCheckedIn) notCheckedIn.classList.add('hidden')
+                    if (checkedIn) checkedIn.classList.remove('hidden')
+                    if (checkinTime) checkinTime.textContent = new Date(attendanceRes.data.record.checkin_time).toLocaleString()
+                    
+                    if (attendanceRes.data.checkedOut && checkedIn) {
+                        checkedIn.innerHTML = '<p class="text-green-600"><i class="fas fa-check-double mr-2"></i>오늘 퇴근을 완료했습니다.</p>'
                     }
                 } else {
-                    document.getElementById('not-checked-in').classList.remove('hidden')
-                    document.getElementById('checked-in').classList.add('hidden')
+                    const notCheckedIn = document.getElementById('not-checked-in')
+                    const checkedIn = document.getElementById('checked-in')
+                    if (notCheckedIn) notCheckedIn.classList.remove('hidden')
+                    if (checkedIn) checkedIn.classList.add('hidden')
                 }
 
                 // 통계 로드
@@ -4087,20 +4093,25 @@ console.log('권한 관리 함수 로드 완료')
                 const stats = statsRes.data
                 const myTickets = ticketsRes.data.tickets.filter(t => !['completed', 'closed'].includes(t.status))
 
-                document.getElementById('my-tickets-count').textContent = myTickets.length
-                document.getElementById('today-completed-count').textContent = stats.todayCompleted
+                const myTicketsCount = document.getElementById('my-tickets-count')
+                const todayCompletedCount = document.getElementById('today-completed-count')
+                if (myTicketsCount) myTicketsCount.textContent = myTickets.length
+                if (todayCompletedCount) todayCompletedCount.textContent = stats.todayCompleted
 
                 // 미배정 티켓
                 const openTickets = await axios.get(`${API_BASE}/tickets?status=open`)
-                document.getElementById('open-tickets-count').textContent = openTickets.data.tickets.length
+                const openTicketsCount = document.getElementById('open-tickets-count')
+                if (openTicketsCount) openTicketsCount.textContent = openTickets.data.tickets.length
 
                 // 긴급 티켓
                 const urgentCount = stats.priorityStats.find(s => s.priority === 'urgent')?.count || 0
-                document.getElementById('urgent-tickets-count').textContent = urgentCount
+                const urgentTicketsCount = document.getElementById('urgent-tickets-count')
+                if (urgentTicketsCount) urgentTicketsCount.textContent = urgentCount
 
                 // 관리자: 승인 대기 목록
                 if (currentStaff.role === 'admin') {
-                    document.getElementById('admin-section').classList.remove('hidden')
+                    const adminSection = document.getElementById('admin-section')
+                    if (adminSection) adminSection.classList.remove('hidden')
                     await loadPendingApprovals()
                 }
 
@@ -5399,8 +5410,10 @@ console.log('권한 관리 함수 로드 완료')
 
                 document.getElementById('betting-folders-list').innerHTML = bettingHtml
 
-                // 경기 정산 목록 로드
-                await loadMatchSettlementList()
+                // 경기 정산 목록 로드 (요소가 있는 경우에만)
+                if (document.getElementById('match-settlement-list')) {
+                    await loadMatchSettlementList()
+                }
             } catch (error) {
                 console.error('배팅 관리 로드 오류:', error)
             }
