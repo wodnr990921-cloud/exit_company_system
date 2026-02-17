@@ -98,6 +98,35 @@ attendance.get('/status/:staff_id', async (c) => {
   }
 })
 
+// 직원별 출퇴근 기록 조회
+attendance.get('/staff/:staff_id', async (c) => {
+  try {
+    const staff_id = c.req.param('staff_id')
+    const start_date = c.req.query('start_date')
+    
+    let query = `
+      SELECT id, checkin_time, checkout_time, stamps_used, daily_report
+      FROM attendance 
+      WHERE staff_id = ?
+    `
+    const params: any[] = [staff_id]
+    
+    if (start_date) {
+      query += ` AND DATE(checkin_time) >= ?`
+      params.push(start_date)
+    }
+    
+    query += ` ORDER BY checkin_time DESC LIMIT 30`
+    
+    const { results } = await c.env.DB.prepare(query).bind(...params).all()
+    
+    return c.json({ records: results })
+  } catch (error) {
+    console.error('출퇴근 기록 조회 오류:', error)
+    return c.json({ error: '출퇴근 기록 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 출근 기록 조회
 attendance.get('/history/:staff_id', async (c) => {
   try {

@@ -4468,10 +4468,25 @@ console.log('권한 관리 함수 로드 완료')
                     daily_report: dailyReport
                 })
 
-                alert('퇴근이 완료되었습니다!')
+                // 일일 업무 보고가 있는 경우 관리자에게 알림 전송
+                if (dailyReport && dailyReport.trim()) {
+                    try {
+                        await axios.post(`${API_BASE}/notifications`, {
+                            staff_id: currentStaff.id,
+                            type: 'daily_report',
+                            title: `${currentStaff.name} 업무 보고`,
+                            message: dailyReport,
+                            priority: 'normal'
+                        })
+                    } catch (notifError) {
+                        console.error('알림 전송 실패:', notifError)
+                    }
+                }
+
+                showToast('퇴근이 완료되었습니다!', 'success')
                 await loadDashboard()
             } catch (error) {
-                alert('퇴근 실패: ' + (error.response?.data?.error || error.message))
+                showToast('퇴근 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
 
@@ -5845,6 +5860,9 @@ console.log('권한 관리 함수 로드 완료')
                 `).join('') : '<p class="text-sm text-gray-500">권한 변경 이력이 없습니다.</p>'
                 
                 document.getElementById('staff-role-changes').innerHTML = changesHtml
+                
+                // 출퇴근 기록 로드
+                await loadStaffAttendance(staffId)
                 
                 // 모달 표시
                 document.getElementById('staff-detail-modal').classList.remove('hidden')
@@ -8184,6 +8202,13 @@ console.log('권한 관리 함수 로드 완료')
             if (tab === 'receive') loadPendingMail()
             if (tab === 'inspection') loadProcessedMail()
             if (tab === 'history') loadMailHistory()
+            if (tab === 'responses') {
+                // 답변실 기간 디폴트 오늘로 설정
+                const today = new Date().toISOString().split('T')[0]
+                const responseDate = document.getElementById('response-date-filter')
+                if (responseDate) responseDate.value = today
+                loadResponses()
+            }
         }
 
         // 이미지 압축 함수
@@ -10693,10 +10718,16 @@ console.log('권한 관리 함수 로드 완료')
         // 근태 내역 로드
         async function loadStaffAttendance(staffId) {
             try {
-                const response = await axios.get(`${API_BASE}/attendance?staff_id=${staffId}&days=30`)
-                const records = response.data.attendance || []
+                const thirtyDaysAgo = new Date()
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+                const startDate = thirtyDaysAgo.toISOString().split('T')[0]
+                
+                const response = await axios.get(`${API_BASE}/attendance/staff/${staffId}?start_date=${startDate}`)
+                const records = response.data.records || []
                 
                 const container = document.getElementById('staff-attendance-history')
+                if (!container) return
+                
                 if (records.length === 0) {
                     container.innerHTML = '<p class="text-sm text-gray-500">근태 기록이 없습니다.</p>'
                     return
@@ -10705,21 +10736,21 @@ console.log('권한 관리 함수 로드 완료')
                 container.innerHTML = records.map(r => `
                     <div class="flex justify-between items-center p-2 border rounded hover:bg-gray-50">
                         <div class="flex items-center gap-3">
-                            <i class="fas ${r.check_out ? 'fa-check-circle text-green-500' : 'fa-clock text-blue-500'}"></i>
+                            <i class="fas ${r.checkout_time ? 'fa-check-circle text-green-500' : 'fa-clock text-blue-500'}"></i>
                             <div>
                                 <div class="text-sm font-medium">
-                                    ${new Date(r.check_in).toLocaleDateString()} 
-                                    <span class="text-gray-600">(${['일','월','화','수','목','금','토'][new Date(r.check_in).getDay()]})</span>
+                                    ${new Date(r.checkin_time).toLocaleDateString()} 
+                                    <span class="text-gray-600">(${['일','월','화','수','목','금','토'][new Date(r.checkin_time).getDay()]})</span>
                                 </div>
                                 <div class="text-xs text-gray-600">
-                                    출근: ${new Date(r.check_in).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}
-                                    ${r.check_out ? ` | 퇴근: ${new Date(r.check_out).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}` : ''}
+                                    출근: ${new Date(r.checkin_time).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}
+                                    ${r.checkout_time ? ` | 퇴근: ${new Date(r.checkout_time).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}` : ''}
                                 </div>
                             </div>
                         </div>
-                        ${r.check_out ? `
+                        ${r.checkout_time ? `
                             <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
-                                ${calculateWorkHours(r.check_in, r.check_out)}
+                                ${calculateWorkHours(r.checkin_time, r.checkout_time)}
                             </span>
                         ` : `
                             <span class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
@@ -10730,8 +10761,10 @@ console.log('권한 관리 함수 로드 완료')
                 `).join('')
             } catch (error) {
                 console.error('근태 내역 로드 오류:', error)
-                document.getElementById('staff-attendance-history').innerHTML = 
-                    '<p class="text-sm text-red-500">근태 내역을 불러오는데 실패했습니다.</p>'
+                const container = document.getElementById('staff-attendance-history')
+                if (container) {
+                    container.innerHTML = '<p class="text-sm text-red-500">근태 내역을 불러오는데 실패했습니다.</p>'
+                }
             }
         }
         
