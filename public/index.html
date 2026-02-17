@@ -2145,28 +2145,211 @@
             <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>경기 관리</h3>
+                        <h3 class="text-xl font-bold"><i class="fas fa-futbol mr-2"></i>경기 관리</h3>
                         <button onclick="closeMatchManagementModal()" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times"></i>
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- 액션 버튼 -->
+                    <div class="flex gap-2 mb-4">
+                        <button onclick="showAddMatchModal()" class="btn btn-primary">
+                            <i class="fas fa-plus mr-2"></i>경기 추가
+                        </button>
+                        <button onclick="showExcelUploadModal()" class="btn btn-success">
+                            <i class="fas fa-file-excel mr-2"></i>엑셀 일괄 등록
+                        </button>
+                        <button onclick="downloadMatchTemplate()" class="btn btn-secondary">
+                            <i class="fas fa-download mr-2"></i>엑셀 양식 다운로드
+                        </button>
+                    </div>
+                    
+                    <!-- 경기 목록 -->
+                    <div class="card">
+                        <h4 class="font-bold mb-3">등록된 경기 목록</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-2 py-2 text-left">경기명</th>
+                                        <th class="px-2 py-2 text-left">홈 vs 원정</th>
+                                        <th class="px-2 py-2 text-left">경기일시</th>
+                                        <th class="px-2 py-2 text-left">타입</th>
+                                        <th class="px-2 py-2 text-left">배당</th>
+                                        <th class="px-2 py-2 text-center">상태</th>
+                                        <th class="px-2 py-2 text-center">관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="match-list-table" class="divide-y">
+                                    <tr>
+                                        <td colspan="7" class="px-2 py-4 text-center text-gray-500">경기를 불러오는 중...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 경기 추가 모달 -->
+        <div id="add-match-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-plus-circle mr-2"></i>경기 추가</h3>
+                        <button onclick="closeAddMatchModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <form id="add-match-form" class="space-y-4">
+                        <!-- 기본 정보 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">경기명 *</label>
+                                <input type="text" id="new-match-name" class="w-full px-3 py-2 border rounded" placeholder="예: EPL 10R" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">경기 일시 *</label>
+                                <input type="datetime-local" id="new-match-date" class="w-full px-3 py-2 border rounded" required>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">홈 팀 *</label>
+                                <input type="text" id="new-home-team" class="w-full px-3 py-2 border rounded" placeholder="맨체스터 유나이티드" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">원정 팀 *</label>
+                                <input type="text" id="new-away-team" class="w-full px-3 py-2 border rounded" placeholder="리버풀" required>
+                            </div>
+                        </div>
+                        
+                        <!-- 배팅 타입 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">배팅 타입 *</label>
+                            <select id="new-betting-type" class="w-full px-3 py-2 border rounded" onchange="toggleNewBettingFields()" required>
+                                <option value="">선택하세요</option>
+                                <option value="win_draw_lose">승무패</option>
+                                <option value="over_under">언오버</option>
+                                <option value="handicap">핸디캡</option>
+                            </select>
+                        </div>
+                        
+                        <!-- 승무패 필드 -->
+                        <div id="new-win-draw-lose-fields" class="hidden grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">홈 승 배당</label>
+                                <input type="number" step="0.01" id="new-home-odds" class="w-full px-3 py-2 border rounded" placeholder="1.50">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">무승부 배당</label>
+                                <input type="number" step="0.01" id="new-draw-odds" class="w-full px-3 py-2 border rounded" placeholder="3.20">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">원정 승 배당</label>
+                                <input type="number" step="0.01" id="new-away-odds" class="w-full px-3 py-2 border rounded" placeholder="2.10">
+                            </div>
+                        </div>
+                        
+                        <!-- 언오버 필드 -->
+                        <div id="new-over-under-fields" class="hidden grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">기준 골</label>
+                                <input type="number" step="0.5" id="new-over-line" class="w-full px-3 py-2 border rounded" placeholder="2.5">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">오버 배당</label>
+                                <input type="number" step="0.01" id="new-over-odds" class="w-full px-3 py-2 border rounded" placeholder="1.80">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">언더 배당</label>
+                                <input type="number" step="0.01" id="new-under-odds" class="w-full px-3 py-2 border rounded" placeholder="1.90">
+                            </div>
+                        </div>
+                        
+                        <!-- 핸디캡 필드 -->
+                        <div id="new-handicap-fields" class="hidden grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">핸디캡</label>
+                                <input type="number" step="0.5" id="new-handicap-line" class="w-full px-3 py-2 border rounded" placeholder="-0.5">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">홈 배당</label>
+                                <input type="number" step="0.01" id="new-handicap-home-odds" class="w-full px-3 py-2 border rounded" placeholder="1.85">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">원정 배당</label>
+                                <input type="number" step="0.01" id="new-handicap-away-odds" class="w-full px-3 py-2 border rounded" placeholder="1.95">
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end gap-2 pt-4 border-t">
+                            <button type="button" onclick="closeAddMatchModal()" class="btn btn-secondary">취소</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check mr-2"></i>추가
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 엑셀 업로드 모달 -->
+        <div id="excel-upload-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-file-excel mr-2"></i>엑셀 일괄 등록</h3>
+                        <button onclick="closeExcelUploadModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
                         </button>
                     </div>
                     
                     <div class="space-y-4">
-                        <!-- 경기 목록 -->
-                        <div class="card">
-                            <div class="flex justify-between items-center mb-4">
-                                <h4 class="font-bold">등록된 경기 일정</h4>
-                                <button onclick="addMatchRow()" class="btn btn-success btn-sm">
-                                    <i class="fas fa-plus mr-2"></i>경기 추가
-                                </button>
-                            </div>
-                            <div id="match-management-list" class="space-y-3"></div>
+                        <!-- 안내 -->
+                        <div class="bg-blue-50 border border-blue-200 rounded p-4">
+                            <h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-info-circle mr-2"></i>사용 방법</h4>
+                            <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                                <li>엑셀 양식 다운로드 버튼을 클릭하여 양식을 다운로드합니다</li>
+                                <li>엑셀 파일에 경기 정보를 입력합니다</li>
+                                <li>작성한 파일을 업로드하여 일괄 등록합니다</li>
+                            </ol>
                         </div>
                         
-                        <div class="flex justify-end space-x-2">
-                            <button onclick="closeMatchManagementModal()" class="btn btn-secondary">취소</button>
-                            <button onclick="saveAllMatches()" class="btn btn-primary">
-                                <i class="fas fa-save mr-2"></i>모두 저장
+                        <!-- 파일 업로드 -->
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-600 mb-4">엑셀 파일을 선택하거나 드래그 앤 드롭하세요</p>
+                            <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelFile(event)">
+                            <button onclick="document.getElementById('excel-file-input').click()" class="btn btn-primary">
+                                <i class="fas fa-file-upload mr-2"></i>파일 선택
+                            </button>
+                            <p class="text-xs text-gray-500 mt-2">지원 형식: .xlsx, .xls, .csv</p>
+                        </div>
+                        
+                        <!-- 선택된 파일 -->
+                        <div id="selected-file-info" class="hidden bg-gray-50 rounded p-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-file-excel text-green-600 text-2xl"></i>
+                                    <div>
+                                        <p class="font-medium" id="file-name"></p>
+                                        <p class="text-xs text-gray-500" id="file-size"></p>
+                                    </div>
+                                </div>
+                                <button onclick="clearExcelFile()" class="text-red-500 hover:text-red-700">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end gap-2 pt-4 border-t">
+                            <button onclick="closeExcelUploadModal()" class="btn btn-secondary">취소</button>
+                            <button onclick="uploadExcelMatches()" id="upload-excel-btn" class="btn btn-success" disabled>
+                                <i class="fas fa-upload mr-2"></i>업로드 및 등록
                             </button>
                         </div>
                     </div>
@@ -6272,87 +6455,150 @@ console.log('권한 관리 함수 로드 완료')
                 const response = await axios.get(`${API_BASE}/betting/matches`)
                 const matches = response.data.matches || []
 
-                const html = matches.map((m, index) => `
-                    <div class="border rounded p-4 bg-gray-50" data-match-id="${m.id || 'new-' + index}">
-                        <!-- 기본 정보 -->
-                        <div class="grid grid-cols-12 gap-4 items-center mb-3">
-                            <div class="col-span-4">
-                                <label class="text-xs text-gray-600">경기명</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="${m.match_name || ''}" data-field="match_name">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="text-xs text-gray-600">홈팀</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="${m.home_team || ''}" data-field="home_team">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="text-xs text-gray-600">원정팀</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="${m.away_team || ''}" data-field="away_team">
-                            </div>
-                            <div class="col-span-4">
-                                <label class="text-xs text-gray-600">경기일시</label>
-                                <input type="datetime-local" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="${m.match_date ? new Date(m.match_date).toISOString().slice(0, 16) : ''}" data-field="match_date">
-                            </div>
-                        </div>
-                        
-                        <!-- 승무패 배당 -->
-                        <div class="bg-blue-50 p-3 rounded mb-3">
-                            <p class="text-xs font-bold text-blue-800 mb-2"><i class="fas fa-trophy mr-1"></i>승무패 배당</p>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-600">홈승 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.home_odds || ''}" data-field="home_odds" placeholder="1.50">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">무승부 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.draw_odds || ''}" data-field="draw_odds" placeholder="3.20">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">원정승 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.away_odds || ''}" data-field="away_odds" placeholder="2.10">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 언오바 배당 -->
-                        <div class="bg-green-50 p-3 rounded mb-3">
-                            <p class="text-xs font-bold text-green-800 mb-2"><i class="fas fa-chart-line mr-1"></i>언오바 배당</p>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-600">기준점</label>
-                                    <input type="number" step="0.5" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.over_line || ''}" data-field="over_line" placeholder="2.5">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">오버 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.over_odds || ''}" data-field="over_odds" placeholder="1.85">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">언더 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.under_odds || ''}" data-field="under_odds" placeholder="1.95">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="flex justify-end space-x-2">
-                            ${m.id && isAdmin() ? `<button onclick="deleteMatch(${m.id})" class="btn btn-danger btn-sm"><i class="fas fa-trash mr-1"></i>삭제</button>` : ''}
-                        </div>
-                    </div>
-                `).join('')
-
-                document.getElementById('match-management-list').innerHTML = html || '<p class="text-gray-500 text-center py-4">등록된 경기가 없습니다.</p>'
+                const tbody = document.getElementById('match-list-table')
+                if (!tbody) return
+                
+                if (matches.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="px-2 py-4 text-center text-gray-500">등록된 경기가 없습니다</td></tr>'
+                    return
+                }
+                
+                tbody.innerHTML = matches.map(m => {
+                    // 배당 정보 요약
+                    let oddsInfo = []
+                    if (m.home_odds && m.draw_odds && m.away_odds) {
+                        oddsInfo.push(`승무패: ${m.home_odds}/${m.draw_odds}/${m.away_odds}`)
+                    }
+                    if (m.over_line && m.over_odds && m.under_odds) {
+                        oddsInfo.push(`언오버 ${m.over_line}: ${m.over_odds}/${m.under_odds}`)
+                    }
+                    if (m.handicap_line !== null && m.handicap_home_odds && m.handicap_away_odds) {
+                        oddsInfo.push(`핸디 ${m.handicap_line}: ${m.handicap_home_odds}/${m.handicap_away_odds}`)
+                    }
+                    
+                    // 배팅 타입 결정
+                    let bettingType = []
+                    if (m.home_odds) bettingType.push('승무패')
+                    if (m.over_line) bettingType.push('언오버')
+                    if (m.handicap_line !== null) bettingType.push('핸디캡')
+                    
+                    const statusColors = {
+                        'open': 'bg-green-100 text-green-700',
+                        'closed': 'bg-gray-100 text-gray-700',
+                        'completed': 'bg-blue-100 text-blue-700'
+                    }
+                    
+                    const statusText = {
+                        'open': '진행중',
+                        'closed': '마감',
+                        'completed': '완료'
+                    }
+                    
+                    return `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-2 py-2 font-medium">${m.match_name}</td>
+                            <td class="px-2 py-2">${m.home_team} vs ${m.away_team}</td>
+                            <td class="px-2 py-2">${new Date(m.match_date).toLocaleString('ko-KR', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'})}</td>
+                            <td class="px-2 py-2 text-xs">${bettingType.join(', ') || '-'}</td>
+                            <td class="px-2 py-2 text-xs">${oddsInfo.join(' | ') || '-'}</td>
+                            <td class="px-2 py-2 text-center">
+                                <span class="px-2 py-1 text-xs rounded ${statusColors[m.status] || 'bg-gray-100 text-gray-700'}">
+                                    ${statusText[m.status] || m.status}
+                                </span>
+                            </td>
+                            <td class="px-2 py-2 text-center">
+                                <button onclick="deleteMatch(${m.id})" class="text-red-500 hover:text-red-700 text-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `
+                }).join('')
             } catch (error) {
                 console.error('경기 관리 목록 로드 오류:', error)
+                const tbody = document.getElementById('match-list-table')
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="px-2 py-4 text-center text-red-500">경기 목록 로드 실패</td></tr>'
+                }
             }
         }
+        
+        // 경기 추가 모달 열기
+        function showAddMatchModal() {
+            document.getElementById('add-match-modal').classList.remove('hidden')
+            
+            // 폼 초기화
+            document.getElementById('add-match-form').reset()
+            document.getElementById('new-win-draw-lose-fields').classList.add('hidden')
+            document.getElementById('new-over-under-fields').classList.add('hidden')
+            document.getElementById('new-handicap-fields').classList.add('hidden')
+        }
+        
+        // 경기 추가 모달 닫기
+        function closeAddMatchModal() {
+            document.getElementById('add-match-modal').classList.add('hidden')
+        }
+        
+        // 배팅 타입에 따라 필드 표시
+        function toggleNewBettingFields() {
+            const type = document.getElementById('new-betting-type').value
+            
+            document.getElementById('new-win-draw-lose-fields').classList.add('hidden')
+            document.getElementById('new-over-under-fields').classList.add('hidden')
+            document.getElementById('new-handicap-fields').classList.add('hidden')
+            
+            if (type === 'win_draw_lose') {
+                document.getElementById('new-win-draw-lose-fields').classList.remove('hidden')
+            } else if (type === 'over_under') {
+                document.getElementById('new-over-under-fields').classList.remove('hidden')
+            } else if (type === 'handicap') {
+                document.getElementById('new-handicap-fields').classList.remove('hidden')
+            }
+        }
+        
+        // 경기 추가 폼 제출
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('add-match-form')
+            if (form) {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault()
+                    
+                    const data = {
+                        match_name: document.getElementById('new-match-name').value,
+                        home_team: document.getElementById('new-home-team').value,
+                        away_team: document.getElementById('new-away-team').value,
+                        match_date: document.getElementById('new-match-date').value,
+                        betting_type: document.getElementById('new-betting-type').value
+                    }
+                    
+                    // 배팅 타입에 따른 추가 데이터
+                    if (data.betting_type === 'win_draw_lose') {
+                        data.home_odds = parseFloat(document.getElementById('new-home-odds').value) || null
+                        data.draw_odds = parseFloat(document.getElementById('new-draw-odds').value) || null
+                        data.away_odds = parseFloat(document.getElementById('new-away-odds').value) || null
+                    } else if (data.betting_type === 'over_under') {
+                        data.over_line = parseFloat(document.getElementById('new-over-line').value) || null
+                        data.over_odds = parseFloat(document.getElementById('new-over-odds').value) || null
+                        data.under_odds = parseFloat(document.getElementById('new-under-odds').value) || null
+                    } else if (data.betting_type === 'handicap') {
+                        data.handicap_line = parseFloat(document.getElementById('new-handicap-line').value) || null
+                        data.handicap_home_odds = parseFloat(document.getElementById('new-handicap-home-odds').value) || null
+                        data.handicap_away_odds = parseFloat(document.getElementById('new-handicap-away-odds').value) || null
+                    }
+                    
+                    try {
+                        await axios.post(`${API_BASE}/betting/matches`, data)
+                        showToast('경기가 추가되었습니다', 'success')
+                        closeAddMatchModal()
+                        await loadMatchManagement()
+                        await loadMatchSchedule()
+                    } catch (error) {
+                        console.error('경기 추가 오류:', error)
+                        showToast('경기 추가 실패: ' + (error.response?.data?.error || error.message), 'error')
+                    }
+                })
+            }
+        })
 
         // 경기 추가 행
         function addMatchRow() {
@@ -12524,6 +12770,127 @@ console.log('권한 관리 함수 로드 완료')
             `).join('')
             
             document.getElementById('log-showing-text').textContent = `${logs.length}개 표시`
+        }
+        
+        // ==========================================
+        // 엑셀 처리 함수
+        // ==========================================
+        
+        let selectedExcelFile = null
+        
+        // 엑셀 업로드 모달 열기
+        function showExcelUploadModal() {
+            document.getElementById('excel-upload-modal').classList.remove('hidden')
+            clearExcelFile()
+        }
+        
+        // 엑셀 업로드 모달 닫기
+        function closeExcelUploadModal() {
+            document.getElementById('excel-upload-modal').classList.add('hidden')
+            clearExcelFile()
+        }
+        
+        // 엑셀 템플릿 다운로드
+        function downloadMatchTemplate() {
+            const template = [
+                ['경기명', '홈팀', '원정팀', '경기일시', '홈승배당', '무승부배당', '원정승배당', '언오버기준', '오버배당', '언더배당', '핸디캡', '핸디캡홈배당', '핸디캡원정배당'],
+                ['EPL 10R', '맨체스터 유나이티드', '리버풀', '2026-02-20 20:00', '1.50', '3.20', '2.10', '2.5', '1.85', '1.95', '-0.5', '1.85', '1.95'],
+                ['라리가 12R', '레알 마드리드', 'FC 바르셀로나', '2026-02-21 23:00', '1.90', '3.50', '1.80', '', '', '', '', '', '']
+            ]
+            
+            const ws = XLSX.utils.aoa_to_sheet(template)
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, '경기목록')
+            
+            XLSX.writeFile(wb, '경기목록_양식.xlsx')
+            showToast('엑셀 양식이 다운로드되었습니다', 'success')
+        }
+        
+        // 엑셀 파일 선택 처리
+        function handleExcelFile(event) {
+            const file = event.target.files[0]
+            if (!file) return
+            
+            selectedExcelFile = file
+            
+            // 파일 정보 표시
+            document.getElementById('file-name').textContent = file.name
+            document.getElementById('file-size').textContent = `${(file.size / 1024).toFixed(2)} KB`
+            document.getElementById('selected-file-info').classList.remove('hidden')
+            document.getElementById('upload-excel-btn').disabled = false
+        }
+        
+        // 엑셀 파일 선택 취소
+        function clearExcelFile() {
+            selectedExcelFile = null
+            document.getElementById('excel-file-input').value = ''
+            document.getElementById('selected-file-info').classList.add('hidden')
+            document.getElementById('upload-excel-btn').disabled = true
+        }
+        
+        // 엑셀 파일 업로드 및 등록
+        async function uploadExcelMatches() {
+            if (!selectedExcelFile) {
+                showToast('파일을 선택해주세요', 'warning')
+                return
+            }
+            
+            try {
+                // 엑셀 파일 읽기
+                const data = await selectedExcelFile.arrayBuffer()
+                const workbook = XLSX.read(data, { type: 'array' })
+                const sheetName = workbook.SheetNames[0]
+                const worksheet = workbook.Sheets[sheetName]
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+                
+                // 헤더 제외
+                const rows = jsonData.slice(1).filter(row => row.length > 0 && row[0])
+                
+                if (rows.length === 0) {
+                    showToast('등록할 경기가 없습니다', 'warning')
+                    return
+                }
+                
+                // 경기 데이터 변환
+                const matches = rows.map(row => {
+                    const match = {
+                        match_name: row[0],
+                        home_team: row[1],
+                        away_team: row[2],
+                        match_date: row[3],
+                        betting_type: 'win_draw_lose' // 기본값
+                    }
+                    
+                    // 승무패 배당
+                    if (row[4]) match.home_odds = parseFloat(row[4])
+                    if (row[5]) match.draw_odds = parseFloat(row[5])
+                    if (row[6]) match.away_odds = parseFloat(row[6])
+                    
+                    // 언오버 배당
+                    if (row[7]) match.over_line = parseFloat(row[7])
+                    if (row[8]) match.over_odds = parseFloat(row[8])
+                    if (row[9]) match.under_odds = parseFloat(row[9])
+                    
+                    // 핸디캡 배당
+                    if (row[10]) match.handicap_line = parseFloat(row[10])
+                    if (row[11]) match.handicap_home_odds = parseFloat(row[11])
+                    if (row[12]) match.handicap_away_odds = parseFloat(row[12])
+                    
+                    return match
+                })
+                
+                // 일괄 등록 API 호출
+                const response = await axios.post(`${API_BASE}/betting/matches/bulk`, { matches })
+                
+                showToast(`${matches.length}개 경기가 등록되었습니다`, 'success')
+                closeExcelUploadModal()
+                await loadMatchManagement()
+                await loadMatchSchedule()
+                
+            } catch (error) {
+                console.error('엑셀 업로드 오류:', error)
+                showToast('엑셀 업로드 실패: ' + (error.response?.data?.error || error.message), 'error')
+            }
         }
     </script>
 </body>
