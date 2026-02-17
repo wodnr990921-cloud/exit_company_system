@@ -11073,9 +11073,13 @@ console.log('권한 관리 함수 로드 완료')
                 showToast('엑셀 파일을 생성 중입니다...', 'info')
                 
                 // 모든 티켓 데이터 가져오기 (필터 적용)
-                const status = document.getElementById('ticket-status-filter').value
-                const type = document.getElementById('ticket-type-filter').value
-                const priority = document.getElementById('ticket-priority-filter').value
+                const statusEl = document.getElementById('ticket-status-filter')
+                const typeEl = document.getElementById('ticket-type-filter')
+                const priorityEl = document.getElementById('ticket-priority-filter')
+                
+                const status = statusEl ? statusEl.value : 'all'
+                const type = typeEl ? typeEl.value : 'all'
+                const priority = priorityEl ? priorityEl.value : 'all'
                 
                 let url = `${API_BASE}/tickets?page=1&limit=10000`
                 if (status !== 'all') url += `&status=${status}`
