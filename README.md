@@ -4,6 +4,27 @@
 
 ## 🆕 최신 업데이트 (2026-02-17)
 
+### 🔥 v12.3.2 루트 경로 접근 수정 ✅
+
+**긴급 수정**:
+- ✅ **index.html 추가**: 루트 경로(`/`)에서 앱이 정상 로드되도록 수정
+- ✅ **Cloudflare Pages 호환**: `public/index.html` 생성으로 자동 서빙
+- ✅ **URL 접근**: `/`와 `/app.html` 모두 정상 작동
+
+**수정 내용**:
+```bash
+# index.html이 없어서 루트 경로에서 API 메시지만 표시되던 문제
+# app.html을 index.html로 복사하여 해결
+cp public/app.html public/index.html
+```
+
+**접속 URL**:
+- 🌐 **메인 (루트)**: https://0d647245.exit-company-system-5je.pages.dev/
+- 🌐 **앱 경로**: https://0d647245.exit-company-system-5je.pages.dev/app.html
+- 🌐 **프로젝트**: https://exit-company-system.pages.dev
+
+---
+
 ### 🔥 v12.3.1 모바일 JavaScript 오류 수정 ✅
 
 **긴급 수정**:
