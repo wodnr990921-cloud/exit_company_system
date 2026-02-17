@@ -6430,6 +6430,105 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
 
+        // 정산 필터링 조회
+        async function loadFilteredSettlements() {
+            try {
+                const startDate = document.getElementById('settlement-start-date')?.value || ''
+                const endDate = document.getElementById('settlement-end-date')?.value || ''
+                const status = document.getElementById('settlement-status-filter')?.value || ''
+                const memberId = document.getElementById('settlement-member-filter')?.value || ''
+                const folderType = document.getElementById('settlement-folder-type-filter')?.value || ''
+                
+                const params = new URLSearchParams()
+                if (startDate) params.append('start_date', startDate)
+                if (endDate) params.append('end_date', endDate)
+                if (status) params.append('status', status)
+                if (memberId) params.append('member_id', memberId)
+                if (folderType) params.append('folder_type', folderType)
+                
+                const response = await axios.get(`${API_BASE}/betting/settlements?${params}`)
+                const settlements = response.data.settlements || []
+                
+                // 정산 목록 렌더링
+                renderSettlementsList(settlements)
+                
+                showToast(`${settlements.length}건의 정산 내역을 조회했습니다`, 'success')
+                
+            } catch (error) {
+                console.error('정산 내역 조회 오류:', error)
+                showToast('정산 내역 조회 실패', 'error')
+            }
+        }
+        
+        // 정산 목록 렌더링
+        function renderSettlementsList(settlements) {
+            const container = document.getElementById('pending-settlements-list')
+            if (!container) return
+            
+            if (!settlements || settlements.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">조회된 정산 내역이 없습니다.</p>'
+                return
+            }
+            
+            container.innerHTML = settlements.map(s => {
+                const statusColor = s.status === 'approved' ? 'green' : s.status === 'rejected' ? 'red' : 'yellow'
+                const statusText = s.status === 'approved' ? '승인 완료' : s.status === 'rejected' ? '거부' : '대기'
+                
+                return `
+                    <div class="card bg-gray-50">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="font-bold text-lg">${s.member_name || 'N/A'}</span>
+                                <span class="text-sm text-gray-600 ml-2">(${s.member_number || 'N/A'})</span>
+                                <span class="ml-2 px-2 py-1 text-xs rounded bg-${statusColor}-100 text-${statusColor}-700">
+                                    ${statusText}
+                                </span>
+                            </div>
+                            <span class="text-sm text-gray-500">${new Date(s.created_at).toLocaleString()}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                                <div class="text-sm text-gray-600">폴더 유형</div>
+                                <div class="font-medium">${s.folder_type === 'single' ? '단폴더' : '다폴더'}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">총 배당률</div>
+                                <div class="font-medium text-blue-600">${s.total_odds}배</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">배팅 금액</div>
+                                <div class="font-medium">${Number(s.bet_amount).toLocaleString()}원</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">예상 적중금</div>
+                                <div class="font-medium text-green-600">${Number(s.potential_win).toLocaleString()}원</div>
+                            </div>
+                        </div>
+                        ${s.status === 'pending' ? `
+                            <div class="flex gap-2 pt-3 border-t">
+                                <button onclick="approveSettlement(${s.id})" class="btn btn-success flex-1">
+                                    <i class="fas fa-check mr-2"></i>승인
+                                </button>
+                                <button onclick="rejectSettlement(${s.id})" class="btn btn-danger flex-1">
+                                    <i class="fas fa-times mr-2"></i>거부
+                                </button>
+                            </div>
+                        ` : s.status === 'approved' ? `
+                            <div class="text-sm text-green-600 pt-2 border-t">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                ${s.approved_at ? new Date(s.approved_at).toLocaleString() : ''} 승인됨
+                            </div>
+                        ` : `
+                            <div class="text-sm text-red-600 pt-2 border-t">
+                                <i class="fas fa-times-circle mr-1"></i>
+                                ${s.reject_reason || '거부됨'}
+                            </div>
+                        `}
+                    </div>
+                `
+            }).join('')
+        }
+
         // 티켓 상세 모달 (배팅 폴더 포함)
         let currentTicketId = null
         let currentTicket = null

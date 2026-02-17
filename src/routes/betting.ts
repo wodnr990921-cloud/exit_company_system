@@ -592,6 +592,65 @@ betting.get('/folders', async (c) => {
 // ==========================================
 
 // 정산 대기 목록 조회
+// 정산 목록 조회 (필터링 지원)
+betting.get('/settlements', async (c) => {
+  try {
+    const startDate = c.req.query('start_date')
+    const endDate = c.req.query('end_date')
+    const status = c.req.query('status')
+    const memberId = c.req.query('member_id')
+    const folderType = c.req.query('folder_type')
+    
+    const conditions = []
+    const values = []
+    
+    // 날짜 필터
+    if (startDate && endDate) {
+      conditions.push('DATE(bs.created_at) BETWEEN ? AND ?')
+      values.push(startDate, endDate)
+    }
+    
+    // 상태 필터
+    if (status) {
+      conditions.push('bs.status = ?')
+      values.push(status)
+    }
+    
+    // 회원 필터
+    if (memberId) {
+      conditions.push('bs.member_id = ?')
+      values.push(memberId)
+    }
+    
+    // 폴더 유형 필터
+    if (folderType) {
+      conditions.push('bf.folder_type = ?')
+      values.push(folderType)
+    }
+    
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    
+    const query = `
+      SELECT bs.*, 
+             bf.folder_number, bf.folder_type, bf.total_bet_amount as bet_amount, 
+             bf.total_odds, bf.potential_win,
+             m.name as member_name, m.member_number, m.prison
+      FROM bet_settlements bs
+      LEFT JOIN bet_folders bf ON bs.folder_id = bf.id
+      LEFT JOIN members m ON bs.member_id = m.id
+      ${whereClause}
+      ORDER BY bs.created_at DESC
+    `
+    
+    const { results } = await c.env.DB.prepare(query).bind(...values).all()
+    
+    return c.json({ settlements: results })
+  } catch (error) {
+    console.error('정산 목록 조회 오류:', error)
+    return c.json({ error: '정산 목록 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 betting.get('/settlements/pending', async (c) => {
   try {
     const { results } = await c.env.DB.prepare(
