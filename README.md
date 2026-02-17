@@ -4,7 +4,81 @@
 
 ## 🆕 최신 업데이트 (2026-02-17)
 
-### 🔥 v12.2.0 배팅 시스템 언오바(Over/Under) 기능 추가 (진행중) ✅
+### 🔥 v12.3.0 배팅 폴더 생성 및 정산 승인 시스템 완성 ✅
+
+**배팅 시스템 완전 통합**:
+- ✅ **배팅 폴더 자동 생성**: 티켓 생성 시 배팅 폴더 API 호출 및 포인트 차감
+- ✅ **티켓 상세 모달 통합**: 요청 > 배팅에서 다폴더/단폴더 선택 및 생성
+- ✅ **정산 승인 탭**: 배팅 관리에 "정산 승인" 탭 추가
+- ✅ **정산 대기 목록**: 당첨된 배팅 폴더 목록 표시
+- ✅ **승인/거부 기능**: 관리자가 정산 승인 또는 거부 처리
+- ✅ **포인트 자동 지급**: 승인 시 회원 배팅 포인트 자동 증가
+- ✅ **원자적 트랜잭션**: D1 batch 사용으로 포인트 지급과 기록 동기화
+
+**배팅 생성 플로우**:
+```
+1. 신규 티켓 생성 (유형: 배팅)
+   → 경기 선택, 배팅 유형 선택, 금액 입력
+   → createTicket() 호출
+   → /betting/folders API 호출
+   → 배팅 포인트 차감 + 폴더 생성
+
+2. 티켓 상세 > 요청 > 배팅 추가
+   → 경기 체크박스 선택 (다중 가능)
+   → 배팅 유형 선택 (승무패/언오바/핸디캡)
+   → 폴더 타입 자동 설정 (1개=단폴더, 2개이상=다폴더)
+   → addBettingRequest() 호출
+   → /betting/folders API 호출
+   → 배팅 포인트 차감 + 폴더 생성
+```
+
+**정산 승인 플로우**:
+```
+1. 경기 결과 입력 (관리자)
+   → /betting/matches/:id/result API
+   → 자동으로 배팅 승패 판정
+   → 승리 시 bet_settlements 테이블에 추가 (status: pending)
+
+2. 정산 승인 탭
+   → 배팅 관리 > 정산 승인 탭 클릭
+   → 대기 중인 정산 목록 표시
+   → [승인] 버튼 클릭
+   → /betting/settlements/:id/approve API
+   → D1 batch로 원자적 처리:
+     * 회원 배팅 포인트 증가
+     * 정산 상태 → approved
+     * 폴더 승인 처리
+     * 포인트 거래 기록 생성
+   → 토스트 알림 표시
+
+3. 정산 거부
+   → [거부] 버튼 클릭
+   → 거부 사유 입력
+   → /betting/settlements/:id/reject API
+   → 정산 상태 → rejected
+```
+
+**정산 승인 UI**:
+- **대기 목록 카드**: 폴더 번호, 회원명, 배팅 금액, 배당률, 정산 금액 표시
+- **승인 버튼**: 초록색 버튼으로 즉시 승인 처리
+- **거부 버튼**: 빨간색 버튼으로 사유 입력 후 거부
+- **실시간 업데이트**: 승인/거부 후 목록 자동 새로고침
+
+**백엔드 API 완성**:
+- ✅ `POST /betting/folders` - 배팅 폴더 생성 + 포인트 차감
+- ✅ `GET /betting/settlements/pending` - 정산 대기 목록 조회
+- ✅ `POST /betting/settlements/:id/approve` - 정산 승인 + 포인트 지급
+- ✅ `POST /betting/settlements/:id/reject` - 정산 거부
+- ✅ `POST /betting/matches/:id/result` - 경기 결과 입력 + 자동 정산
+
+**배포 URL**:
+- 🌐 **최신 배포**: https://a14b04c6.exit-company-system-5je.pages.dev
+- 🔗 **메인 사이트**: https://exit-company-system.pages.dev
+- 📦 **GitHub**: https://github.com/wodnr990921-cloud/exit_company_system
+
+---
+
+### 🔥 v12.2.0 배팅 시스템 언오바(Over/Under) 기능 추가 ✅
 
 **배팅 시스템 고도화**:
 - ✅ **언오바 기준점 설정**: 경기 등록 시 기준점 설정 (예: 2.5골)
