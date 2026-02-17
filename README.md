@@ -44,8 +44,9 @@ const priority = priorityEl ? priorityEl.value : 'all'
 ```
 
 **배포 URL**:
-- 🌐 **최신 배포**: https://734118f7.exit-company-system-5je.pages.dev
-- 🌐 **메인 사이트**: https://exit-company-system.pages.dev
+- 🌐 **최신 배포**: https://41a97d10.exit-company-system-5je.pages.dev/
+- 🌐 **메인 사이트**: https://exit-company-system.pages.dev/
+- ✅ **루트 경로에서 앱 정상 로드**
 
 ---
 
