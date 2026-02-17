@@ -11,13 +11,16 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
-        /* 데스크톱 네비게이션 강제 표시 */
+        
+        /* 기본 hidden 클래스 */
+        .hidden { display: none !important; }
+        
+        /* 데스크톱 네비게이션 강제 표시 - hidden 클래스보다 높은 우선순위 */
         @media (min-width: 768px) {
-            nav.hidden.md:block {
+            nav.hidden.md\:block {
                 display: block !important;
             }
         }
-        .hidden { display: none !important; }
         
         /* 로딩 애니메이션 개선 */
         .loading { animation: spin 1s linear infinite; }
