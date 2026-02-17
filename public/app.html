@@ -416,7 +416,7 @@
                 <div class="flex items-center space-x-2 md:space-x-4">
                     <!-- 실시간 알림 아이콘 -->
                     <div class="relative no-print">
-                        <button onclick="toggleNotifications()" class="relative text-gray-600 hover:text-gray-800">
+                        <button onclick="event.stopPropagation(); toggleNotifications()" class="relative text-gray-600 hover:text-gray-800">
                             <i class="fas fa-bell text-xl"></i>
                             <span id="notification-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
                         </button>
@@ -434,7 +434,7 @@
                     </div>
                     
                     <!-- 다크 모드 토글 -->
-                    <div class="dark-mode-toggle no-print" onclick="toggleDarkMode()" title="다크 모드 전환">
+                    <div class="dark-mode-toggle no-print" onclick="event.stopPropagation(); toggleDarkMode()" title="다크 모드 전환">
                         <div class="dark-mode-toggle-thumb"></div>
                     </div>
                     
@@ -545,7 +545,7 @@
                 <!-- 대시보드 헤더 -->
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold"><i class="fas fa-tachometer-alt mr-2"></i>대시보드</h2>
-                    <button onclick="showDashboardSettings()" class="btn btn-secondary no-print">
+                    <button onclick="event.stopPropagation(); showDashboardSettings()" class="btn btn-secondary no-print">
                         <i class="fas fa-cog mr-2"></i>위젯 설정
                     </button>
                 </div>
@@ -3074,6 +3074,8 @@ function toggleDarkMode() {
     const body = document.body
     const toggle = document.querySelector('.dark-mode-toggle')
     
+    if (!body || !toggle) return
+    
     body.classList.toggle('dark-mode')
     toggle.classList.toggle('active')
     
@@ -3081,7 +3083,7 @@ function toggleDarkMode() {
     const isDark = body.classList.contains('dark-mode')
     localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled')
     
-    showToast(isDark ? '다크 모드 활성화' : '라이트 모드 활성화', 'info', 2000)
+    showToast(isDark ? '🌙 다크 모드 활성화' : '☀️ 라이트 모드 활성화', 'info', 2000)
 }
 
 // 페이지 로드 시 다크 모드 설정 복원
@@ -4700,6 +4702,11 @@ console.log('권한 관리 함수 로드 완료')
         function handleTouchEnd(e, element) {
             const diffX = touchEndX - touchStartX
             const diffY = touchEndY - touchStartY
+            
+            // 버튼, 링크, 입력 요소 등 클릭 가능한 요소는 무시
+            if (element.closest('button, a, input, select, textarea, .dark-mode-toggle, .card, .modal')) {
+                return
+            }
             
             // 최소 스와이프 거리
             const minSwipeDistance = 50
