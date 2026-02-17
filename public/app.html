@@ -825,6 +825,9 @@
                         <button onclick="showBettingTab('statistics')" id="betting-tab-statistics" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
                             <i class="fas fa-chart-line mr-1"></i>통계
                         </button>
+                        <button onclick="showBettingTab('settlements')" id="betting-tab-settlements" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                            <i class="fas fa-check-circle mr-1"></i>정산 승인
+                        </button>
                     </div>
                 </div>
 
@@ -977,6 +980,30 @@
                             <div id="daily-trend-list" class="space-y-2 max-h-96 overflow-y-auto">
                                 <p class="text-gray-500 text-center py-4">데이터 없음</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 정산 승인 탭 -->
+                <div id="betting-settlements-tab" class="betting-tab-content hidden">
+                    <div class="card mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold"><i class="fas fa-check-circle mr-2 text-green-600"></i>정산 대기 목록</h3>
+                            <button onclick="loadPendingSettlements()" class="btn btn-sm btn-primary">
+                                <i class="fas fa-sync mr-2"></i>새로고침
+                            </button>
+                        </div>
+                        
+                        <div id="pending-settlements-list" class="space-y-4">
+                            <p class="text-gray-500 text-center py-8">정산 대기 중인 항목이 없습니다.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 최근 승인/거부 내역 -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4"><i class="fas fa-history mr-2"></i>최근 처리 내역</h3>
+                        <div id="recent-settlements-list" class="space-y-2 max-h-96 overflow-y-auto">
+                            <p class="text-gray-500 text-center py-4">데이터 없음</p>
                         </div>
                     </div>
                 </div>
@@ -5016,6 +5043,8 @@ console.log('권한 관리 함수 로드 완료')
             document.getElementById('betting-tab-management').classList.add('bg-gray-200', 'text-gray-700')
             document.getElementById('betting-tab-statistics').classList.remove('bg-blue-500', 'text-white')
             document.getElementById('betting-tab-statistics').classList.add('bg-gray-200', 'text-gray-700')
+            document.getElementById('betting-tab-settlements').classList.remove('bg-blue-500', 'text-white')
+            document.getElementById('betting-tab-settlements').classList.add('bg-gray-200', 'text-gray-700')
             
             document.getElementById(`betting-tab-${tabName}`).classList.remove('bg-gray-200', 'text-gray-700')
             document.getElementById(`betting-tab-${tabName}`).classList.add('bg-blue-500', 'text-white')
@@ -5028,6 +5057,8 @@ console.log('권한 관리 함수 로드 완료')
             if (tabName === 'statistics') {
                 setStatsDateRange('month')
                 loadBettingStatistics()
+            } else if (tabName === 'settlements') {
+                loadPendingSettlements()
             }
         }
 
@@ -5117,6 +5148,121 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('통계 로드 오류:', error)
                 alert('통계를 불러오는데 실패했습니다.')
+            }
+        }
+
+        // ==========================================
+        // 정산 승인/거부 기능
+        // ==========================================
+        
+        // 정산 대기 목록 조회
+        async function loadPendingSettlements() {
+            try {
+                const response = await axios.get(`${API_BASE}/betting/settlements/pending`)
+                const settlements = response.data.settlements || []
+                
+                const container = document.getElementById('pending-settlements-list')
+                
+                if (settlements.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">정산 대기 중인 항목이 없습니다.</p>'
+                    return
+                }
+                
+                const html = settlements.map(s => `
+                    <div class="border rounded-lg p-4 bg-white hover:shadow-md transition">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-bold text-lg">${s.folder_number}</h4>
+                                <p class="text-sm text-gray-600">회원: ${s.member_name}</p>
+                            </div>
+                            <span class="status-badge bg-yellow-100 text-yellow-800">
+                                <i class="fas fa-clock mr-1"></i>대기 중
+                            </span>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-3 text-sm">
+                            <div>
+                                <p class="text-gray-600">폴더 타입</p>
+                                <p class="font-medium">${s.folder_type === 'single' ? '단폴더' : '다폴더'}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">배팅 금액</p>
+                                <p class="font-medium text-blue-600">${s.total_bet_amount.toLocaleString()}원</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">총 배당률</p>
+                                <p class="font-medium text-purple-600">${s.total_odds.toFixed(2)}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">정산 금액</p>
+                                <p class="font-bold text-green-600 text-lg">${s.settlement_amount.toLocaleString()}원</p>
+                            </div>
+                        </div>
+                        
+                        <div class="text-xs text-gray-500 mb-3 pb-3 border-b">
+                            <i class="fas fa-calendar mr-1"></i>${new Date(s.created_at).toLocaleString()}
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="approveSettlement(${s.id})" 
+                                    class="flex-1 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                                <i class="fas fa-check mr-2"></i>승인
+                            </button>
+                            <button onclick="showRejectModal(${s.id})" 
+                                    class="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                                <i class="fas fa-times mr-2"></i>거부
+                            </button>
+                        </div>
+                    </div>
+                `).join('')
+                
+                container.innerHTML = html
+            } catch (error) {
+                console.error('정산 목록 조회 오류:', error)
+                showToast('정산 목록을 불러오는데 실패했습니다.', 'error', 3000)
+            }
+        }
+        
+        // 정산 승인
+        async function approveSettlement(settlementId) {
+            if (!confirm('정산을 승인하시겠습니까? 회원에게 포인트가 지급됩니다.')) {
+                return
+            }
+            
+            try {
+                await axios.post(`${API_BASE}/betting/settlements/${settlementId}/approve`, {
+                    approved_by: currentStaff.id
+                })
+                
+                showToast('정산이 승인되었습니다.', 'success', 3000)
+                loadPendingSettlements()
+            } catch (error) {
+                console.error('정산 승인 오류:', error)
+                alert('정산 승인 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        // 정산 거부 모달 표시
+        function showRejectModal(settlementId) {
+            const notes = prompt('거부 사유를 입력해주세요:')
+            if (notes === null) return  // 취소
+            
+            rejectSettlement(settlementId, notes)
+        }
+        
+        // 정산 거부
+        async function rejectSettlement(settlementId, notes) {
+            try {
+                await axios.post(`${API_BASE}/betting/settlements/${settlementId}/reject`, {
+                    approved_by: currentStaff.id,
+                    notes: notes || '사유 없음'
+                })
+                
+                showToast('정산이 거부되었습니다.', 'info', 3000)
+                loadPendingSettlements()
+            } catch (error) {
+                console.error('정산 거부 오류:', error)
+                alert('정산 거부 실패: ' + (error.response?.data?.error || error.message))
             }
         }
 
@@ -7135,7 +7281,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             // 회원 필수 유형 검증
-            if (['ORDER', 'POINT_ADJUSTMENT', 'MEMBER'].includes(ticketType) && !memberId) {
+            if (['ORDER', 'POINT_ADJUSTMENT', 'MEMBER', 'BETTING'].includes(ticketType) && !memberId) {
                 alert('이 유형은 회원 선택이 필수입니다.')
                 return
             }
@@ -7165,10 +7311,64 @@ console.log('권한 관리 함수 로드 완료')
                 data.adjustment_type = adjustmentType
                 data.amount = amount
             }
+            
+            // 배팅일 경우 추가 데이터
+            if (ticketType === 'BETTING') {
+                const matchId = document.getElementById('betting-match').value
+                const bettingType = document.getElementById('betting-type').value
+                const bettingAmount = parseFloat(document.getElementById('betting-amount').value)
+                
+                if (!matchId) {
+                    alert('경기를 선택해주세요.')
+                    return
+                }
+                
+                if (!bettingType) {
+                    alert('배팅 유형을 선택해주세요.')
+                    return
+                }
+                
+                if (!bettingAmount || bettingAmount < 1000) {
+                    alert('배팅 금액은 최소 1,000원 이상이어야 합니다.')
+                    return
+                }
+                
+                const bettingTypeOption = document.getElementById('betting-type').selectedOptions[0]
+                const odds = parseFloat(bettingTypeOption.dataset.odds || 0)
+                
+                data.betting_data = {
+                    match_id: matchId,
+                    bet_type: bettingType,
+                    odds: odds,
+                    amount: bettingAmount,
+                    potential_win: Math.floor(bettingAmount * odds)
+                }
+            }
 
             try {
                 const ticketResponse = await axios.post(`${API_BASE}/tickets`, data)
                 const ticketId = ticketResponse.data.ticket_id
+
+                // 배팅 티켓일 경우 배팅 폴더 생성
+                if (ticketType === 'BETTING' && data.betting_data) {
+                    try {
+                        await axios.post(`${API_BASE}/betting/folders`, {
+                            ticket_id: ticketId,
+                            member_id: memberId,
+                            folder_type: 'single',  // 단폴더
+                            total_bet_amount: data.betting_data.amount,
+                            bets: [{
+                                match_id: data.betting_data.match_id,
+                                bet_type: data.betting_data.bet_type,
+                                odds: data.betting_data.odds
+                            }],
+                            created_by: currentStaff.id
+                        })
+                    } catch (bettingError) {
+                        console.error('배팅 폴더 생성 오류:', bettingError)
+                        alert('티켓은 생성되었으나 배팅 폴더 생성에 실패했습니다: ' + (bettingError.response?.data?.error || bettingError.message))
+                    }
+                }
 
                 // 이미지 업로드 처리
                 const imageInput = document.getElementById('ticket-images')
@@ -7190,7 +7390,7 @@ console.log('권한 관리 함수 로드 완료')
                     }
                 }
 
-                alert('티켓이 생성되었습니다.')
+                showToast(ticketType === 'BETTING' ? '배팅 티켓이 생성되고 포인트가 차감되었습니다.' : '티켓이 생성되었습니다.', 'success', 3000)
                 closeNewTicketModal()
                 if (currentView === 'tickets') await loadTickets()
                 if (currentView === 'dashboard') await loadDashboard()
@@ -10248,19 +10448,21 @@ console.log('권한 관리 함수 로드 완료')
             const potentialWin = Math.floor(betAmount * totalOdds)
             
             try {
-                await axios.post(`${API_BASE}/ticket-items/${currentTicketId}`, {
-                    item_type: 'betting',
-                    item_data: {
-                        member_id: memberId,
-                        folder_type: folderType,
-                        selections: selectedMatches,
-                        bet_amount: betAmount,
-                        total_odds: totalOdds,
-                        potential_win: potentialWin
-                    }
+                // 배팅 폴더 생성 API 호출
+                const response = await axios.post(`${API_BASE}/betting/folders`, {
+                    ticket_id: currentTicketId,
+                    member_id: memberId,
+                    folder_type: folderType === '단폴더' ? 'single' : 'multi',
+                    total_bet_amount: betAmount,
+                    bets: selectedMatches.map(m => ({
+                        match_id: m.matchId,
+                        bet_type: m.betType,
+                        odds: m.odds
+                    })),
+                    created_by: currentStaff.id
                 })
                 
-                alert('배팅이 장바구니에 추가되었습니다.')
+                showToast(`배팅이 장바구니에 추가되었습니다. 폴더 번호: ${response.data.folder_number}`, 'success', 3000)
                 closeAddRequestModal()
                 loadTicketItems(currentTicketId)
             } catch (error) {

@@ -136,7 +136,8 @@ tickets.get('/:id', async (c) => {
 // 티켓 생성
 tickets.post('/', async (c) => {
   try {
-    const { title, description, member_id, ticket_type, priority, assigned_to, created_by } = await c.req.json()
+    const body = await c.req.json()
+    const { title, description, member_id, ticket_type, priority, assigned_to, created_by, betting_data } = body
 
     if (!title || !ticket_type || !created_by) {
       return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
@@ -157,6 +158,74 @@ tickets.post('/', async (c) => {
     ).run()
 
     const ticketId = result.meta.last_row_id
+
+    // 배팅 티켓인 경우 배팅 폴더 및 배팅 생성
+    if (ticket_type === 'BETTING' && betting_data && member_id) {
+      try {
+        // 회원의 배팅 포인트 조회
+        const member = await c.env.DB.prepare(
+          'SELECT betting_points FROM members WHERE id = ?'
+        ).bind(member_id).first()
+        
+        const currentPoints = Number((member as any)?.betting_points || 0)
+        
+        if (currentPoints < betting_data.amount) {
+          return c.json({ error: '배팅 포인트가 부족합니다.' }, 400)
+        }
+        
+        // 배팅 폴더 생성
+        const folderResult = await c.env.DB.prepare(
+          `INSERT INTO bet_folders (member_id, folder_type, total_bet_amount, potential_win, ticket_id)
+           VALUES (?, ?, ?, ?, ?)`
+        ).bind(
+          member_id,
+          'single', // 단폴더로 고정
+          betting_data.amount,
+          betting_data.potential_win,
+          ticketId
+        ).run()
+        
+        const folderId = folderResult.meta.last_row_id
+        
+        // 배팅 레코드 생성
+        await c.env.DB.prepare(
+          `INSERT INTO bets (folder_id, match_id, bet_type, odds)
+           VALUES (?, ?, ?, ?)`
+        ).bind(
+          folderId,
+          betting_data.match_id,
+          betting_data.bet_type,
+          betting_data.odds
+        ).run()
+        
+        // 회원 배팅 포인트 차감
+        await c.env.DB.prepare(
+          'UPDATE members SET betting_points = betting_points - ? WHERE id = ?'
+        ).bind(betting_data.amount, member_id).run()
+        
+        // 포인트 트랜잭션 기록
+        await c.env.DB.prepare(
+          `INSERT INTO point_transactions (member_id, transaction_type, amount, point_type, description, related_ticket_id)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        ).bind(
+          member_id,
+          'subtract',
+          betting_data.amount,
+          'betting_points',
+          `배팅 사용 (${ticket_number})`,
+          ticketId
+        ).run()
+      } catch (bettingError) {
+        console.error('배팅 처리 오류:', bettingError)
+        // 티켓은 생성되었으나 배팅 처리 실패
+        return c.json({ 
+          success: true, 
+          ticket_id: ticketId,
+          ticket_number,
+          warning: '티켓은 생성되었으나 배팅 처리 중 오류가 발생했습니다.'
+        })
+      }
+    }
 
     return c.json({ 
       success: true, 
