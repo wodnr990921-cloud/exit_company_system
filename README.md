@@ -4,6 +4,37 @@
 
 ## 🆕 최신 업데이트 (2026-02-17)
 
+### 🔥 v12.0.4 로고 클릭 대시보드 네비게이션 ✅
+
+**새로운 기능**:
+- ✅ **로고 클릭 시 대시보드 이동**: 헤더의 "엑시트 시스템" 로고 클릭으로 대시보드 바로 가기
+- ✅ **호버 효과**: 로고에 마우스 오버 시 투명도 변화 (시각적 피드백)
+- ✅ **커서 변경**: 클릭 가능함을 나타내는 포인터 커서
+- ✅ **이벤트 전파 방지**: 로고 클릭이 다른 이벤트에 영향 없음
+
+**구현 내용**:
+```html
+<!-- 로고 (클릭 시 대시보드로 이동) -->
+<div class="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity" 
+     onclick="event.stopPropagation(); showView('dashboard')">
+    <i class="fas fa-door-open text-3xl text-blue-500"></i>
+    <div>
+        <h1 class="text-xl md:text-2xl font-bold text-gray-800">엑시트 시스템</h1>
+        <p class="text-xs md:text-sm text-gray-600">EXIT System</p>
+    </div>
+</div>
+```
+
+**UI/UX 개선**:
+- `cursor-pointer`: 클릭 가능함을 시각적으로 표시
+- `hover:opacity-80`: 호버 시 80% 투명도로 피드백
+- `transition-opacity`: 부드러운 애니메이션 효과
+
+**배포 URL**:
+- 🌐 **최신 배포**: https://3aec804c.exit-company-system-5je.pages.dev
+
+---
+
 ### 🔥 v12.0.3 터치 제스처 및 버튼 충돌 해결 ✅
 
 **긴급 수정**:
