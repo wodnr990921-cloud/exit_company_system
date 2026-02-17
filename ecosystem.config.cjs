@@ -3,10 +3,10 @@ module.exports = {
     {
       name: 'exit-system',
       script: 'npx',
-      args: 'wrangler pages dev dist --local --ip 0.0.0.0 --port 8787',
+      args: 'wrangler pages dev dist --local --ip 0.0.0.0 --port 3000',
       env: {
         NODE_ENV: 'development',
-        PORT: 8787,
+        PORT: 3000,
         CLOUDFLARE_API_TOKEN: 'suBVZRmBzUt7luzRSGUiii-n98GQwDgBadrfc3ST'
       },
       watch: false,
