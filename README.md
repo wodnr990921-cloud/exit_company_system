@@ -23,7 +23,7 @@ const priority = priorityEl ? priorityEl.value : 'all'
 ```
 
 **배포 URL**:
-- 🌐 **최신 배포**: https://a9c63a89.exit-company-system-5je.pages.dev
+- 🌐 **최신 배포**: https://734118f7.exit-company-system-5je.pages.dev
 - 🌐 **메인 사이트**: https://exit-company-system.pages.dev
 
 ---
