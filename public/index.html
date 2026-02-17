@@ -2836,6 +2836,14 @@
                                 <p class="text-sm text-gray-500">로딩 중...</p>
                             </div>
                         </div>
+                        
+                        <!-- 근태 내역 -->
+                        <div class="card lg:col-span-2">
+                            <h4 class="font-bold mb-3"><i class="fas fa-clock mr-2"></i>근태 내역 (최근 30일)</h4>
+                            <div id="staff-attendance-history" class="space-y-2 max-h-60 overflow-y-auto">
+                                <p class="text-sm text-gray-500">로딩 중...</p>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="flex justify-between mt-6">
@@ -5154,6 +5162,9 @@ console.log('권한 관리 함수 로드 완료')
         // 배팅 관리 로드
         async function loadBetting() {
             try {
+                // 경기 일정 로드
+                await loadMatchSchedule()
+                
                 const foldersRes = await axios.get(`${API_BASE}/betting/folders`)
 
                 // 배팅 폴더 목록 (고객 배팅) - 더 상세한 정보 표시
@@ -5197,6 +5208,63 @@ console.log('권한 관리 함수 로드 완료')
                 await loadMatchSettlementList()
             } catch (error) {
                 console.error('배팅 관리 로드 오류:', error)
+            }
+        }
+
+        // 경기 일정 로드
+        async function loadMatchSchedule() {
+            try {
+                const response = await axios.get(`${API_BASE}/betting/matches?status=open`)
+                const matches = response.data.matches || []
+                
+                const container = document.getElementById('match-schedule-list')
+                if (!container) return
+                
+                if (matches.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-4">등록된 경기가 없습니다</p>'
+                    return
+                }
+                
+                container.innerHTML = matches.map(m => {
+                    let bettingInfo = []
+                    if (m.home_odds && m.draw_odds && m.away_odds) {
+                        bettingInfo.push(`승무패: ${m.home_odds} / ${m.draw_odds} / ${m.away_odds}`)
+                    }
+                    if (m.over_line && m.over_odds && m.under_odds) {
+                        bettingInfo.push(`언오버 ${m.over_line}: ${m.over_odds} / ${m.under_odds}`)
+                    }
+                    if (m.handicap_line !== null && m.handicap_home_odds && m.handicap_away_odds) {
+                        bettingInfo.push(`핸디캡 ${m.handicap_line > 0 ? '+' : ''}${m.handicap_line}: ${m.handicap_home_odds} / ${m.handicap_away_odds}`)
+                    }
+                    
+                    return `
+                        <div class="border rounded p-3 hover:bg-gray-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <p class="font-bold">${m.match_name}</p>
+                                    <p class="text-sm text-gray-600">${m.home_team} vs ${m.away_team}</p>
+                                </div>
+                                <span class="text-xs px-2 py-1 rounded ${
+                                    m.status === 'open' ? 'bg-green-100 text-green-700' : 
+                                    m.status === 'closed' ? 'bg-gray-100 text-gray-700' : 
+                                    'bg-blue-100 text-blue-700'
+                                }">
+                                    ${m.status === 'open' ? '진행중' : m.status === 'closed' ? '마감' : '완료'}
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-500 mb-1">
+                                ${new Date(m.match_date).toLocaleString()}
+                            </div>
+                            ${bettingInfo.length > 0 ? `
+                                <div class="text-xs text-blue-600 mt-2">
+                                    ${bettingInfo.join(' | ')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `
+                }).join('')
+            } catch (error) {
+                console.error('경기 일정 로드 오류:', error)
             }
         }
 
@@ -5815,7 +5883,7 @@ console.log('권한 관리 함수 로드 완료')
             try {
                 const date = document.getElementById('closing-date').value
                 if (!date) {
-                    alert('날짜를 선택해주세요.')
+                    showToast('날짜를 선택해주세요.', 'warning')
                     return
                 }
 
@@ -5825,19 +5893,21 @@ console.log('권한 관리 함수 로드 완료')
 
                 const notes = prompt('마감 메모를 입력하세요 (선택사항):')
 
+                showToast('마감을 진행중입니다...', 'info')
+
                 const response = await axios.post(`${API_BASE}/closing`, {
                     date: date,
                     closed_by: currentStaff.id,
                     notes: notes || ''
                 })
 
-                alert('일일 마감이 완료되었습니다.')
+                showToast('일일 마감이 완료되었습니다. ✅', 'success')
                 await loadClosingData()
 
             } catch (error) {
                 console.error('마감 실행 오류:', error)
                 const errorMsg = error.response?.data?.error || '마감 실행 중 오류가 발생했습니다.'
-                alert(errorMsg)
+                showToast(errorMsg, 'error')
             }
         }
 
@@ -10388,11 +10458,109 @@ console.log('권한 관리 함수 로드 완료')
                     (stats.assigned_tickets > 0 ? Math.round((stats.completed_tickets / stats.assigned_tickets) * 100) : 0) + '%'
                 document.getElementById('stat-attendance-days').textContent = stats.attendance_days || 0
 
+                // 권한 변경 이력 로드
+                loadStaffRoleChanges(staffId)
+                
+                // 근태 내역 로드
+                loadStaffAttendance(staffId)
+
                 document.getElementById('staff-detail-modal').classList.remove('hidden')
             } catch (error) {
                 console.error('직원 상세 로드 오류:', error)
                 alert('직원 정보를 불러오는데 실패했습니다.')
             }
+        }
+        
+        // 권한 변경 이력 로드
+        async function loadStaffRoleChanges(staffId) {
+            try {
+                const response = await axios.get(`${API_BASE}/staff/${staffId}/role-changes`)
+                const changes = response.data.role_changes || []
+                
+                const container = document.getElementById('staff-role-changes')
+                if (changes.length === 0) {
+                    container.innerHTML = '<p class="text-sm text-gray-500">권한 변경 이력이 없습니다.</p>'
+                    return
+                }
+                
+                const roleNames = {
+                    'admin': '관리자',
+                    'staff': '일반 직원',
+                    'viewer': '뷰어'
+                }
+                
+                container.innerHTML = changes.map(c => `
+                    <div class="border-l-2 border-blue-500 pl-3 py-2 text-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-red-500">${roleNames[c.old_role] || c.old_role}</span>
+                                <i class="fas fa-arrow-right mx-1 text-gray-400"></i>
+                                <span class="text-green-500">${roleNames[c.new_role] || c.new_role}</span>
+                            </div>
+                            <span class="text-xs text-gray-500">${new Date(c.changed_at).toLocaleDateString()}</span>
+                        </div>
+                        ${c.reason ? `<p class="text-xs text-gray-600 mt-1">${c.reason}</p>` : ''}
+                        <p class="text-xs text-gray-500 mt-1">변경자: ${c.changed_by_name || 'N/A'}</p>
+                    </div>
+                `).join('')
+            } catch (error) {
+                console.error('권한 변경 이력 로드 오류:', error)
+                document.getElementById('staff-role-changes').innerHTML = 
+                    '<p class="text-sm text-red-500">이력을 불러오는데 실패했습니다.</p>'
+            }
+        }
+        
+        // 근태 내역 로드
+        async function loadStaffAttendance(staffId) {
+            try {
+                const response = await axios.get(`${API_BASE}/attendance?staff_id=${staffId}&days=30`)
+                const records = response.data.attendance || []
+                
+                const container = document.getElementById('staff-attendance-history')
+                if (records.length === 0) {
+                    container.innerHTML = '<p class="text-sm text-gray-500">근태 기록이 없습니다.</p>'
+                    return
+                }
+                
+                container.innerHTML = records.map(r => `
+                    <div class="flex justify-between items-center p-2 border rounded hover:bg-gray-50">
+                        <div class="flex items-center gap-3">
+                            <i class="fas ${r.check_out ? 'fa-check-circle text-green-500' : 'fa-clock text-blue-500'}"></i>
+                            <div>
+                                <div class="text-sm font-medium">
+                                    ${new Date(r.check_in).toLocaleDateString()} 
+                                    <span class="text-gray-600">(${['일','월','화','수','목','금','토'][new Date(r.check_in).getDay()]})</span>
+                                </div>
+                                <div class="text-xs text-gray-600">
+                                    출근: ${new Date(r.check_in).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}
+                                    ${r.check_out ? ` | 퇴근: ${new Date(r.check_out).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        ${r.check_out ? `
+                            <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+                                ${calculateWorkHours(r.check_in, r.check_out)}
+                            </span>
+                        ` : `
+                            <span class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                                근무중
+                            </span>
+                        `}
+                    </div>
+                `).join('')
+            } catch (error) {
+                console.error('근태 내역 로드 오류:', error)
+                document.getElementById('staff-attendance-history').innerHTML = 
+                    '<p class="text-sm text-red-500">근태 내역을 불러오는데 실패했습니다.</p>'
+            }
+        }
+        
+        // 근무 시간 계산
+        function calculateWorkHours(checkIn, checkOut) {
+            const diff = new Date(checkOut) - new Date(checkIn)
+            const hours = Math.floor(diff / (1000 * 60 * 60))
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+            return `${hours}시간 ${minutes}분`
         }
 
         function closeStaffDetail() {
