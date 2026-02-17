@@ -4,7 +4,31 @@
 
 ## 🆕 최신 업데이트 (2026-02-17)
 
-### 🔥 v12.3.0 배팅 폴더 생성 및 정산 승인 시스템 완성 ✅
+### 🔥 v12.3.1 모바일 JavaScript 오류 수정 ✅
+
+**긴급 수정**:
+- ✅ **Null 참조 오류 수정**: `ticket-priority-filter` 요소 누락으로 인한 JavaScript 오류 해결
+- ✅ **안전한 요소 접근**: 모든 필터 요소에 null 체크 추가
+- ✅ **기본값 처리**: 요소가 없을 경우 'all' 값 사용
+- ✅ **모바일 안정성**: 모바일에서도 정상 작동
+
+**수정 내용**:
+```javascript
+// 이전 (오류 발생)
+const priority = document.getElementById('ticket-priority-filter').value
+
+// 수정 (안전)
+const priorityEl = document.getElementById('ticket-priority-filter')
+const priority = priorityEl ? priorityEl.value : 'all'
+```
+
+**배포 URL**:
+- 🌐 **최신 배포**: https://a9c63a89.exit-company-system-5je.pages.dev
+- 🌐 **메인 사이트**: https://exit-company-system.pages.dev
+
+---
+
+### 🔥 v12.3.0 배팅 시스템 정산 승인 기능 완성 ✅
 
 **배팅 시스템 완전 통합**:
 - ✅ **배팅 폴더 자동 생성**: 티켓 생성 시 배팅 폴더 API 호출 및 포인트 차감
