@@ -3395,23 +3395,18 @@
         <div id="ticket-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg w-full max-w-[95vw] h-[90vh] flex flex-col">
                 <!-- 모달 헤더 -->
-                <div class="p-4 border-b flex justify-between items-center">
-                    <div>
-                        <h3 class="text-xl font-bold"><i class="fas fa-ticket-alt mr-2"></i>티켓 상세</h3>
-                        <p class="text-sm text-gray-600">
-                            <span id="modal-ticket-number" class="font-mono"></span> - 
-                            <span id="modal-ticket-title"></span>
-                        </p>
-                        <p class="text-xs text-gray-500">
-                            회원: <span id="modal-ticket-member"></span>
-                            <span id="modal-member-balance-container" class="ml-3 hidden">
-                                | 잔액: <span id="modal-member-balance" class="font-semibold text-blue-600"></span>P
-                            </span>
-                        </p>
+                <div class="p-4 border-b bg-white">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-lg font-bold flex items-center">
+                                <i class="fas fa-ticket-alt mr-2"></i>
+                                티켓 상세 - <span id="modal-ticket-number" class="font-mono ml-1"></span>
+                            </h3>
+                        </div>
+                        <button onclick="closeTicketDetail()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
                     </div>
-                    <button onclick="closeTicketDetail()" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
                 </div>
 
                 <!-- 좌우 레이아웃 -->
@@ -3486,101 +3481,142 @@
                             <button onclick="showTicketTab('requests')" id="tab-requests" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
                                 <i class="fas fa-shopping-cart mr-1"></i>요청사항 <span id="cart-count" class="ml-1 px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">0</span>
                             </button>
-                            <button onclick="showTicketTab('comments')" id="tab-comments" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
-                                <i class="fas fa-comments mr-1"></i>댓글
-                            </button>
                         </div>
 
                         <!-- 탭 컨텐츠 영역 -->
                         <div class="flex-1 overflow-y-auto p-6">
                             <!-- 티켓 정보 탭 -->
                             <div id="ticket-tab-info" class="tab-content">
-                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <!-- 좌측: 이미지 + 요약 -->
-                                    <div class="space-y-4">
-                                        <!-- 우편물 이미지 (mailroom 탭에서 옮겨옴) -->
-                                        <div id="mail-images-section" class="hidden">
-                                            <div class="card">
-                                                <h4 class="font-bold mb-3"><i class="fas fa-images mr-2"></i>우편물 이미지</h4>
-                                                <div id="mail-image-viewer" class="space-y-2">
-                                                    <!-- JavaScript로 렌더링 -->
-                                                </div>
+                                <!-- 좌측 컨텐츠 영역과 우측 사이드바 (3:1 비율) -->
+                                <div class="flex gap-6">
+                                    <!-- 좌측: 원문/요약/답변 영역 (75%) -->
+                                    <div class="flex-1 space-y-4">
+                                        <!-- 원문 섹션 -->
+                                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                            <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                                <i class="fas fa-file-text mr-2 text-gray-600"></i>원문
+                                            </h4>
+                                            <div id="detail-ticket-description" class="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                                                <!-- JavaScript로 원문 표시 -->
                                             </div>
-                                        </div>
-                                        
-                                        <!-- 요약 -->
-                                        <div class="card">
-                                            <h4 class="font-bold mb-3"><i class="fas fa-clipboard-list mr-2"></i>요약</h4>
-                                            <div id="ticket-summary" class="text-sm text-gray-700">
-                                                <!-- JavaScript로 요약 정보 표시 -->
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 중앙: 기본 정보 + 원문 -->
-                                    <div class="space-y-4">
-                                        <!-- 기본 정보 -->
-                                        <div class="card">
-                                            <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
-                                            <div class="space-y-2 text-sm">
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">티켓 번호:</span>
-                                                    <span class="font-mono" id="detail-ticket-number"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">제목:</span>
-                                                    <span id="detail-ticket-title"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">유형:</span>
-                                                    <span id="detail-ticket-type"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">상태:</span>
-                                                    <span id="detail-ticket-status"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">우선순위:</span>
-                                                    <span id="detail-ticket-priority"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">회원:</span>
-                                                    <span id="detail-ticket-member-name"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">담당자:</span>
-                                                    <span id="detail-ticket-assigned"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">생성일:</span>
-                                                    <span id="detail-ticket-created"></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- 원문 -->
-                                        <div class="card">
-                                            <h4 class="font-bold mb-3"><i class="fas fa-file-text mr-2"></i>원문</h4>
-                                            <div id="ticket-original-text" class="text-sm text-gray-800 whitespace-pre-wrap max-h-96 overflow-y-auto p-3 bg-gray-50 rounded border">
-                                                <p id="detail-ticket-description" class="text-gray-800"></p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 우측: 회원 관리 + 상태 변경 -->
-                                    <div class="space-y-4">
-                                        <!-- 회원 관리 -->
-                                        <div id="member-management-card">
-                                            <!-- JavaScript로 동적 렌더링됩니다 -->
                                         </div>
 
-                                        <!-- 상태 변경 -->
-                                        <div class="card">
-                                            <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>상태 변경</h4>
+                                        <!-- 요약 섹션 -->
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                            <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                                <i class="fas fa-clipboard-list mr-2 text-blue-600"></i>요약
+                                            </h4>
+                                            <div id="ticket-summary" class="text-sm text-gray-700 leading-relaxed">
+                                                <!-- JavaScript로 요약 표시 -->
+                                            </div>
+                                        </div>
+
+                                        <!-- 담변 섹션 (답변 입력) -->
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                            <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                                <i class="fas fa-comment mr-2 text-gray-600"></i>담변
+                                            </h4>
+                                            <textarea 
+                                                id="response-content" 
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                                                rows="5" 
+                                                placeholder="답변 입력"
+                                            ></textarea>
+                                        </div>
+
+                                        <!-- 댓글 섹션 (기존 답변 목록) -->
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                            <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                                <i class="fas fa-comments mr-2 text-green-600"></i>댓글
+                                            </h4>
+                                            <p class="text-sm text-gray-500">감사합니다. 관리자에게서 요청하신 송금이 정상적으로 접수되었습니다!</p>
+                                            <p class="text-xs text-gray-400 mt-2">다음에는 숙기 소중히 작업할 것임니다. 다음엔 이렇게할 것임.</p>
+                                            <div class="mt-3">
+                                                <p class="text-sm text-gray-700 bg-gray-50 p-2 rounded">댓글 입력</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 우측: 기본 정보 + 회원 정보 사이드바 (25%) -->
+                                    <div class="w-80 space-y-4 flex-shrink-0">
+                                        <!-- 기본 정보 카드 -->
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                            <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                                <i class="fas fa-file-alt mr-2 text-gray-600"></i>기본 정보
+                                            </h4>
+                                            <div class="space-y-2 text-sm">
+                                                <div class="flex items-start">
+                                                    <span class="text-gray-500 w-20 flex-shrink-0">티켓번호</span>
+                                                    <span class="font-mono text-gray-800" id="detail-ticket-number"></span>
+                                                </div>
+                                                <div class="flex items-start">
+                                                    <span class="text-gray-500 w-20 flex-shrink-0">제목</span>
+                                                    <span class="text-gray-800" id="detail-ticket-title"></span>
+                                                </div>
+                                                <div class="flex items-start">
+                                                    <span class="text-gray-500 w-20 flex-shrink-0">유형</span>
+                                                    <span class="text-gray-800" id="detail-ticket-type"></span>
+                                                </div>
+                                                <div class="flex items-start">
+                                                    <span class="text-gray-500 w-20 flex-shrink-0">상태</span>
+                                                    <span id="detail-ticket-status"></span>
+                                                </div>
+                                                <div class="flex items-start">
+                                                    <span class="text-gray-500 w-20 flex-shrink-0">우선순위</span>
+                                                    <span id="detail-ticket-priority"></span>
+                                                </div>
+                                                <div class="flex items-start">
+                                                    <span class="text-gray-500 w-20 flex-shrink-0">생성일</span>
+                                                    <span class="text-gray-800" id="detail-ticket-created"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 회원 정보 카드 -->
+                                        <div id="member-management-card">
+                                            <!-- JavaScript로 동적 렌더링 -->
+                                        </div>
+
+                                        <!-- 회원 정보 + 등록완료 카드 (기본 템플릿) -->
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4" id="member-info-static" style="display:none;">
+                                            <div class="flex justify-between items-center mb-3">
+                                                <h4 class="font-semibold text-gray-800 flex items-center">
+                                                    <i class="fas fa-user-check mr-2 text-green-500"></i>회원 정보
+                                                </h4>
+                                                <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full flex items-center">
+                                                    <i class="fas fa-check-circle mr-1"></i>등록완료
+                                                </span>
+                                            </div>
+                                            <div class="space-y-2 text-sm mb-4">
+                                                <div class="flex items-start">
+                                                    <span class="text-gray-500 w-16 flex-shrink-0">이름</span>
+                                                    <span class="text-gray-800" id="detail-ticket-member-name"></span>
+                                                </div>
+                                                <div class="flex items-start">
+                                                    <span class="text-gray-500 w-16 flex-shrink-0">잔액</span>
+                                                    <span class="text-blue-600 font-semibold" id="detail-member-balance"></span>
+                                                </div>
+                                            </div>
+                                            <!-- 액션 버튼 -->
+                                            <div class="flex gap-2">
+                                                <button class="flex-1 px-3 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 text-sm flex items-center justify-center">
+                                                    <i class="fas fa-exchange-alt mr-1"></i>회원 변경
+                                                </button>
+                                                <button class="flex-1 px-3 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm flex items-center justify-center">
+                                                    <i class="fas fa-edit mr-1"></i>정보 수정
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- 상태 변경 폼 -->
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                            <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                                <i class="fas fa-edit mr-2 text-gray-600"></i>상태 변경
+                                            </h4>
                                             <div class="space-y-3">
                                                 <div>
-                                                    <label class="block text-sm font-medium mb-1">티켓 상태</label>
-                                                    <select id="update-ticket-status" class="w-full px-3 py-2 border rounded">
+                                                    <label class="block text-xs text-gray-600 mb-1">티켓 상태</label>
+                                                    <select id="update-ticket-status" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
                                                         <option value="open">미배정</option>
                                                         <option value="assigned">배정됨</option>
                                                         <option value="in_progress">처리중</option>
@@ -3589,8 +3625,8 @@
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label class="block text-sm font-medium mb-1">우선순위</label>
-                                                    <select id="update-ticket-priority" class="w-full px-3 py-2 border rounded">
+                                                    <label class="block text-xs text-gray-600 mb-1">우선순위</label>
+                                                    <select id="update-ticket-priority" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
                                                         <option value="low">낮음</option>
                                                         <option value="normal">보통</option>
                                                         <option value="high">높음</option>
@@ -3598,76 +3634,16 @@
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label class="block text-sm font-medium mb-1">담당자</label>
-                                                    <select id="update-ticket-assigned" class="w-full px-3 py-2 border rounded">
+                                                    <label class="block text-xs text-gray-600 mb-1">담당자</label>
+                                                    <select id="update-ticket-assigned" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
                                                         <option value="">미배정</option>
                                                     </select>
                                                 </div>
-                                                <button onclick="updateTicketInfo()" class="btn btn-primary w-full">
+                                                <button onclick="updateTicketInfo()" class="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm">
                                                     <i class="fas fa-save mr-2"></i>변경사항 저장
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 댓글 탭 -->
-                            <div id="ticket-tab-comments" class="tab-content hidden">
-                                <div class="card mb-4">
-                                    <h4 class="font-bold mb-3"><i class="fas fa-comment mr-2"></i>댓글/답변 작성</h4>
-                                    
-                                    <!-- 댓글 타입 선택 -->
-                                    <div class="mb-3">
-                                        <label class="block text-sm font-medium mb-1">타입</label>
-                                        <div class="flex gap-4">
-                                            <label class="flex items-center">
-                                                <input type="radio" name="comment-type" value="internal" checked class="mr-2">
-                                                <span>내부 메모 (직원만 보기)</span>
-                                            </label>
-                                            <label class="flex items-center">
-                                                <input type="radio" name="comment-type" value="response" class="mr-2">
-                                                <span class="text-blue-600 font-bold">회원 답변 (출력용)</span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 답변 템플릿 선택 -->
-                                    <div class="mb-3" id="template-section">
-                                        <label class="block text-sm font-medium mb-1">빠른 답변 템플릿</label>
-                                        <select id="comment-template" onchange="insertTemplate()" class="w-full px-3 py-2 border rounded">
-                                            <option value="">-- 템플릿 선택 또는 직접 입력 --</option>
-                                            <option value="order_received">주문 접수 완료</option>
-                                            <option value="order_processing">주문 처리 중</option>
-                                            <option value="order_shipped">발송 완료</option>
-                                            <option value="point_adjusted">포인트 조정 완료</option>
-                                            <option value="inquiry_answer">문의 답변</option>
-                                            <option value="need_more_info">추가 정보 필요</option>
-                                            <option value="completed">처리 완료</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <textarea 
-                                        id="comment-content" 
-                                        class="w-full px-3 py-2 border rounded mb-2" 
-                                        rows="5" 
-                                        placeholder="내용을 입력하세요... (수기 작성 가능)"
-                                    ></textarea>
-                                    
-                                    <div class="flex gap-2">
-                                        <button onclick="addComment()" class="btn btn-primary flex-1">
-                                            <i class="fas fa-paper-plane mr-2"></i>저장
-                                        </button>
-                                        <button onclick="addAndNotify()" class="btn btn-success flex-1" id="notify-btn" style="display:none;">
-                                            <i class="fas fa-bell mr-2"></i>저장 + 알림 발송
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="card">
-                                    <h4 class="font-bold mb-3"><i class="fas fa-comments mr-2"></i>댓글/답변 목록</h4>
-                                    <div id="comments-list" class="space-y-3 max-h-[400px] overflow-y-auto">
-                                        로딩중...
                                     </div>
                                 </div>
                             </div>
@@ -7668,29 +7644,6 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 티켓 기본 정보 (헤더)
                 document.getElementById('modal-ticket-number').textContent = ticket.ticket_number
-                document.getElementById('modal-ticket-title').textContent = ticket.title
-                document.getElementById('modal-ticket-member').textContent = ticket.member_name || '-'
-
-                // 회원 잔액 표시
-                const balanceContainer = document.getElementById('modal-member-balance-container')
-                const balanceEl = document.getElementById('modal-member-balance')
-                if (ticket.member_id) {
-                    try {
-                        const memberRes = await axios.get(`${API_BASE}/members/${ticket.member_id}`)
-                        const member = memberRes.data.member
-                        if (member && member.betting_points !== undefined) {
-                            balanceEl.textContent = member.betting_points.toLocaleString()
-                            balanceContainer.classList.remove('hidden')
-                        } else {
-                            balanceContainer.classList.add('hidden')
-                        }
-                    } catch (error) {
-                        console.error('회원 잔액 로드 오류:', error)
-                        balanceContainer.classList.add('hidden')
-                    }
-                } else {
-                    balanceContainer.classList.add('hidden')
-                }
 
                 // 티켓 정보 탭 상세
                 document.getElementById('detail-ticket-number').textContent = ticket.ticket_number
@@ -7711,6 +7664,22 @@ console.log('권한 관리 함수 로드 완료')
                     summaryEl.textContent = ticket.summary || ticket.description || '요약 없음'
                 }
 
+                // 회원 잔액 표시 (우측 사이드바)
+                if (ticket.member_id) {
+                    try {
+                        const memberRes = await axios.get(`${API_BASE}/members/${ticket.member_id}`)
+                        const member = memberRes.data.member
+                        if (member && member.betting_points !== undefined) {
+                            const balanceEl = document.getElementById('detail-member-balance')
+                            if (balanceEl) {
+                                balanceEl.textContent = member.betting_points.toLocaleString() + 'P'
+                            }
+                        }
+                    } catch (error) {
+                        console.error('회원 잔액 로드 오류:', error)
+                    }
+                }
+
                 // 상태 변경 폼
                 document.getElementById('update-ticket-status').value = ticket.status
                 document.getElementById('update-ticket-priority').value = ticket.priority
@@ -7725,29 +7694,29 @@ console.log('권한 관리 함수 로드 완료')
                     if (!ticket.member_name) {
                         // 미지정 회원: 신규 등록 버튼 표시
                         memberManagementCard.innerHTML = `
-                            <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                            <div class="bg-white border border-gray-200 rounded-lg p-4">
                                 <div class="flex items-center justify-between mb-3">
-                                    <h3 class="font-semibold text-gray-800">
+                                    <h4 class="font-semibold text-gray-800 flex items-center">
                                         <i class="fas fa-user-tag mr-2 text-orange-500"></i>
                                         회원 정보
-                                    </h3>
-                                    <span class="text-sm text-orange-600 font-medium">
+                                    </h4>
+                                    <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full flex items-center">
                                         <i class="fas fa-exclamation-triangle mr-1"></i>
                                         미지정
                                     </span>
                                 </div>
-                                <div class="text-sm text-gray-600 mb-4">
+                                <p class="text-sm text-gray-600 mb-4">
                                     <i class="fas fa-info-circle mr-1"></i>
                                     회원이 지정되지 않았습니다.
-                                </div>
+                                </p>
                                 <div class="flex gap-2">
                                     <button onclick="openNewMemberRegistration()" 
-                                            class="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm">
+                                            class="flex-1 px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-sm flex items-center justify-center">
                                         <i class="fas fa-user-plus mr-1"></i>
                                         신규 회원 등록
                                     </button>
                                     <button onclick="openChangeMemberModal()" 
-                                            class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
+                                            class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm flex items-center justify-center">
                                         <i class="fas fa-exchange-alt mr-1"></i>
                                         기존 회원 선택
                                     </button>
@@ -7757,43 +7726,43 @@ console.log('권한 관리 함수 로드 완료')
                     } else {
                         // 기존 회원: 정보 표시 + 회원 변경 + 회원 정보 수정 버튼
                         memberManagementCard.innerHTML = `
-                            <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                            <div class="bg-white border border-gray-200 rounded-lg p-4">
                                 <div class="flex items-center justify-between mb-3">
-                                    <h3 class="font-semibold text-gray-800">
+                                    <h4 class="font-semibold text-gray-800 flex items-center">
                                         <i class="fas fa-user-check mr-2 text-green-500"></i>
                                         회원 정보
-                                    </h3>
-                                    <span class="text-sm text-green-600 font-medium">
+                                    </h4>
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full flex items-center">
                                         <i class="fas fa-check-circle mr-1"></i>
-                                        등록 완료
+                                        등록완료
                                     </span>
                                 </div>
-                                <div class="space-y-2 mb-4">
+                                <div class="space-y-2 text-sm mb-4">
                                     <div class="flex items-start">
-                                        <span class="text-sm text-gray-500 w-20">이름</span>
-                                        <span class="text-sm text-gray-800 font-medium">${ticket.member_name}</span>
+                                        <span class="text-gray-500 w-16 flex-shrink-0">이름</span>
+                                        <span class="text-gray-800 font-medium">${ticket.member_name}</span>
                                     </div>
                                     ${ticket.member_number ? `
                                         <div class="flex items-start">
-                                            <span class="text-sm text-gray-500 w-20">수용번호</span>
-                                            <span class="text-sm text-gray-800">${ticket.member_number}</span>
+                                            <span class="text-gray-500 w-16 flex-shrink-0">수용번호</span>
+                                            <span class="text-gray-800">${ticket.member_number}</span>
                                         </div>
                                     ` : ''}
                                     ${ticket.institution ? `
                                         <div class="flex items-start">
-                                            <span class="text-sm text-gray-500 w-20">수용기관</span>
-                                            <span class="text-sm text-gray-800">${ticket.institution}</span>
+                                            <span class="text-gray-500 w-16 flex-shrink-0">수용기관</span>
+                                            <span class="text-gray-800">${ticket.institution}</span>
                                         </div>
                                     ` : ''}
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="openChangeMemberModal()" 
-                                            class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm">
+                                            class="flex-1 px-3 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 text-sm flex items-center justify-center">
                                         <i class="fas fa-exchange-alt mr-1"></i>
                                         회원 변경
                                     </button>
                                     <button onclick="showEditMemberModal(${ticket.member_id})" 
-                                            class="flex-1 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition text-sm">
+                                            class="flex-1 px-3 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm flex items-center justify-center">
                                         <i class="fas fa-edit mr-1"></i>
                                         정보 수정
                                     </button>
