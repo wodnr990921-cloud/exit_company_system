@@ -3511,10 +3511,20 @@
                                             </div>
                                         </div>
 
-                                        <!-- 담변 섹션 (답변 입력) -->
+                                        <!-- 답변 목록 (위로 이동) -->
                                         <div class="bg-white border border-gray-200 rounded-lg p-4">
                                             <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-                                                <i class="fas fa-comment mr-2 text-gray-600"></i>담변
+                                                <i class="fas fa-comments mr-2 text-green-600"></i>답변 목록
+                                            </h4>
+                                            <div id="ticket-responses-list" class="space-y-3 max-h-96 overflow-y-auto">
+                                                <!-- JavaScript로 답변 목록 표시 -->
+                                            </div>
+                                        </div>
+
+                                        <!-- 답변 입력 -->
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                            <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                                <i class="fas fa-comment mr-2 text-gray-600"></i>답변 작성
                                             </h4>
                                             <textarea 
                                                 id="response-content" 
@@ -3527,13 +3537,25 @@
                                             </button>
                                         </div>
 
-                                        <!-- 댓글 섹션 (기존 답변 목록) -->
+                                        <!-- 내부 댓글 목록 -->
                                         <div class="bg-white border border-gray-200 rounded-lg p-4">
                                             <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-                                                <i class="fas fa-comments mr-2 text-green-600"></i>답변 목록
+                                                <i class="fas fa-comment-dots mr-2 text-purple-600"></i>내부 소통 (직원 전용)
                                             </h4>
-                                            <div id="ticket-responses-list" class="space-y-3 max-h-96 overflow-y-auto">
-                                                <!-- JavaScript로 답변 목록 표시 -->
+                                            <div id="ticket-comments-list" class="space-y-3 max-h-96 overflow-y-auto mb-3">
+                                                <!-- JavaScript로 댓글 목록 표시 -->
+                                            </div>
+                                            <!-- 댓글 입력 -->
+                                            <div class="border-t pt-3">
+                                                <textarea 
+                                                    id="comment-content" 
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-2" 
+                                                    rows="3" 
+                                                    placeholder="내부 댓글 입력 (회원에게 보이지 않습니다)"
+                                                ></textarea>
+                                                <button onclick="addComment()" class="w-full px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 text-sm">
+                                                    <i class="fas fa-comment-medical mr-2"></i>댓글 추가
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -7886,9 +7908,11 @@ console.log('권한 관리 함수 로드 완료')
             })
             document.getElementById(`ticket-tab-${tabName}`).classList.remove('hidden')
 
-            // requests 탭이 열리면 티켓 아이템 로드
+            // requests 탭이 열리면 티켓 아이템, 답변, 댓글 로드
             if (tabName === 'requests' && currentTicketId) {
                 loadTicketItems(currentTicketId)
+                loadTicketResponses(currentTicketId)
+                loadTicketComments(currentTicketId)
             }
         }
 
@@ -7916,23 +7940,26 @@ console.log('권한 관리 함수 로드 완료')
         // 답변 목록 로드
         async function loadTicketResponses(ticketId) {
             try {
-                const response = await axios.get(`${API_BASE}/tickets/${ticketId}/responses`)
-                const responses = response.data.responses || []
+                // comments API를 사용하되 response 타입만 필터링
+                const response = await axios.get(`${API_BASE}/tickets/${ticketId}/comments`)
+                const allComments = response.data.comments || []
+                const responses = allComments.filter(c => c.comment_type === 'response')
 
                 const responsesHtml = responses.map(r => {
                     return `
-                    <div class="bg-gray-50 border border-gray-200 p-3 rounded">
+                    <div class="bg-blue-50 border border-blue-200 p-3 rounded">
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex items-center gap-2">
                                 <span class="font-semibold text-sm">${r.created_by_name || '직원'}</span>
+                                <span class="text-xs bg-blue-600 text-white px-2 py-1 rounded">회원 답변</span>
                                 <span class="text-xs text-gray-500">${new Date(r.created_at).toLocaleString()}</span>
                             </div>
-                            <button onclick="printResponse(${r.id}, '${r.response_text.replace(/'/g, "\\'")}', '${r.created_at}')" 
+                            <button onclick="printResponse(${r.id}, '${(r.content || r.comment).replace(/'/g, "\\'")}', '${r.created_at}')" 
                                     class="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
                                 <i class="fas fa-print mr-1"></i>출력
                             </button>
                         </div>
-                        <p class="text-sm text-gray-800 whitespace-pre-wrap">${r.response_text}</p>
+                        <p class="text-sm text-gray-800 whitespace-pre-wrap">${r.content || r.comment}</p>
                     </div>
                 `
                 }).join('')
@@ -7960,8 +7987,11 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
-                await axios.post(`${API_BASE}/tickets/${currentTicketId}/responses`, {
-                    response_text: responseContent
+                // comments API를 사용하되 comment_type을 'response'로 설정
+                await axios.post(`${API_BASE}/tickets/${currentTicketId}/comments`, {
+                    content: responseContent,
+                    created_by: currentStaff.id,
+                    comment_type: 'response'
                 })
                 
                 // 입력 필드 초기화
@@ -7970,7 +8000,7 @@ console.log('권한 관리 함수 로드 완료')
                 // 답변 목록 새로고침
                 await loadTicketResponses(currentTicketId)
                 
-                showToast('답변이 저장되었습니다.', 'success')
+                showToast('답변이 저장되었습니다. "답변 일괄 출력"으로 인쇄할 수 있습니다.', 'success')
             } catch (error) {
                 console.error('답변 저장 오류:', error)
                 alert('답변 저장 실패: ' + (error.response?.data?.error || error.message))
@@ -8138,33 +8168,31 @@ console.log('권한 관리 함수 로드 완료')
         async function loadTicketComments(ticketId) {
             try {
                 const response = await axios.get(`${API_BASE}/tickets/${ticketId}/comments`)
-                const comments = response.data.comments || []
+                const allComments = response.data.comments || []
+                // memo 타입만 필터링 (내부 소통용)
+                const comments = allComments.filter(c => c.comment_type === 'memo' || !c.comment_type)
 
                 const commentsHtml = comments.map(c => {
-                    const isResponse = c.comment_type === 'response'
-                    const bgColor = isResponse ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-gray-50'
-                    const typeLabel = isResponse ? '<span class="text-xs bg-blue-600 text-white px-2 py-1 rounded">회원 답변</span>' : '<span class="text-xs bg-gray-500 text-white px-2 py-1 rounded">내부 메모</span>'
-                    
                     return `
-                    <div class="${bgColor} p-3 rounded">
+                    <div class="bg-gray-50 border border-gray-200 p-3 rounded">
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex items-center gap-2">
-                                <span class="font-bold">${c.created_by_name}</span>
-                                ${typeLabel}
+                                <span class="font-semibold text-sm">${c.created_by_name}</span>
+                                <span class="text-xs bg-gray-500 text-white px-2 py-1 rounded">내부 메모</span>
                                 <span class="text-xs text-gray-500">${new Date(c.created_at).toLocaleString()}</span>
                             </div>
                         </div>
-                        <p class="text-gray-800 whitespace-pre-wrap">${c.content || c.comment}</p>
+                        <p class="text-sm text-gray-800 whitespace-pre-wrap">${c.content || c.comment}</p>
                     </div>
                 `
                 }).join('')
 
-                document.getElementById('comments-list').innerHTML = commentsHtml || 
-                    '<p class="text-gray-500 text-center py-4">댓글이 없습니다.</p>'
+                document.getElementById('ticket-comments-list').innerHTML = commentsHtml || 
+                    '<p class="text-gray-500 text-center text-sm py-4">댓글이 없습니다.</p>'
             } catch (error) {
                 console.error('댓글 로드 오류:', error)
-                document.getElementById('comments-list').innerHTML = 
-                    '<p class="text-red-500 text-center py-4">댓글을 불러올 수 없습니다.</p>'
+                document.getElementById('ticket-comments-list').innerHTML = 
+                    '<p class="text-red-500 text-center text-sm py-4">댓글을 불러올 수 없습니다.</p>'
             }
         }
 
@@ -8177,21 +8205,16 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
 
-            const commentType = document.querySelector('input[name="comment-type"]:checked').value
-
             try {
+                // 내부 댓글은 항상 memo 타입
                 await axios.post(`${API_BASE}/tickets/${currentTicketId}/comments`, {
                     content,
                     created_by: currentStaff.id,
-                    comment_type: commentType
+                    comment_type: 'memo'
                 })
                 document.getElementById('comment-content').value = ''
-                document.getElementById('comment-template').value = ''
                 await loadTicketComments(currentTicketId)
-                
-                if (commentType === 'response') {
-                    alert('회원 답변이 저장되었습니다. "답변 일괄 출력"으로 인쇄할 수 있습니다.')
-                }
+                showToast('내부 댓글이 추가되었습니다.', 'success')
             } catch (error) {
                 alert('저장 실패: ' + (error.response?.data?.error || error.message))
             }
