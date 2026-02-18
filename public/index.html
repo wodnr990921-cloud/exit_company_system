@@ -7657,7 +7657,13 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('detail-ticket-type').textContent = getTicketTypeText(ticket.ticket_type)
                 document.getElementById('detail-ticket-status').innerHTML = `<span class="status-badge status-${ticket.status}">${getStatusText(ticket.status)}</span>`
                 document.getElementById('detail-ticket-priority').innerHTML = getPriorityBadge(ticket.priority)
-                document.getElementById('detail-ticket-member-name').textContent = ticket.member_name || '-'
+                
+                // 회원명 표시 (요소가 있을 경우에만)
+                const memberNameEl = document.getElementById('detail-ticket-member-name')
+                if (memberNameEl) {
+                    memberNameEl.textContent = ticket.member_name || '-'
+                }
+                
                 document.getElementById('detail-ticket-assigned').textContent = ticket.assigned_to_name || '미배정'
                 document.getElementById('detail-ticket-created').textContent = new Date(ticket.created_at).toLocaleString()
                 
@@ -7886,6 +7892,10 @@ console.log('권한 관리 함수 로드 완료')
                                 <span class="font-semibold text-sm">${r.created_by_name || '직원'}</span>
                                 <span class="text-xs text-gray-500">${new Date(r.created_at).toLocaleString()}</span>
                             </div>
+                            <button onclick="printResponse(${r.id}, '${r.response_text.replace(/'/g, "\\'")}', '${r.created_at}')" 
+                                    class="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                                <i class="fas fa-print mr-1"></i>출력
+                            </button>
                         </div>
                         <p class="text-sm text-gray-800 whitespace-pre-wrap">${r.response_text}</p>
                     </div>
@@ -7929,6 +7939,164 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('답변 저장 오류:', error)
                 alert('답변 저장 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 답변서 출력 (EXIT COMPANY 템플릿)
+        function printResponse(responseId, responseText, createdAt) {
+            const printWindow = window.open('', '_blank')
+            const date = new Date(createdAt).toLocaleDateString('ko-KR')
+            
+            // 회원 정보 가져오기
+            const memberName = currentTicket?.member_name || '회원'
+            const memberNumber = currentTicket?.member_number || ''
+            const institution = currentTicket?.institution || ''
+            
+            const htmlContent = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXIT COMPANY 답변서</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+            padding: 30mm 25mm;
+            background: white;
+            position: relative;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 60px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #333;
+        }
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            color: #000;
+            letter-spacing: 2px;
+        }
+        .logo-text {
+            font-size: 20px;
+            color: #555;
+            margin-top: 5px;
+            letter-spacing: 3px;
+        }
+        .company-info {
+            text-align: right;
+            font-size: 11px;
+            line-height: 1.8;
+            color: #333;
+        }
+        .content-area {
+            min-height: 520px;
+            padding: 40px 30px;
+            margin-bottom: 40px;
+        }
+        .recipient-info {
+            margin-bottom: 30px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .recipient-info strong {
+            display: inline-block;
+            width: 80px;
+        }
+        .response-content {
+            font-size: 13px;
+            line-height: 2.0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #222;
+        }
+        .footer {
+            position: absolute;
+            bottom: 30mm;
+            left: 25mm;
+            right: 25mm;
+            text-align: center;
+            padding-top: 20px;
+            border-top: 2px solid #333;
+        }
+        .footer-logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #000;
+            letter-spacing: 4px;
+            margin-bottom: 5px;
+        }
+        .footer-text {
+            font-size: 11px;
+            color: #666;
+            letter-spacing: 2px;
+        }
+        @media print {
+            body {
+                padding: 30mm 25mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <div class="header">
+        <div>
+            <div class="logo">EXIT</div>
+            <div class="logo-text">COMPANY</div>
+        </div>
+        <div class="company-info">
+            <div><strong>엑시트컴퍼니</strong> | ☎<strong>070-7918-1363</strong></div>
+            <div>인천광역시 미추홀구 주안동 171-10 비와이밸리스 506호</div>
+            <div><strong>교정시설 업무 대행 전문</strong></div>
+        </div>
+    </div>
+
+    <!-- 본문 -->
+    <div class="content-area">
+        <!-- 수신자 정보 -->
+        <div class="recipient-info">
+            <div><strong>수신:</strong> ${memberName}${memberNumber ? ' (' + memberNumber + ')' : ''}</div>
+            ${institution ? '<div><strong>기관:</strong> ' + institution + '</div>' : ''}
+            <div><strong>발신일:</strong> ${date}</div>
+        </div>
+
+        <!-- 답변 내용 -->
+        <div class="response-content">${responseText}</div>
+    </div>
+
+    <!-- 푸터 -->
+    <div class="footer">
+        <div class="footer-logo">✕</div>
+        <div class="footer-text">EXIT COMPANY</div>
+    </div>
+</body>
+</html>
+            `
+            
+            printWindow.document.write(htmlContent)
+            printWindow.document.close()
+            
+            // 페이지 로드 후 인쇄 대화상자 자동 열기
+            printWindow.onload = function() {
+                setTimeout(() => {
+                    printWindow.print()
+                }, 250)
             }
         }
 
