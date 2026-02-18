@@ -523,6 +523,7 @@ betting.get('/folders', async (c) => {
   try {
     const member_id = c.req.query('member_id')
     const status = c.req.query('status') || 'all'
+    const league = c.req.query('league')
     const page = parseInt(c.req.query('page') || '1')
     const limit = parseInt(c.req.query('limit') || '20')
     const offset = (page - 1) * limit
@@ -545,6 +546,12 @@ betting.get('/folders', async (c) => {
       query += ` AND bf.status = ?`
       params.push(status)
     }
+    
+    // 리그 필터 (배팅에 포함된 경기의 리그)
+    if (league) {
+      query += ` AND EXISTS (SELECT 1 FROM bets b JOIN matches m ON b.match_id = m.id WHERE b.folder_id = bf.id AND m.league = ?)`
+      params.push(league)
+    }
 
     // 총 개수 조회
     let countQuery = `SELECT COUNT(*) as total FROM bet_folders bf WHERE 1=1`
@@ -558,6 +565,11 @@ betting.get('/folders', async (c) => {
     if (status && status !== 'all') {
       countQuery += ` AND bf.status = ?`
       countParams.push(status)
+    }
+    
+    if (league) {
+      countQuery += ` AND EXISTS (SELECT 1 FROM bets b JOIN matches m ON b.match_id = m.id WHERE b.folder_id = bf.id AND m.league = ?)`
+      countParams.push(league)
     }
     
     const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first()
@@ -608,6 +620,7 @@ betting.get('/settlements', async (c) => {
     const status = c.req.query('status')
     const memberId = c.req.query('member_id')
     const folderType = c.req.query('folder_type')
+    const league = c.req.query('league')
     
     const conditions = []
     const values = []
@@ -634,6 +647,12 @@ betting.get('/settlements', async (c) => {
     if (folderType) {
       conditions.push('bf.folder_type = ?')
       values.push(folderType)
+    }
+    
+    // 리그 필터 (배팅에 포함된 경기의 리그)
+    if (league) {
+      conditions.push('EXISTS (SELECT 1 FROM bets b JOIN matches m ON b.match_id = m.id WHERE b.folder_id = bf.id AND m.league = ?)')
+      values.push(league)
     }
     
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''

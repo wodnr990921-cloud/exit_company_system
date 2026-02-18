@@ -852,6 +852,31 @@
                             <span class="text-sm text-gray-600 ml-auto" id="betting-period-label"></span>
                         </div>
                         
+                        <!-- 리그 필터 -->
+                        <div class="mb-4 flex items-center gap-2">
+                            <label class="text-sm font-medium">리그:</label>
+                            <select id="betting-league-filter" onchange="applyBettingFilters()" class="px-3 py-1.5 border rounded text-sm">
+                                <option value="">전체</option>
+                                <option value="EPL">EPL</option>
+                                <option value="LA_LIGA">라리가</option>
+                                <option value="SERIE_A">세리에A</option>
+                                <option value="BUNDESLIGA">분데스리가</option>
+                                <option value="LIGUE_1">리그1</option>
+                                <option value="K_LEAGUE">K리그</option>
+                                <option value="MLB">MLB</option>
+                                <option value="KBO">KBO</option>
+                                <option value="NBA">NBA</option>
+                                <option value="WNBA">WNBA</option>
+                                <option value="KBL">KBL</option>
+                                <option value="WKBL">WKBL</option>
+                                <option value="KOVO_M">KOVO남</option>
+                                <option value="KOVO_W">KOVO여</option>
+                                <option value="NFL">NFL</option>
+                                <option value="NHL">NHL</option>
+                                <option value="ETC">기타</option>
+                            </select>
+                        </div>
+                        
                         <div id="betting-folders-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
                     </div>
                 </div>
@@ -988,6 +1013,29 @@
                                 </div>
                             </div>
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">리그</label>
+                                <select id="settlement-league-filter" class="w-full px-3 py-2 border rounded text-sm">
+                                    <option value="">전체</option>
+                                    <option value="EPL">EPL</option>
+                                    <option value="LA_LIGA">라리가</option>
+                                    <option value="SERIE_A">세리에A</option>
+                                    <option value="BUNDESLIGA">분데스리가</option>
+                                    <option value="LIGUE_1">리그1</option>
+                                    <option value="K_LEAGUE">K리그</option>
+                                    <option value="MLB">MLB</option>
+                                    <option value="KBO">KBO</option>
+                                    <option value="NBA">NBA</option>
+                                    <option value="WNBA">WNBA</option>
+                                    <option value="KBL">KBL</option>
+                                    <option value="WKBL">WKBL</option>
+                                    <option value="KOVO_M">KOVO남</option>
+                                    <option value="KOVO_W">KOVO여</option>
+                                    <option value="NFL">NFL</option>
+                                    <option value="NHL">NHL</option>
+                                    <option value="ETC">기타</option>
+                                </select>
+                            </div>
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">상태</label>
                                 <select id="settlement-status-filter" class="w-full px-3 py-2 border rounded text-sm">
                                     <option value="pending">정산 대기</option>
@@ -1010,11 +1058,11 @@
                                     <option value="multi">다폴더</option>
                                 </select>
                             </div>
-                            <div class="flex items-end">
-                                <button onclick="loadFilteredSettlements()" class="btn btn-primary w-full">
-                                    <i class="fas fa-search mr-2"></i>조회
-                                </button>
-                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button onclick="loadFilteredSettlements()" class="btn btn-primary">
+                                <i class="fas fa-search mr-2"></i>조회
+                            </button>
                         </div>
                     </div>
 
@@ -2162,6 +2210,31 @@
                         <button onclick="downloadMatchTemplate()" class="btn btn-secondary">
                             <i class="fas fa-download mr-2"></i>엑셀 양식 다운로드
                         </button>
+                    </div>
+                    
+                    <!-- 리그 필터 -->
+                    <div class="mb-4 flex items-center gap-2">
+                        <label class="text-sm font-medium">리그:</label>
+                        <select id="match-league-filter" onchange="loadMatchManagement()" class="px-3 py-1.5 border rounded text-sm">
+                            <option value="">전체</option>
+                            <option value="EPL">EPL</option>
+                            <option value="LA_LIGA">라리가</option>
+                            <option value="SERIE_A">세리에A</option>
+                            <option value="BUNDESLIGA">분데스리가</option>
+                            <option value="LIGUE_1">리그1</option>
+                            <option value="K_LEAGUE">K리그</option>
+                            <option value="MLB">MLB</option>
+                            <option value="KBO">KBO</option>
+                            <option value="NBA">NBA</option>
+                            <option value="WNBA">WNBA</option>
+                            <option value="KBL">KBL</option>
+                            <option value="WKBL">WKBL</option>
+                            <option value="KOVO_M">KOVO남</option>
+                            <option value="KOVO_W">KOVO여</option>
+                            <option value="NFL">NFL</option>
+                            <option value="NHL">NHL</option>
+                            <option value="ETC">기타</option>
+                        </select>
                     </div>
                     
                     <!-- 경기 목록 -->
@@ -5579,7 +5652,28 @@ console.log('권한 관리 함수 로드 완료')
                 // 경기 일정 로드
                 await loadMatchSchedule()
                 
-                const foldersRes = await axios.get(`${API_BASE}/betting/folders`)
+                // 리그 필터 적용
+                await applyBettingFilters()
+
+                // 경기 정산 목록 로드 (요소가 있는 경우에만)
+                if (document.getElementById('match-settlement-list')) {
+                    await loadMatchSettlementList()
+                }
+            } catch (error) {
+                console.error('배팅 관리 로드 오류:', error)
+            }
+        }
+        
+        // 배팅 목록 필터 적용
+        async function applyBettingFilters() {
+            try {
+                const leagueFilter = document.getElementById('betting-league-filter')
+                const league = leagueFilter ? leagueFilter.value : ''
+                
+                const params = new URLSearchParams()
+                if (league) params.append('league', league)
+                
+                const foldersRes = await axios.get(`${API_BASE}/betting/folders?${params.toString()}`)
 
                 // 배팅 폴더 목록 (고객 배팅) - 더 상세한 정보 표시
                 const folders = foldersRes.data.folders || []
@@ -5617,13 +5711,8 @@ console.log('권한 관리 함수 로드 완료')
                 `).join('') : '<p class="text-gray-500 text-sm text-center py-4">배팅이 없습니다.</p>'
 
                 document.getElementById('betting-folders-list').innerHTML = bettingHtml
-
-                // 경기 정산 목록 로드 (요소가 있는 경우에만)
-                if (document.getElementById('match-settlement-list')) {
-                    await loadMatchSettlementList()
-                }
             } catch (error) {
-                console.error('배팅 관리 로드 오류:', error)
+                console.error('배팅 필터 적용 오류:', error)
             }
         }
 
@@ -6506,7 +6595,13 @@ console.log('권한 관리 함수 로드 완료')
         async function loadMatchManagement() {
             try {
                 const response = await axios.get(`${API_BASE}/betting/matches`)
-                const matches = response.data.matches || []
+                let matches = response.data.matches || []
+                
+                // 리그 필터 적용
+                const leagueFilter = document.getElementById('match-league-filter')
+                if (leagueFilter && leagueFilter.value) {
+                    matches = matches.filter(m => m.league === leagueFilter.value)
+                }
 
                 const tbody = document.getElementById('match-list-table')
                 if (!tbody) return
@@ -7041,6 +7136,7 @@ console.log('권한 관리 함수 로드 완료')
             try {
                 const startDate = document.getElementById('settlement-start-date')?.value || ''
                 const endDate = document.getElementById('settlement-end-date')?.value || ''
+                const league = document.getElementById('settlement-league-filter')?.value || ''
                 const status = document.getElementById('settlement-status-filter')?.value || ''
                 const memberId = document.getElementById('settlement-member-filter')?.value || ''
                 const folderType = document.getElementById('settlement-folder-type-filter')?.value || ''
@@ -7048,6 +7144,7 @@ console.log('권한 관리 함수 로드 완료')
                 const params = new URLSearchParams()
                 if (startDate) params.append('start_date', startDate)
                 if (endDate) params.append('end_date', endDate)
+                if (league) params.append('league', league)
                 if (status) params.append('status', status)
                 if (memberId) params.append('member_id', memberId)
                 if (folderType) params.append('folder_type', folderType)
