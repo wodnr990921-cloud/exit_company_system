@@ -3782,8 +3782,8 @@
 
                                 <!-- 일괄 처리 버튼 -->
                                 <div class="mt-4 flex gap-3">
-                                    <button onclick="processAllRequests()" class="btn btn-success flex-1" id="process-all-btn" style="display:none;">
-                                        <i class="fas fa-check-double mr-2"></i>전체 처리
+                                    <button onclick="requestAllApprovals()" class="btn btn-primary flex-1" id="request-all-btn" style="display:none;">
+                                        <i class="fas fa-paper-plane mr-2"></i>일괄 결재 요청
                                     </button>
                                     <button onclick="clearAllRequests()" class="btn btn-danger flex-1" id="clear-all-btn" style="display:none;">
                                         <i class="fas fa-trash mr-2"></i>전체 삭제
@@ -12249,13 +12249,17 @@ console.log('권한 관리 함수 로드 완료')
                 const container = document.getElementById('ticket-requests-list')
                 if (items.length === 0) {
                     container.innerHTML = '<p class="text-gray-500 text-center py-8">추가된 요청사항이 없습니다</p>'
-                    document.getElementById('process-all-btn').style.display = 'none'
-                    document.getElementById('clear-all-btn').style.display = 'none'
+                    const requestAllBtn = document.getElementById('request-all-btn')
+                    const clearAllBtn = document.getElementById('clear-all-btn')
+                    if (requestAllBtn) requestAllBtn.style.display = 'none'
+                    if (clearAllBtn) clearAllBtn.style.display = 'none'
                     return
                 }
                 
-                document.getElementById('process-all-btn').style.display = 'block'
-                document.getElementById('clear-all-btn').style.display = 'block'
+                const requestAllBtn = document.getElementById('request-all-btn')
+                const clearAllBtn = document.getElementById('clear-all-btn')
+                if (requestAllBtn) requestAllBtn.style.display = 'block'
+                if (clearAllBtn) clearAllBtn.style.display = 'block'
                 
                 container.innerHTML = items.map(item => {
                     const data = item.item_data
@@ -12310,11 +12314,16 @@ console.log('권한 관리 함수 로드 완료')
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     ` : ''}
+                                    ${item.status === 'approval_pending' ? `
+                                        <span class="text-xs text-blue-600">
+                                            <i class="fas fa-clock mr-1"></i>결재 대기중
+                                        </span>
+                                    ` : ''}
                                 </div>
                             </div>
                             ${item.status === 'pending' ? `
-                                <button onclick="processSingleItem(${item.id})" class="btn btn-sm btn-success mt-2">
-                                    <i class="fas fa-check mr-1"></i>처리
+                                <button onclick="requestApproval(${item.id}, '${item.item_type}')" class="btn btn-sm btn-primary mt-2">
+                                    <i class="fas fa-paper-plane mr-1"></i>결재 요청
                                 </button>
                             ` : ''}
                         </div>
@@ -12343,9 +12352,11 @@ console.log('권한 관리 함수 로드 완료')
         function getStatusBadge(status) {
             const badges = {
                 'pending': '<span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded">대기</span>',
-                'processing': '<span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">처리중</span>',
+                'approval_pending': '<span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">결재 대기</span>',
+                'processing': '<span class="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded">처리중</span>',
                 'completed': '<span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">완료</span>',
-                'cancelled': '<span class="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded">취소</span>'
+                'cancelled': '<span class="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded">취소</span>',
+                'rejected': '<span class="text-xs px-2 py-1 bg-red-100 text-red-800 rounded">거부됨</span>'
             }
             return badges[status] || status
         }
@@ -12363,6 +12374,58 @@ console.log('권한 관리 함수 로드 완료')
                 loadTicketItems(currentTicketId)
             } catch (error) {
                 alert('처리 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        // 개별 결재 요청
+        async function requestApproval(itemId, itemType) {
+            if (!confirm('이 요청을 결재 대기 상태로 전환하시겠습니까?')) return
+            
+            try {
+                // 티켓 아이템을 결재 대기 상태로 변경
+                await axios.post(`${API_BASE}/ticket-items/${itemId}/request-approval`, {
+                    requested_by: currentStaff.id
+                })
+                
+                showToast('결재 요청이 완료되었습니다. 관리자 승인 후 처리됩니다.', 'success')
+                loadTicketItems(currentTicketId)
+            } catch (error) {
+                console.error('결재 요청 오류:', error)
+                showToast(error.response?.data?.error || '결재 요청 실패', 'error')
+            }
+        }
+        
+        // 일괄 결재 요청
+        async function requestAllApprovals() {
+            if (!confirm('모든 대기 중인 요청을 결재 대기 상태로 전환하시겠습니까?')) return
+            
+            try {
+                const response = await axios.get(`${API_BASE}/ticket-items/${currentTicketId}`)
+                const items = response.data.items || []
+                const pendingItems = items.filter(item => item.status === 'pending')
+                
+                if (pendingItems.length === 0) {
+                    showToast('결재 요청할 항목이 없습니다.', 'warning')
+                    return
+                }
+                
+                let successCount = 0
+                for (const item of pendingItems) {
+                    try {
+                        await axios.post(`${API_BASE}/ticket-items/${item.id}/request-approval`, {
+                            requested_by: currentStaff.id
+                        })
+                        successCount++
+                    } catch (error) {
+                        console.error(`아이템 ${item.id} 결재 요청 실패:`, error)
+                    }
+                }
+                
+                showToast(`${successCount}개의 요청이 결재 대기 상태로 전환되었습니다.`, 'success')
+                loadTicketItems(currentTicketId)
+            } catch (error) {
+                console.error('일괄 결재 요청 오류:', error)
+                showToast(error.response?.data?.error || '일괄 결재 요청 실패', 'error')
             }
         }
 
