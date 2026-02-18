@@ -867,11 +867,12 @@
                             <div>
                                 <label class="block text-xs font-medium text-gray-700 mb-1">상태</label>
                                 <select id="schedule-status-filter" onchange="applyScheduleFilters()" class="w-full px-3 py-1.5 border rounded text-sm">
-                                    <option value="">전체</option>
-                                    <option value="open" selected>진행중</option>
+                                    <option value="open_scheduled" selected>진행중+예정</option>
+                                    <option value="open">진행중</option>
                                     <option value="scheduled">예정</option>
                                     <option value="closed">마감</option>
                                     <option value="completed">완료</option>
+                                    <option value="">전체</option>
                                 </select>
                             </div>
                         </div>
@@ -5815,13 +5816,15 @@ console.log('권한 관리 함수 로드 완료')
                     )
                 }
                 
-                // 상태 필터 (기본값: open 또는 scheduled)
-                if (status) {
-                    matches = matches.filter(m => m.status === status)
-                } else {
-                    // 상태 필터가 비어있으면 진행중/예정만 표시
+                // 상태 필터
+                if (status === 'open_scheduled') {
+                    // 기본값: 진행중 + 예정
                     matches = matches.filter(m => m.status === 'open' || m.status === 'scheduled')
+                } else if (status) {
+                    // 특정 상태만
+                    matches = matches.filter(m => m.status === status)
                 }
+                // status가 빈 문자열("")이면 전체 표시 (필터링 안 함)
                 
                 const container = document.getElementById('match-schedule-list')
                 if (!container) return
