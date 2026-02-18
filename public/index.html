@@ -13185,14 +13185,143 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
             
-            // 기존 loadClosingData 함수 재사용
-            await loadClosingData()
-            
-            // 데이터를 admin-closing-data에 복사
-            const sourceData = document.getElementById('closing-data')
-            const targetData = document.getElementById('admin-closing-data')
-            if (sourceData && targetData) {
-                targetData.innerHTML = sourceData.innerHTML
+            try {
+                const response = await axios.get(`${API_BASE}/closing?date=${date}`)
+                const data = response.data
+
+                // 마감 데이터 HTML 생성
+                const closingHtml = `
+                    <!-- 마감 상태 -->
+                    <div id="admin-closing-status" class="mb-6">
+                        ${data.is_closed ? `
+                            <div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                ${data.closed_at ? new Date(data.closed_at).toLocaleString() : ''} 마감 완료
+                                ${data.closed_by_name ? ` (담당: ${data.closed_by_name})` : ''}
+                            </div>
+                        ` : `
+                            <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                마감되지 않았습니다.
+                            </div>
+                        `}
+                    </div>
+
+                    <!-- 티켓 통계 -->
+                    <div class="card mb-6">
+                        <h4 class="font-bold mb-4"><i class="fas fa-ticket-alt mr-2"></i>티켓 통계</h4>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-center p-4 bg-blue-50 rounded">
+                                <div class="text-sm text-gray-600">전체 티켓</div>
+                                <div class="text-2xl font-bold text-blue-600">${data.ticket_stats?.total_tickets || 0}건</div>
+                            </div>
+                            <div class="text-center p-4 bg-green-50 rounded">
+                                <div class="text-sm text-gray-600">완료 티켓</div>
+                                <div class="text-2xl font-bold text-green-600">${data.ticket_stats?.completed_tickets || 0}건</div>
+                            </div>
+                            <div class="text-center p-4 bg-yellow-50 rounded">
+                                <div class="text-sm text-gray-600">대기 티켓</div>
+                                <div class="text-2xl font-bold text-yellow-600">${(data.ticket_stats?.total_tickets || 0) - (data.ticket_stats?.completed_tickets || 0)}건</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 포인트 통계 -->
+                    <div class="card mb-6">
+                        <h4 class="font-bold mb-4"><i class="fas fa-coins mr-2"></i>포인트 통계</h4>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-center p-4 bg-green-50 rounded">
+                                <div class="text-sm text-gray-600">획득 포인트</div>
+                                <div class="text-xl font-bold text-green-600">${Number(data.point_stats?.earned_points || 0).toLocaleString()}P</div>
+                            </div>
+                            <div class="text-center p-4 bg-red-50 rounded">
+                                <div class="text-sm text-gray-600">사용 포인트</div>
+                                <div class="text-xl font-bold text-red-600">${Number(data.point_stats?.used_points || 0).toLocaleString()}P</div>
+                            </div>
+                            <div class="text-center p-4 bg-blue-50 rounded">
+                                <div class="text-sm text-gray-600">순 포인트</div>
+                                <div class="text-xl font-bold text-blue-600">${Number(data.point_stats?.net_points || 0).toLocaleString()}P</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 배팅 통계 -->
+                    <div class="card mb-6">
+                        <h4 class="font-bold mb-4"><i class="fas fa-dice mr-2"></i>배팅 통계</h4>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-center p-4 bg-purple-50 rounded">
+                                <div class="text-sm text-gray-600">총 배팅액</div>
+                                <div class="text-xl font-bold text-purple-600">${Number(data.betting_stats?.total_bet_amount || 0).toLocaleString()}P</div>
+                            </div>
+                            <div class="text-center p-4 bg-green-50 rounded">
+                                <div class="text-sm text-gray-600">당첨금</div>
+                                <div class="text-xl font-bold text-green-600">${Number(data.betting_stats?.total_win_amount || 0).toLocaleString()}P</div>
+                            </div>
+                            <div class="text-center p-4 bg-blue-50 rounded">
+                                <div class="text-sm text-gray-600">마진</div>
+                                <div class="text-xl font-bold text-blue-600">${Number(data.betting_stats?.bet_margin || 0).toLocaleString()}P</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 도서 통계 -->
+                    <div class="card mb-6">
+                        <h4 class="font-bold mb-4"><i class="fas fa-book mr-2"></i>도서 판매 통계</h4>
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="text-center p-4 bg-blue-50 rounded">
+                                <div class="text-sm text-gray-600">주문 건수</div>
+                                <div class="text-xl font-bold text-blue-600">${data.book_stats?.book_orders || 0}건</div>
+                            </div>
+                            <div class="text-center p-4 bg-green-50 rounded">
+                                <div class="text-sm text-gray-600">판매액</div>
+                                <div class="text-xl font-bold text-green-600">${Number(data.book_stats?.total_sales || 0).toLocaleString()}원</div>
+                            </div>
+                            <div class="text-center p-4 bg-purple-50 rounded">
+                                <div class="text-sm text-gray-600">발송 완료</div>
+                                <div class="text-xl font-bold text-purple-600">${data.book_stats?.shipped_orders || 0}건</div>
+                            </div>
+                            <div class="text-center p-4 bg-yellow-50 rounded">
+                                <div class="text-sm text-gray-600">대기 중</div>
+                                <div class="text-xl font-bold text-yellow-600">${data.book_stats?.pending_orders || 0}건</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 종합 요약 -->
+                    <div class="card bg-gradient-to-r from-blue-50 to-purple-50">
+                        <h4 class="font-bold mb-4"><i class="fas fa-chart-line mr-2"></i>종합 요약</h4>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="text-center p-4 bg-white rounded shadow">
+                                <div class="text-sm text-gray-600">총 매출</div>
+                                <div class="text-3xl font-bold text-blue-600">${Number(data.summary?.total_revenue || 0).toLocaleString()}원</div>
+                            </div>
+                            <div class="text-center p-4 bg-white rounded shadow">
+                                <div class="text-sm text-gray-600">총 마진</div>
+                                <div class="text-3xl font-bold text-green-600">${Number(data.summary?.total_margin || 0).toLocaleString()}원</div>
+                            </div>
+                        </div>
+                    </div>
+                `
+
+                document.getElementById('admin-closing-data').innerHTML = closingHtml
+
+                // 마감 버튼 상태 업데이트
+                const executeBtn = document.getElementById('admin-execute-closing-btn')
+                if (data.is_closed) {
+                    executeBtn.disabled = true
+                    executeBtn.classList.add('opacity-50', 'cursor-not-allowed')
+                } else {
+                    executeBtn.disabled = false
+                    executeBtn.classList.remove('opacity-50', 'cursor-not-allowed')
+                }
+            } catch (error) {
+                console.error('마감 데이터 로드 오류:', error)
+                document.getElementById('admin-closing-data').innerHTML = `
+                    <div class="bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        데이터를 불러올 수 없습니다: ${error.response?.data?.error || error.message}
+                    </div>
+                `
             }
         }
         
