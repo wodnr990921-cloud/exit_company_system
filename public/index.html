@@ -3979,8 +3979,8 @@
 
     <!-- 포인트 전환 모달 -->
     <div id="point-conversion-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[60]" onclick="if(event.target === this) closePointConversionModal()">
-        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-md">
-            <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-4 flex justify-between items-center">
                 <h3 class="text-xl font-bold">
                     <i class="fas fa-exchange-alt mr-2"></i>포인트 전환
                 </h3>
@@ -3989,64 +3989,94 @@
                 </button>
             </div>
 
-            <div class="p-6">
-                <!-- 현재 잔액 표시 -->
-                <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                    <h4 class="font-semibold text-gray-700 mb-3">현재 잔액</h4>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-white rounded p-3 border border-blue-200">
-                            <p class="text-xs text-gray-600 mb-1">일반 포인트</p>
-                            <p class="text-lg font-bold text-blue-600" id="conversion-regular-points">-</p>
+            <div class="flex-1 overflow-y-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+                    <!-- 왼쪽: 전환 입력 폼 -->
+                    <div>
+                        <h4 class="text-lg font-bold text-gray-800 mb-4">
+                            <i class="fas fa-plus-circle mr-2 text-blue-500"></i>새 전환
+                        </h4>
+                        
+                        <!-- 현재 잔액 표시 -->
+                        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                            <h5 class="font-semibold text-gray-700 mb-3">현재 잔액</h5>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-white rounded p-3 border border-blue-200">
+                                    <p class="text-xs text-gray-600 mb-1">일반 포인트</p>
+                                    <p class="text-lg font-bold text-blue-600" id="conversion-regular-points">-</p>
+                                </div>
+                                <div class="bg-white rounded p-3 border border-purple-200">
+                                    <p class="text-xs text-gray-600 mb-1">배팅 포인트</p>
+                                    <p class="text-lg font-bold text-purple-600" id="conversion-betting-points">-</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="bg-white rounded p-3 border border-purple-200">
-                            <p class="text-xs text-gray-600 mb-1">배팅 포인트</p>
-                            <p class="text-lg font-bold text-purple-600" id="conversion-betting-points">-</p>
+
+                        <!-- 전환 방향 선택 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">전환 방향</label>
+                            <select id="conversion-direction" class="w-full px-3 py-2 border rounded" onchange="updateConversionDirection()">
+                                <option value="regular-to-betting">일반 포인트 → 배팅 포인트</option>
+                                <option value="betting-to-regular">배팅 포인트 → 일반 포인트</option>
+                            </select>
+                        </div>
+
+                        <!-- 전환 금액 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">전환 금액</label>
+                            <input type="number" id="conversion-amount" class="w-full px-3 py-2 border rounded" placeholder="전환할 금액 입력" min="1" oninput="updateConversionPreview()">
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                <span id="conversion-max-amount">최대 전환 가능: 계산 중...</span>
+                            </p>
+                        </div>
+
+                        <!-- 전환 미리보기 -->
+                        <div class="bg-blue-50 rounded-lg p-4 mb-4" id="conversion-preview">
+                            <h5 class="font-semibold text-gray-700 mb-2">전환 후 잔액</h5>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <p class="text-gray-600 mb-1">일반 포인트</p>
+                                    <p class="font-bold text-blue-600" id="conversion-preview-regular">-</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600 mb-1">배팅 포인트</p>
+                                    <p class="font-bold text-purple-600" id="conversion-preview-betting">-</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 버튼 -->
+                        <button onclick="executePointConversion()" class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 font-medium">
+                            <i class="fas fa-exchange-alt mr-2"></i>전환하기
+                        </button>
+                    </div>
+
+                    <!-- 오른쪽: 전환 내역 -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-lg font-bold text-gray-800">
+                                <i class="fas fa-history mr-2 text-purple-500"></i>전환 내역
+                            </h4>
+                            <button onclick="loadConversionHistory()" class="text-sm text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-sync-alt mr-1"></i>새로고침
+                            </button>
+                        </div>
+                        
+                        <!-- 내역 필터 -->
+                        <div class="mb-4">
+                            <select id="conversion-history-filter" class="w-full px-3 py-2 border rounded text-sm" onchange="loadConversionHistory()">
+                                <option value="all">전체</option>
+                                <option value="active">활성</option>
+                                <option value="cancelled">취소됨</option>
+                            </select>
+                        </div>
+                        
+                        <!-- 내역 목록 -->
+                        <div id="conversion-history-list" class="space-y-3 max-h-96 overflow-y-auto">
+                            <p class="text-gray-500 text-center py-8">로딩 중...</p>
                         </div>
                     </div>
-                </div>
-
-                <!-- 전환 방향 선택 -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">전환 방향</label>
-                    <select id="conversion-direction" class="w-full px-3 py-2 border rounded" onchange="updateConversionDirection()">
-                        <option value="regular-to-betting">일반 포인트 → 배팅 포인트</option>
-                        <option value="betting-to-regular">배팅 포인트 → 일반 포인트</option>
-                    </select>
-                </div>
-
-                <!-- 전환 금액 -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">전환 금액</label>
-                    <input type="number" id="conversion-amount" class="w-full px-3 py-2 border rounded" placeholder="전환할 금액 입력" min="1" oninput="updateConversionPreview()">
-                    <p class="text-xs text-gray-500 mt-1">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        <span id="conversion-max-amount">최대 전환 가능: 계산 중...</span>
-                    </p>
-                </div>
-
-                <!-- 전환 미리보기 -->
-                <div class="bg-blue-50 rounded-lg p-4 mb-4" id="conversion-preview">
-                    <h4 class="font-semibold text-gray-700 mb-2">전환 후 잔액</h4>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <p class="text-gray-600 mb-1">일반 포인트</p>
-                            <p class="font-bold text-blue-600" id="conversion-preview-regular">-</p>
-                        </div>
-                        <div>
-                            <p class="text-gray-600 mb-1">배팅 포인트</p>
-                            <p class="font-bold text-purple-600" id="conversion-preview-betting">-</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 버튼 -->
-                <div class="flex gap-3">
-                    <button onclick="closePointConversionModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
-                        취소
-                    </button>
-                    <button onclick="executePointConversion()" class="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded hover:from-blue-600 hover:to-purple-600">
-                        <i class="fas fa-exchange-alt mr-2"></i>전환하기
-                    </button>
                 </div>
             </div>
         </div>
@@ -14377,6 +14407,9 @@ console.log('권한 관리 함수 로드 완료')
             document.getElementById('conversion-direction').value = 'regular-to-betting'
             document.getElementById('conversion-amount').value = ''
             updateConversionDirection()
+            
+            // 전환 내역 로드
+            loadConversionHistory()
         }
         
         function closePointConversionModal() {
@@ -14446,45 +14479,33 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
             
-            const fromType = direction === 'regular-to-betting' ? '일반 포인트' : '배팅 포인트'
-            const toType = direction === 'regular-to-betting' ? '배팅 포인트' : '일반 포인트'
+            const fromType = direction === 'regular-to-betting' ? 'regular' : 'betting'
+            const toType = direction === 'regular-to-betting' ? 'betting' : 'regular'
+            const fromTypeName = direction === 'regular-to-betting' ? '일반 포인트' : '배팅 포인트'
+            const toTypeName = direction === 'regular-to-betting' ? '배팅 포인트' : '일반 포인트'
             
             const confirmed = await customConfirm(
                 '포인트 전환',
-                `${fromType} ${amount.toLocaleString()}P를 ${toType}로 전환하시겠습니까?`
+                `${fromTypeName} ${amount.toLocaleString()}P를 ${toTypeName}로 전환하시겠습니까?`
             )
             
             if (!confirmed) return
             
             try {
-                // 포인트 차감
-                await axios.post(`${API_BASE}/ticket-items/${currentTicketId}`, {
-                    item_type: 'point_request',
-                    item_data: {
-                        member_id: currentMember.id,
-                        point_type: direction === 'regular-to-betting' ? 'regular' : 'betting',
-                        transaction_type: 'deduct',
-                        amount: amount,
-                        description: `포인트 전환 (차감)`
-                    },
-                    notes: '포인트 전환'
-                })
-                
-                // 포인트 지급
-                await axios.post(`${API_BASE}/ticket-items/${currentTicketId}`, {
-                    item_type: 'point_request',
-                    item_data: {
-                        member_id: currentMember.id,
-                        point_type: direction === 'regular-to-betting' ? 'betting' : 'regular',
-                        transaction_type: 'add',
-                        amount: amount,
-                        description: `포인트 전환 (지급)`
-                    },
-                    notes: '포인트 전환'
+                // 새로운 point-conversions API 사용
+                const response = await axios.post(`${API_BASE}/point-conversions`, {
+                    member_id: currentMember.id,
+                    from_type: fromType,
+                    to_type: toType,
+                    amount: amount,
+                    ticket_id: currentTicketId,
+                    created_by: currentStaff.id
                 })
                 
                 showToast('포인트 전환이 완료되었습니다', 'success')
-                closePointConversionModal()
+                
+                // 입력 필드 초기화
+                document.getElementById('conversion-amount').value = ''
                 
                 // 회원 정보 새로고침
                 const memberRes = await axios.get(`${API_BASE}/members/${currentMember.id}`)
@@ -14492,6 +14513,11 @@ console.log('권한 관리 함수 로드 완료')
                 
                 // 모든 잔액 표시 업데이트
                 updateModalBalances()
+                updateConversionBalances()
+                updateConversionDirection()
+                
+                // 전환 내역 새로고침
+                await loadConversionHistory()
                 
                 // 티켓 상세 정보도 새로고침
                 await showTicketDetail(currentTicketId)
@@ -14499,6 +14525,110 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('포인트 전환 오류:', error)
                 showToast('포인트 전환 실패: ' + (error.response?.data?.error || error.message), 'error')
+            }
+        }
+        
+        // 포인트 전환 내역 로드
+        async function loadConversionHistory() {
+            if (!currentMember) return
+            
+            try {
+                const filter = document.getElementById('conversion-history-filter')?.value || 'all'
+                const params = {
+                    member_id: currentMember.id
+                }
+                
+                if (filter !== 'all') {
+                    params.status = filter
+                }
+                
+                const response = await axios.get(`${API_BASE}/point-conversions`, { params })
+                const conversions = response.data.conversions || []
+                
+                const container = document.getElementById('conversion-history-list')
+                
+                if (conversions.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">전환 내역이 없습니다</p>'
+                    return
+                }
+                
+                container.innerHTML = conversions.map(conv => {
+                    const createdAt = new Date(conv.created_at)
+                    const now = new Date()
+                    const diffMinutes = (now - createdAt) / (1000 * 60)
+                    const canCancel = conv.status === 'active' && diffMinutes <= 10
+                    
+                    const fromText = conv.from_type === 'regular' ? '일반P' : '배팅P'
+                    const toText = conv.to_type === 'regular' ? '일반P' : '배팅P'
+                    const statusBadge = conv.status === 'active' 
+                        ? '<span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">활성</span>'
+                        : '<span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded">취소됨</span>'
+                    
+                    return `
+                        <div class="border rounded-lg p-3 ${conv.status === 'cancelled' ? 'bg-gray-50 opacity-60' : 'bg-white'}">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold">${fromText} → ${toText}</span>
+                                    ${statusBadge}
+                                </div>
+                                <span class="text-lg font-bold text-blue-600">${Number(conv.amount).toLocaleString()}P</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mb-2">
+                                <div>생성: ${createdAt.toLocaleString('ko-KR')}</div>
+                                ${conv.creator_name ? `<div>담당: ${conv.creator_name}</div>` : ''}
+                                ${conv.status === 'cancelled' && conv.cancel_reason ? `<div class="text-red-600">취소 사유: ${conv.cancel_reason}</div>` : ''}
+                            </div>
+                            ${canCancel ? `
+                                <button onclick="cancelConversion(${conv.id})" class="w-full px-3 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600">
+                                    <i class="fas fa-undo mr-1"></i>전환 취소 (${Math.floor(10 - diffMinutes)}분 남음)
+                                </button>
+                            ` : ''}
+                        </div>
+                    `
+                }).join('')
+                
+            } catch (error) {
+                console.error('포인트 전환 내역 로드 오류:', error)
+                document.getElementById('conversion-history-list').innerHTML = 
+                    '<p class="text-red-500 text-center py-8">내역 로드 실패</p>'
+            }
+        }
+        
+        // 포인트 전환 취소
+        async function cancelConversion(conversionId) {
+            const confirmed = await customConfirm(
+                '포인트 전환 취소',
+                '이 전환을 취소하시겠습니까? 포인트가 원래대로 되돌아갑니다.'
+            )
+            
+            if (!confirmed) return
+            
+            try {
+                await axios.post(`${API_BASE}/point-conversions/${conversionId}/cancel`, {
+                    cancelled_by: currentStaff.id,
+                    cancel_reason: '사용자 요청'
+                })
+                
+                showToast('포인트 전환이 취소되었습니다', 'success')
+                
+                // 회원 정보 새로고침
+                const memberRes = await axios.get(`${API_BASE}/members/${currentMember.id}`)
+                currentMember = memberRes.data.member
+                
+                // 모든 잔액 표시 업데이트
+                updateModalBalances()
+                updateConversionBalances()
+                updateConversionDirection()
+                
+                // 전환 내역 새로고침
+                await loadConversionHistory()
+                
+                // 티켓 상세 정보도 새로고침
+                await showTicketDetail(currentTicketId)
+                
+            } catch (error) {
+                console.error('포인트 전환 취소 오류:', error)
+                showToast(error.response?.data?.error || '포인트 전환 취소 실패', 'error')
             }
         }
         
