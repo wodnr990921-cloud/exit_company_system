@@ -7649,28 +7649,60 @@ console.log('권한 관리 함수 로드 완료')
                 const staffList = staffRes.data.staff || []
 
                 // 티켓 기본 정보 (헤더)
-                document.getElementById('modal-ticket-number').textContent = ticket.ticket_number
+                const modalTicketNumber = document.getElementById('modal-ticket-number')
+                if (modalTicketNumber) {
+                    modalTicketNumber.textContent = ticket.ticket_number
+                }
 
-                // 티켓 정보 탭 상세
-                document.getElementById('detail-ticket-number').textContent = ticket.ticket_number
-                document.getElementById('detail-ticket-title').textContent = ticket.title
-                document.getElementById('detail-ticket-type').textContent = getTicketTypeText(ticket.ticket_type)
-                document.getElementById('detail-ticket-status').innerHTML = `<span class="status-badge status-${ticket.status}">${getStatusText(ticket.status)}</span>`
-                document.getElementById('detail-ticket-priority').innerHTML = getPriorityBadge(ticket.priority)
+                // 티켓 정보 탭 상세 - 안전 처리
+                const detailTicketNumber = document.getElementById('detail-ticket-number')
+                if (detailTicketNumber) {
+                    detailTicketNumber.textContent = ticket.ticket_number
+                }
                 
-                // 회원명 표시 (요소가 있을 경우에만)
+                const detailTicketTitle = document.getElementById('detail-ticket-title')
+                if (detailTicketTitle) {
+                    detailTicketTitle.textContent = ticket.title
+                }
+                
+                const detailTicketType = document.getElementById('detail-ticket-type')
+                if (detailTicketType) {
+                    detailTicketType.textContent = getTicketTypeText(ticket.ticket_type)
+                }
+                
+                const detailTicketStatus = document.getElementById('detail-ticket-status')
+                if (detailTicketStatus) {
+                    detailTicketStatus.innerHTML = `<span class="status-badge status-${ticket.status}">${getStatusText(ticket.status)}</span>`
+                }
+                
+                const detailTicketPriority = document.getElementById('detail-ticket-priority')
+                if (detailTicketPriority) {
+                    detailTicketPriority.innerHTML = getPriorityBadge(ticket.priority)
+                }
+                
+                // 회원명 표시
                 const memberNameEl = document.getElementById('detail-ticket-member-name')
                 if (memberNameEl) {
                     memberNameEl.textContent = ticket.member_name || '-'
                 }
                 
-                document.getElementById('detail-ticket-assigned').textContent = ticket.assigned_to_name || '미배정'
-                document.getElementById('detail-ticket-created').textContent = new Date(ticket.created_at).toLocaleString()
+                const detailTicketAssigned = document.getElementById('detail-ticket-assigned')
+                if (detailTicketAssigned) {
+                    detailTicketAssigned.textContent = ticket.assigned_to_name || '미배정'
+                }
                 
-                // 원문 표시 (ticket.original 필드)
-                document.getElementById('detail-ticket-description').textContent = ticket.original || ticket.description || '원문 없음'
+                const detailTicketCreated = document.getElementById('detail-ticket-created')
+                if (detailTicketCreated) {
+                    detailTicketCreated.textContent = new Date(ticket.created_at).toLocaleString()
+                }
                 
-                // 요약 표시 (ticket.summary 필드)
+                // 원문 표시
+                const detailTicketDescription = document.getElementById('detail-ticket-description')
+                if (detailTicketDescription) {
+                    detailTicketDescription.textContent = ticket.original || ticket.description || '원문 없음'
+                }
+                
+                // 요약 표시
                 const summaryEl = document.getElementById('ticket-summary')
                 if (summaryEl) {
                     summaryEl.textContent = ticket.summary || ticket.description || '요약 없음'
@@ -7706,13 +7738,22 @@ console.log('권한 관리 함수 로드 완료')
                 // 답변 목록 로드
                 await loadTicketResponses(ticketId)
 
-                // 상태 변경 폼
-                document.getElementById('update-ticket-status').value = ticket.status
-                document.getElementById('update-ticket-priority').value = ticket.priority
+                // 상태 변경 폼 - 안전 처리
+                const updateTicketStatus = document.getElementById('update-ticket-status')
+                if (updateTicketStatus) {
+                    updateTicketStatus.value = ticket.status
+                }
+                
+                const updateTicketPriority = document.getElementById('update-ticket-priority')
+                if (updateTicketPriority) {
+                    updateTicketPriority.value = ticket.priority
+                }
                 
                 const assignedSelect = document.getElementById('update-ticket-assigned')
-                assignedSelect.innerHTML = '<option value="">미배정</option>' + 
-                    staffList.map(s => `<option value="${s.id}" ${ticket.assigned_to === s.id ? 'selected' : ''}>${s.name} (${s.role === 'admin' ? '관리자' : '직원'})</option>`).join('')
+                if (assignedSelect) {
+                    assignedSelect.innerHTML = '<option value="">미배정</option>' + 
+                        staffList.map(s => `<option value="${s.id}" ${ticket.assigned_to === s.id ? 'selected' : ''}>${s.name} (${s.role === 'admin' ? '관리자' : '직원'})</option>`).join('')
+                }
 
                 // 회원 관리 카드 렌더링
                 const memberManagementCard = document.getElementById('member-management-card')
