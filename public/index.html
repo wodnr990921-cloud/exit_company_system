@@ -2240,8 +2240,12 @@
                                 <option value="K_LEAGUE">K리그</option>
                                 <option value="MLB">MLB (메이저리그)</option>
                                 <option value="KBO">KBO</option>
-                                <option value="NBA">NBA</option>
-                                <option value="KBL">KBL</option>
+                                <option value="NBA">NBA (남자농구)</option>
+                                <option value="WNBA">WNBA (여자농구)</option>
+                                <option value="KBL">KBL (남자농구)</option>
+                                <option value="WKBL">WKBL (여자농구)</option>
+                                <option value="KOVO_M">KOVO 남자배구</option>
+                                <option value="KOVO_W">KOVO 여자배구</option>
                                 <option value="NFL">NFL</option>
                                 <option value="NHL">NHL</option>
                                 <option value="ETC" selected>기타</option>
@@ -5650,7 +5654,11 @@ console.log('권한 관리 함수 로드 완료')
                     'MLB': 'MLB',
                     'KBO': 'KBO',
                     'NBA': 'NBA',
+                    'WNBA': 'WNBA',
                     'KBL': 'KBL',
+                    'WKBL': 'WKBL',
+                    'KOVO_M': 'KOVO남',
+                    'KOVO_W': 'KOVO여',
                     'NFL': 'NFL',
                     'NHL': 'NHL',
                     'ETC': '기타'
@@ -6518,7 +6526,11 @@ console.log('권한 관리 함수 로드 완료')
                     'MLB': 'MLB',
                     'KBO': 'KBO',
                     'NBA': 'NBA',
+                    'WNBA': 'WNBA',
                     'KBL': 'KBL',
+                    'WKBL': 'WKBL',
+                    'KOVO_M': 'KOVO남',
+                    'KOVO_W': 'KOVO여',
                     'NFL': 'NFL',
                     'NHL': 'NHL',
                     'ETC': '기타'
@@ -11247,7 +11259,11 @@ console.log('권한 관리 함수 로드 완료')
                     'MLB': 'MLB',
                     'KBO': 'KBO',
                     'NBA': 'NBA',
+                    'WNBA': 'WNBA',
                     'KBL': 'KBL',
+                    'WKBL': 'WKBL',
+                    'KOVO_M': 'KOVO남',
+                    'KOVO_W': 'KOVO여',
                     'NFL': 'NFL',
                     'NHL': 'NHL',
                     'ETC': '기타'
@@ -12890,7 +12906,10 @@ console.log('권한 관리 함수 로드 완료')
             const template = [
                 ['경기명', '홈팀', '원정팀', '리그', '경기일시', '홈승배당', '무승부배당', '원정승배당', '언오버기준', '오버배당', '언더배당', '핸디캡', '핸디캡홈배당', '핸디캡원정배당'],
                 ['EPL 10R', '맨체스터 유나이티드', '리버풀', 'EPL', '2026-02-20 20:00', '1.50', '3.20', '2.10', '2.5', '1.85', '1.95', '-0.5', '1.85', '1.95'],
-                ['라리가 12R', '레알 마드리드', 'FC 바르셀로나', 'LA_LIGA', '2026-02-21 23:00', '1.90', '3.50', '1.80', '', '', '', '', '', '']
+                ['라리가 12R', '레알 마드리드', 'FC 바르셀로나', 'LA_LIGA', '2026-02-21 23:00', '1.90', '3.50', '1.80', '', '', '', '', '', ''],
+                ['NBA 경기', 'LA 레이커스', '보스턴 셀틱스', 'NBA', '2026-02-22 10:00', '1.80', '', '2.00', '220.5', '1.90', '1.90', '-5.5', '1.95', '1.85'],
+                ['여자농구', '우리은행', 'KB스타즈', 'WKBL', '2026-02-23 14:00', '1.65', '', '2.20', '', '', '', '', '', ''],
+                ['남자배구', '현대캐피탈', '대한항공', 'KOVO_M', '2026-02-24 19:00', '1.75', '', '2.05', '', '', '', '', '', '']
             ]
             
             const ws = XLSX.utils.aoa_to_sheet(template)
