@@ -3402,7 +3402,12 @@
                             <span id="modal-ticket-number" class="font-mono"></span> - 
                             <span id="modal-ticket-title"></span>
                         </p>
-                        <p class="text-xs text-gray-500">회원: <span id="modal-ticket-member"></span></p>
+                        <p class="text-xs text-gray-500">
+                            회원: <span id="modal-ticket-member"></span>
+                            <span id="modal-member-balance-container" class="ml-3 hidden">
+                                | 잔액: <span id="modal-member-balance" class="font-semibold text-blue-600"></span>P
+                            </span>
+                        </p>
                     </div>
                     <button onclick="closeTicketDetail()" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times text-xl"></i>
@@ -7665,6 +7670,27 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('modal-ticket-number').textContent = ticket.ticket_number
                 document.getElementById('modal-ticket-title').textContent = ticket.title
                 document.getElementById('modal-ticket-member').textContent = ticket.member_name || '-'
+
+                // 회원 잔액 표시
+                const balanceContainer = document.getElementById('modal-member-balance-container')
+                const balanceEl = document.getElementById('modal-member-balance')
+                if (ticket.member_id) {
+                    try {
+                        const memberRes = await axios.get(`${API_BASE}/members/${ticket.member_id}`)
+                        const member = memberRes.data.member
+                        if (member && member.betting_points !== undefined) {
+                            balanceEl.textContent = member.betting_points.toLocaleString()
+                            balanceContainer.classList.remove('hidden')
+                        } else {
+                            balanceContainer.classList.add('hidden')
+                        }
+                    } catch (error) {
+                        console.error('회원 잔액 로드 오류:', error)
+                        balanceContainer.classList.add('hidden')
+                    }
+                } else {
+                    balanceContainer.classList.add('hidden')
+                }
 
                 // 티켓 정보 탭 상세
                 document.getElementById('detail-ticket-number').textContent = ticket.ticket_number
