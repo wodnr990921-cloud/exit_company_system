@@ -4145,9 +4145,7 @@
     <script>
         // 전역 변수
         // API 기본 URL - 환경에 따라 자동 설정
-        const API_BASE = window.location.hostname === 'localhost' 
-            ? '/api'  // 로컬 개발
-            : 'https://692c1664.exit-company-system.pages.dev/api'  // 프로덕션 (작동하는 배포)
+        const API_BASE = '/api'  // Cloudflare Pages는 같은 도메인에서 API 제공
 
 // ==========================================
 // 다크 모드 관리
