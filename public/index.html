@@ -3518,21 +3518,22 @@
                                             </h4>
                                             <textarea 
                                                 id="response-content" 
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-2" 
                                                 rows="5" 
                                                 placeholder="답변 입력"
                                             ></textarea>
+                                            <button onclick="addTicketResponse()" class="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm">
+                                                <i class="fas fa-paper-plane mr-2"></i>답변 저장
+                                            </button>
                                         </div>
 
                                         <!-- 댓글 섹션 (기존 답변 목록) -->
                                         <div class="bg-white border border-gray-200 rounded-lg p-4">
                                             <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-                                                <i class="fas fa-comments mr-2 text-green-600"></i>댓글
+                                                <i class="fas fa-comments mr-2 text-green-600"></i>답변 목록
                                             </h4>
-                                            <p class="text-sm text-gray-500">감사합니다. 관리자에게서 요청하신 송금이 정상적으로 접수되었습니다!</p>
-                                            <p class="text-xs text-gray-400 mt-2">다음에는 숙기 소중히 작업할 것임니다. 다음엔 이렇게할 것임.</p>
-                                            <div class="mt-3">
-                                                <p class="text-sm text-gray-700 bg-gray-50 p-2 rounded">댓글 입력</p>
+                                            <div id="ticket-responses-list" class="space-y-3 max-h-96 overflow-y-auto">
+                                                <!-- JavaScript로 답변 목록 표시 -->
                                             </div>
                                         </div>
                                     </div>
@@ -3593,7 +3594,11 @@
                                                     <span class="text-gray-800" id="detail-ticket-member-name"></span>
                                                 </div>
                                                 <div class="flex items-start">
-                                                    <span class="text-gray-500 w-16 flex-shrink-0">잔액</span>
+                                                    <span class="text-gray-500 w-16 flex-shrink-0">일반P</span>
+                                                    <span class="text-green-600 font-semibold" id="detail-member-points"></span>
+                                                </div>
+                                                <div class="flex items-start">
+                                                    <span class="text-gray-500 w-16 flex-shrink-0">배팅P</span>
                                                     <span class="text-blue-600 font-semibold" id="detail-member-balance"></span>
                                                 </div>
                                             </div>
@@ -7334,6 +7339,7 @@ console.log('권한 관리 함수 로드 완료')
         // 티켓 상세 모달 (배팅 폴더 포함)
         let currentTicketId = null
         let currentTicket = null
+        let currentMember = null // 현재 티켓의 회원 정보
         let selectedMatches = [] // 다폴더용 선택된 경기들
 
         // 티켓 이미지 뷰어 관련 변수
@@ -7664,21 +7670,35 @@ console.log('권한 관리 함수 로드 완료')
                     summaryEl.textContent = ticket.summary || ticket.description || '요약 없음'
                 }
 
-                // 회원 잔액 표시 (우측 사이드바)
+                // 회원 잔액 표시 (우측 사이드바) - 2종류
                 if (ticket.member_id) {
                     try {
                         const memberRes = await axios.get(`${API_BASE}/members/${ticket.member_id}`)
                         const member = memberRes.data.member
-                        if (member && member.betting_points !== undefined) {
+                        currentMember = member // 전역 변수에 저장
+                        
+                        if (member) {
+                            // 일반 포인트
+                            const pointsEl = document.getElementById('detail-member-points')
+                            if (pointsEl) {
+                                pointsEl.textContent = (member.points || 0).toLocaleString() + 'P'
+                            }
+                            // 배팅 포인트
                             const balanceEl = document.getElementById('detail-member-balance')
                             if (balanceEl) {
-                                balanceEl.textContent = member.betting_points.toLocaleString() + 'P'
+                                balanceEl.textContent = (member.betting_points || 0).toLocaleString() + 'P'
                             }
                         }
                     } catch (error) {
                         console.error('회원 잔액 로드 오류:', error)
+                        currentMember = null
                     }
+                } else {
+                    currentMember = null
                 }
+
+                // 답변 목록 로드
+                await loadTicketResponses(ticketId)
 
                 // 상태 변경 폼
                 document.getElementById('update-ticket-status').value = ticket.status
@@ -7849,6 +7869,66 @@ console.log('권한 관리 함수 로드 완료')
                 if (currentView === 'tickets') await loadTickets()
             } catch (error) {
                 alert('업데이트 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 답변 목록 로드
+        async function loadTicketResponses(ticketId) {
+            try {
+                const response = await axios.get(`${API_BASE}/tickets/${ticketId}/responses`)
+                const responses = response.data.responses || []
+
+                const responsesHtml = responses.map(r => {
+                    return `
+                    <div class="bg-gray-50 border border-gray-200 p-3 rounded">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-sm">${r.created_by_name || '직원'}</span>
+                                <span class="text-xs text-gray-500">${new Date(r.created_at).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-800 whitespace-pre-wrap">${r.response_text}</p>
+                    </div>
+                `
+                }).join('')
+
+                document.getElementById('ticket-responses-list').innerHTML = responsesHtml || 
+                    '<p class="text-gray-500 text-center text-sm py-4">답변이 없습니다.</p>'
+            } catch (error) {
+                console.error('답변 목록 로드 오류:', error)
+                document.getElementById('ticket-responses-list').innerHTML = 
+                    '<p class="text-red-500 text-center text-sm py-4">답변 목록을 불러올 수 없습니다.</p>'
+            }
+        }
+
+        // 답변 저장
+        async function addTicketResponse() {
+            if (!currentTicketId) {
+                alert('티켓 정보를 찾을 수 없습니다.')
+                return
+            }
+
+            const responseContent = document.getElementById('response-content').value.trim()
+            if (!responseContent) {
+                alert('답변 내용을 입력해주세요.')
+                return
+            }
+
+            try {
+                await axios.post(`${API_BASE}/tickets/${currentTicketId}/responses`, {
+                    response_text: responseContent
+                })
+                
+                // 입력 필드 초기화
+                document.getElementById('response-content').value = ''
+                
+                // 답변 목록 새로고침
+                await loadTicketResponses(currentTicketId)
+                
+                showToast('답변이 저장되었습니다.', 'success')
+            } catch (error) {
+                console.error('답변 저장 오류:', error)
+                alert('답변 저장 실패: ' + (error.response?.data?.error || error.message))
             }
         }
 

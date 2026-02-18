@@ -490,6 +490,65 @@ tickets.get('/stats/dashboard', async (c) => {
   }
 })
 
+// 티켓 답변 목록 조회
+tickets.get('/:id/responses', async (c) => {
+  const { DB } = c.env
+  const ticketId = c.req.param('id')
+  
+  try {
+    const responses = await DB.prepare(`
+      SELECT 
+        tr.id,
+        tr.ticket_id,
+        tr.response_text,
+        tr.created_at,
+        s.name as created_by_name
+      FROM ticket_responses tr
+      LEFT JOIN staff s ON tr.created_by = s.id
+      WHERE tr.ticket_id = ?
+      ORDER BY tr.created_at DESC
+    `).bind(ticketId).all()
+    
+    return c.json({ responses: responses.results || [] })
+  } catch (error) {
+    console.error('답변 목록 조회 오류:', error)
+    return c.json({ error: '답변 목록 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 티켓 답변 작성
+tickets.post('/:id/responses', async (c) => {
+  const { DB } = c.env
+  const ticketId = c.req.param('id')
+  const { response_text } = await c.req.json()
+  
+  // 세션에서 직원 ID 가져오기 (여기서는 임시로 1)
+  const staffId = 1
+  
+  try {
+    // 티켓 존재 확인
+    const ticket = await DB.prepare('SELECT id FROM tickets WHERE id = ?').bind(ticketId).first()
+    
+    if (!ticket) {
+      return c.json({ error: '티켓을 찾을 수 없습니다.' }, 404)
+    }
+    
+    // 답변 저장
+    const result = await DB.prepare(`
+      INSERT INTO ticket_responses (ticket_id, response_text, created_by)
+      VALUES (?, ?, ?)
+    `).bind(ticketId, response_text, staffId).run()
+    
+    return c.json({ 
+      success: true,
+      response_id: result.meta.last_row_id 
+    })
+  } catch (error) {
+    console.error('답변 저장 오류:', error)
+    return c.json({ error: '답변 저장 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 티켓 삭제 (관리자만)
 tickets.delete('/:id', async (c) => {
   const { DB } = c.env
