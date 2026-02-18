@@ -876,8 +876,28 @@
                             </div>
                         </div>
                         
-                        <p class="text-sm text-gray-600 mb-4">경기 종료 후 하루까지 표시됩니다</p>
-                        <div id="match-schedule-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                        <p class="text-sm text-gray-600 mb-4">경기 종료 후 하루까지 표시됩니다 | <span id="schedule-match-count" class="font-semibold">0건</span></p>
+                        
+                        <!-- 테이블 형식으로 변경 -->
+                        <div class="overflow-x-auto max-h-96">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">리그</th>
+                                        <th class="px-3 py-2 text-left">경기명</th>
+                                        <th class="px-3 py-2 text-left">홈 vs 원정</th>
+                                        <th class="px-3 py-2 text-left">경기일시</th>
+                                        <th class="px-3 py-2 text-left">배당 정보</th>
+                                        <th class="px-3 py-2 text-center">상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="match-schedule-list" class="divide-y">
+                                    <tr>
+                                        <td colspan="6" class="px-3 py-4 text-center text-gray-500">경기를 불러오는 중...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- 고객 베팅 목록 (하단) -->
@@ -5806,8 +5826,12 @@ console.log('권한 관리 함수 로드 완료')
                 const container = document.getElementById('match-schedule-list')
                 if (!container) return
                 
+                // 경기 수 표시
+                const countEl = document.getElementById('schedule-match-count')
+                if (countEl) countEl.textContent = `${matches.length}건`
+                
                 if (matches.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-4">조회된 경기가 없습니다</p>'
+                    container.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-center text-gray-500">조회된 경기가 없습니다</td></tr>'
                     return
                 }
                 
@@ -5834,44 +5858,57 @@ console.log('권한 관리 함수 로드 완료')
                 container.innerHTML = matches.map(m => {
                     let bettingInfo = []
                     if (m.home_odds && m.draw_odds && m.away_odds) {
-                        bettingInfo.push(`승무패: ${m.home_odds} / ${m.draw_odds} / ${m.away_odds}`)
+                        bettingInfo.push(`승무패: ${m.home_odds}/${m.draw_odds}/${m.away_odds}`)
                     }
                     if (m.over_line && m.over_odds && m.under_odds) {
-                        bettingInfo.push(`언오버 ${m.over_line}: ${m.over_odds} / ${m.under_odds}`)
+                        bettingInfo.push(`언오버 ${m.over_line}: ${m.over_odds}/${m.under_odds}`)
                     }
                     if (m.handicap_line !== null && m.handicap_home_odds && m.handicap_away_odds) {
-                        bettingInfo.push(`핸디캡 ${m.handicap_line > 0 ? '+' : ''}${m.handicap_line}: ${m.handicap_home_odds} / ${m.handicap_away_odds}`)
+                        bettingInfo.push(`핸디 ${m.handicap_line > 0 ? '+' : ''}${m.handicap_line}: ${m.handicap_home_odds}/${m.handicap_away_odds}`)
+                    }
+                    
+                    const statusColors = {
+                        'open': 'bg-green-100 text-green-700',
+                        'scheduled': 'bg-blue-100 text-blue-700',
+                        'closed': 'bg-gray-100 text-gray-700',
+                        'completed': 'bg-purple-100 text-purple-700'
+                    }
+                    
+                    const statusText = {
+                        'open': '진행중',
+                        'scheduled': '예정',
+                        'closed': '마감',
+                        'completed': '완료'
                     }
                     
                     return `
-                        <div class="border rounded p-3 hover:bg-gray-50">
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
-                                            ${leagueNames[m.league] || m.league || '기타'}
-                                        </span>
-                                        <p class="font-bold">${m.match_name}</p>
-                                    </div>
-                                    <p class="text-sm text-gray-600">${m.home_team} vs ${m.away_team}</p>
-                                </div>
-                                <span class="text-xs px-2 py-1 rounded ${
-                                    m.status === 'open' || m.status === 'scheduled' ? 'bg-green-100 text-green-700' : 
-                                    m.status === 'closed' ? 'bg-gray-100 text-gray-700' : 
-                                    'bg-blue-100 text-blue-700'
-                                }">
-                                    ${m.status === 'open' || m.status === 'scheduled' ? '진행중' : m.status === 'closed' ? '마감' : '완료'}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-3 py-2">
+                                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs whitespace-nowrap">
+                                    ${leagueNames[m.league] || m.league || '기타'}
                                 </span>
-                            </div>
-                            <div class="text-xs text-gray-500 mb-1">
-                                ${new Date(m.match_date).toLocaleString()}
-                            </div>
-                            ${bettingInfo.length > 0 ? `
-                                <div class="text-xs text-blue-600 mt-2">
-                                    ${bettingInfo.join(' | ')}
-                                </div>
-                            ` : ''}
-                        </div>
+                            </td>
+                            <td class="px-3 py-2 font-medium">${m.match_name}</td>
+                            <td class="px-3 py-2 text-gray-700">
+                                ${m.home_team} <span class="text-gray-400">vs</span> ${m.away_team}
+                            </td>
+                            <td class="px-3 py-2 text-gray-600 whitespace-nowrap">
+                                ${new Date(m.match_date).toLocaleString('ko-KR', {
+                                    month: '2-digit', 
+                                    day: '2-digit', 
+                                    hour: '2-digit', 
+                                    minute: '2-digit'
+                                })}
+                            </td>
+                            <td class="px-3 py-2 text-xs text-gray-600">
+                                ${bettingInfo.join(' | ') || '-'}
+                            </td>
+                            <td class="px-3 py-2 text-center">
+                                <span class="px-2 py-1 text-xs rounded whitespace-nowrap ${statusColors[m.status] || 'bg-gray-100 text-gray-700'}">
+                                    ${statusText[m.status] || m.status}
+                                </span>
+                            </td>
+                        </tr>
                     `
                 }).join('')
             } catch (error) {
