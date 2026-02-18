@@ -74,13 +74,15 @@ betting.post('/matches', async (c) => {
         match_number, match_name, match_date, home_team, away_team,
         home_odds, away_odds, draw_odds,
         over_line, over_odds, under_odds,
-        handicap_line, handicap_home_odds, handicap_away_odds
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        handicap_line, handicap_home_odds, handicap_away_odds,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       match_number, match_name, match_date, home_team, away_team,
       home_odds || 1.0, away_odds || 1.0, draw_odds || null,
       over_line || null, over_odds || null, under_odds || null,
-      handicap_line || null, handicap_home_odds || null, handicap_away_odds || null
+      handicap_line || null, handicap_home_odds || null, handicap_away_odds || null,
+      'open'
     ).run()
 
     return c.json({ 
@@ -128,11 +130,17 @@ betting.post('/matches/bulk', async (c) => {
         await c.env.DB.prepare(
           `INSERT INTO matches (
             match_number, match_name, match_date, home_team, away_team,
-            home_odds, away_odds, draw_odds
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            home_odds, away_odds, draw_odds,
+            over_line, over_odds, under_odds,
+            handicap_line, handicap_home_odds, handicap_away_odds,
+            status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           match_number, match_name, match_date, home_team, away_team,
-          home_odds || 1.0, away_odds || 1.0, draw_odds || null
+          home_odds || 1.0, away_odds || 1.0, draw_odds || null,
+          match.over_line || null, match.over_odds || null, match.under_odds || null,
+          match.handicap_line || null, match.handicap_home_odds || null, match.handicap_away_odds || null,
+          'open'
         ).run()
       }
     }
