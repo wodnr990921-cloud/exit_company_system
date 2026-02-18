@@ -3811,6 +3811,30 @@
             <div class="p-6">
                 <!-- 배팅 추가 폼 -->
                 <div id="betting-form" class="request-form hidden">
+                    <!-- 회원 잔액 정보 -->
+                    <div class="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-semibold text-gray-800 mb-2">
+                                    <i class="fas fa-wallet mr-2"></i>보유 포인트
+                                </h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-xs text-gray-600 mb-1">일반 포인트</p>
+                                        <p class="text-lg font-bold text-blue-600" id="betting-modal-regular-points">-</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-gray-600 mb-1">배팅 포인트</p>
+                                        <p class="text-lg font-bold text-purple-600" id="betting-modal-betting-points">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="showPointConversionModal('betting')" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 text-sm font-medium">
+                                <i class="fas fa-exchange-alt mr-2"></i>포인트 전환
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="mb-4">
                         <label class="block text-sm font-medium mb-2">폴더 타입</label>
                         <select id="new-folder-type" class="w-full px-3 py-2 border rounded" onchange="updateFolderType()">
@@ -3852,6 +3876,23 @@
 
                 <!-- 도서 발주 폼 -->
                 <div id="book-order-form" class="request-form hidden">
+                    <!-- 회원 잔액 정보 -->
+                    <div class="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 mb-4">
+                        <h4 class="font-semibold text-gray-800 mb-2">
+                            <i class="fas fa-wallet mr-2"></i>보유 포인트
+                        </h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-600 mb-1">일반 포인트</p>
+                                <p class="text-lg font-bold text-blue-600" id="book-modal-regular-points">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-600 mb-1">배팅 포인트</p>
+                                <p class="text-lg font-bold text-purple-600" id="book-modal-betting-points">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="mb-4">
                         <label class="block text-sm font-medium mb-2">도서 검색</label>
                         <input type="text" id="book-search" class="w-full px-3 py-2 border rounded" placeholder="도서명 또는 ISBN 검색" oninput="searchBooksForOrder()">
@@ -3878,6 +3919,30 @@
 
                 <!-- 포인트 요청 폼 -->
                 <div id="point-request-form" class="request-form hidden">
+                    <!-- 회원 잔액 정보 -->
+                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-semibold text-gray-800 mb-2">
+                                    <i class="fas fa-wallet mr-2"></i>보유 포인트
+                                </h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-xs text-gray-600 mb-1">일반 포인트</p>
+                                        <p class="text-lg font-bold text-blue-600" id="point-modal-regular-points">-</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-gray-600 mb-1">배팅 포인트</p>
+                                        <p class="text-lg font-bold text-purple-600" id="point-modal-betting-points">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="showPointConversionModal('point')" class="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 text-sm font-medium">
+                                <i class="fas fa-exchange-alt mr-2"></i>포인트 전환
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="mb-4">
                         <label class="block text-sm font-medium mb-2">포인트 타입</label>
                         <select id="point-request-type" class="w-full px-3 py-2 border rounded">
@@ -3908,6 +3973,101 @@
                         <i class="fas fa-plus mr-2"></i>포인트 요청 장바구니에 담기
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 포인트 전환 모달 -->
+    <div id="point-conversion-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[60]" onclick="if(event.target === this) closePointConversionModal()">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-md">
+            <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
+                <h3 class="text-xl font-bold">
+                    <i class="fas fa-exchange-alt mr-2"></i>포인트 전환
+                </h3>
+                <button onclick="closePointConversionModal()" class="text-white hover:text-gray-200">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <!-- 현재 잔액 표시 -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h4 class="font-semibold text-gray-700 mb-3">현재 잔액</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white rounded p-3 border border-blue-200">
+                            <p class="text-xs text-gray-600 mb-1">일반 포인트</p>
+                            <p class="text-lg font-bold text-blue-600" id="conversion-regular-points">-</p>
+                        </div>
+                        <div class="bg-white rounded p-3 border border-purple-200">
+                            <p class="text-xs text-gray-600 mb-1">배팅 포인트</p>
+                            <p class="text-lg font-bold text-purple-600" id="conversion-betting-points">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 전환 방향 선택 -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">전환 방향</label>
+                    <select id="conversion-direction" class="w-full px-3 py-2 border rounded" onchange="updateConversionDirection()">
+                        <option value="regular-to-betting">일반 포인트 → 배팅 포인트</option>
+                        <option value="betting-to-regular">배팅 포인트 → 일반 포인트</option>
+                    </select>
+                </div>
+
+                <!-- 전환 금액 -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">전환 금액</label>
+                    <input type="number" id="conversion-amount" class="w-full px-3 py-2 border rounded" placeholder="전환할 금액 입력" min="1" oninput="updateConversionPreview()">
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        <span id="conversion-max-amount">최대 전환 가능: 계산 중...</span>
+                    </p>
+                </div>
+
+                <!-- 전환 미리보기 -->
+                <div class="bg-blue-50 rounded-lg p-4 mb-4" id="conversion-preview">
+                    <h4 class="font-semibold text-gray-700 mb-2">전환 후 잔액</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-gray-600 mb-1">일반 포인트</p>
+                            <p class="font-bold text-blue-600" id="conversion-preview-regular">-</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 mb-1">배팅 포인트</p>
+                            <p class="font-bold text-purple-600" id="conversion-preview-betting">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 버튼 -->
+                <div class="flex gap-3">
+                    <button onclick="closePointConversionModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                        취소
+                    </button>
+                    <button onclick="executePointConversion()" class="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded hover:from-blue-600 hover:to-purple-600">
+                        <i class="fas fa-exchange-alt mr-2"></i>전환하기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 커스텀 확인 모달 -->
+    <div id="custom-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[70]">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-md">
+            <div class="px-6 py-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800" id="confirm-modal-title">확인</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-700" id="confirm-modal-message">작업을 진행하시겠습니까?</p>
+            </div>
+            <div class="px-6 py-4 border-t flex gap-3">
+                <button onclick="closeCustomConfirm(false)" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                    취소
+                </button>
+                <button onclick="closeCustomConfirm(true)" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" id="confirm-modal-btn">
+                    확인
+                </button>
             </div>
         </div>
     </div>
@@ -7922,6 +8082,18 @@ console.log('권한 관리 함수 로드 완료')
                                             <span class="text-gray-800">${ticket.institution}</span>
                                         </div>
                                     ` : ''}
+                                    ${currentMember ? `
+                                        <div class="border-t pt-2 mt-2">
+                                            <div class="flex items-start mb-1">
+                                                <span class="text-gray-500 w-16 flex-shrink-0">일반P</span>
+                                                <span class="text-blue-600 font-semibold">${Number(currentMember.points || 0).toLocaleString()}P</span>
+                                            </div>
+                                            <div class="flex items-start">
+                                                <span class="text-gray-500 w-16 flex-shrink-0">배팅P</span>
+                                                <span class="text-purple-600 font-semibold">${Number(currentMember.betting_points || 0).toLocaleString()}P</span>
+                                            </div>
+                                        </div>
+                                    ` : ''}
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="openChangeMemberModal()" 
@@ -11800,6 +11972,9 @@ console.log('권한 관리 함수 로드 완료')
             // 모든 폼 숨기기
             document.querySelectorAll('.request-form').forEach(form => form.classList.add('hidden'))
             
+            // 회원 잔액 업데이트
+            updateModalBalances()
+            
             // 선택된 타입의 폼만 표시
             if (requestType === 'betting') {
                 document.getElementById('add-request-modal-title').textContent = '배팅 추가'
@@ -11812,6 +11987,32 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('add-request-modal-title').textContent = '포인트 요청 추가'
                 document.getElementById('point-request-form').classList.remove('hidden')
             }
+        }
+        
+        // 모달 내 회원 잔액 업데이트
+        function updateModalBalances() {
+            if (!currentMember) return
+            
+            const regularPoints = Number(currentMember.points || 0).toLocaleString() + 'P'
+            const bettingPoints = Number(currentMember.betting_points || 0).toLocaleString() + 'P'
+            
+            // 배팅 모달
+            const bettingRegular = document.getElementById('betting-modal-regular-points')
+            const bettingBetting = document.getElementById('betting-modal-betting-points')
+            if (bettingRegular) bettingRegular.textContent = regularPoints
+            if (bettingBetting) bettingBetting.textContent = bettingPoints
+            
+            // 도서 모달
+            const bookRegular = document.getElementById('book-modal-regular-points')
+            const bookBetting = document.getElementById('book-modal-betting-points')
+            if (bookRegular) bookRegular.textContent = regularPoints
+            if (bookBetting) bookBetting.textContent = bettingPoints
+            
+            // 포인트 요청 모달
+            const pointRegular = document.getElementById('point-modal-regular-points')
+            const pointBetting = document.getElementById('point-modal-betting-points')
+            if (pointRegular) pointRegular.textContent = regularPoints
+            if (pointBetting) pointBetting.textContent = bettingPoints
         }
 
         // 모달 닫기
@@ -12379,7 +12580,11 @@ console.log('권한 관리 함수 로드 완료')
         
         // 개별 결재 요청
         async function requestApproval(itemId, itemType) {
-            if (!confirm('이 요청을 결재 대기 상태로 전환하시겠습니까?')) return
+            const confirmed = await customConfirm(
+                '결재 요청',
+                '이 요청을 결재 대기 상태로 전환하시겠습니까?'
+            )
+            if (!confirmed) return
             
             try {
                 // 티켓 아이템을 결재 대기 상태로 변경
@@ -12397,7 +12602,11 @@ console.log('권한 관리 함수 로드 완료')
         
         // 일괄 결재 요청
         async function requestAllApprovals() {
-            if (!confirm('모든 대기 중인 요청을 결재 대기 상태로 전환하시겠습니까?')) return
+            const confirmed = await customConfirm(
+                '일괄 결재 요청',
+                '모든 대기 중인 요청을 결재 대기 상태로 전환하시겠습니까?'
+            )
+            if (!confirmed) return
             
             try {
                 const response = await axios.get(`${API_BASE}/ticket-items/${currentTicketId}`)
@@ -14144,6 +14353,174 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('엑셀 업로드 오류:', error)
                 showToast('엑셀 업로드 실패: ' + (error.response?.data?.error || error.message), 'error')
+            }
+        }
+        
+        // ==========================================
+        // 포인트 전환 기능
+        // ==========================================
+        let conversionSource = null  // 'betting' or 'point' (호출한 모달)
+        
+        function showPointConversionModal(source) {
+            if (!currentMember) {
+                showToast('회원 정보를 먼저 확인해주세요', 'error')
+                return
+            }
+            
+            conversionSource = source
+            document.getElementById('point-conversion-modal').classList.remove('hidden')
+            
+            // 현재 잔액 표시
+            updateConversionBalances()
+            
+            // 초기값 설정
+            document.getElementById('conversion-direction').value = 'regular-to-betting'
+            document.getElementById('conversion-amount').value = ''
+            updateConversionDirection()
+        }
+        
+        function closePointConversionModal() {
+            document.getElementById('point-conversion-modal').classList.add('hidden')
+        }
+        
+        function updateConversionBalances() {
+            if (!currentMember) return
+            
+            const regularPoints = Number(currentMember.points || 0).toLocaleString() + 'P'
+            const bettingPoints = Number(currentMember.betting_points || 0).toLocaleString() + 'P'
+            
+            document.getElementById('conversion-regular-points').textContent = regularPoints
+            document.getElementById('conversion-betting-points').textContent = bettingPoints
+        }
+        
+        function updateConversionDirection() {
+            const direction = document.getElementById('conversion-direction').value
+            const maxAmount = direction === 'regular-to-betting' 
+                ? currentMember.points 
+                : currentMember.betting_points
+            
+            const label = direction === 'regular-to-betting'
+                ? '일반 포인트'
+                : '배팅 포인트'
+            
+            document.getElementById('conversion-max-amount').textContent = 
+                `최대 전환 가능: ${Number(maxAmount).toLocaleString()}P (${label})`
+            
+            updateConversionPreview()
+        }
+        
+        function updateConversionPreview() {
+            const amount = parseInt(document.getElementById('conversion-amount').value) || 0
+            const direction = document.getElementById('conversion-direction').value
+            
+            let newRegular = currentMember.points
+            let newBetting = currentMember.betting_points
+            
+            if (direction === 'regular-to-betting') {
+                newRegular -= amount
+                newBetting += amount
+            } else {
+                newBetting -= amount
+                newRegular += amount
+            }
+            
+            document.getElementById('conversion-preview-regular').textContent = Number(newRegular).toLocaleString() + 'P'
+            document.getElementById('conversion-preview-betting').textContent = Number(newBetting).toLocaleString() + 'P'
+        }
+        
+        async function executePointConversion() {
+            const amount = parseInt(document.getElementById('conversion-amount').value)
+            const direction = document.getElementById('conversion-direction').value
+            
+            if (!amount || amount <= 0) {
+                showToast('전환할 금액을 입력해주세요', 'error')
+                return
+            }
+            
+            const maxAmount = direction === 'regular-to-betting' 
+                ? currentMember.points 
+                : currentMember.betting_points
+            
+            if (amount > maxAmount) {
+                showToast('잔액이 부족합니다', 'error')
+                return
+            }
+            
+            const fromType = direction === 'regular-to-betting' ? '일반 포인트' : '배팅 포인트'
+            const toType = direction === 'regular-to-betting' ? '배팅 포인트' : '일반 포인트'
+            
+            const confirmed = await customConfirm(
+                '포인트 전환',
+                `${fromType} ${amount.toLocaleString()}P를 ${toType}로 전환하시겠습니까?`
+            )
+            
+            if (!confirmed) return
+            
+            try {
+                // 포인트 차감
+                await axios.post(`${API_BASE}/ticket-items/${currentTicketId}`, {
+                    item_type: 'point_request',
+                    item_data: {
+                        member_id: currentMember.id,
+                        point_type: direction === 'regular-to-betting' ? 'regular' : 'betting',
+                        transaction_type: 'deduct',
+                        amount: amount,
+                        description: `포인트 전환 (차감)`
+                    },
+                    notes: '포인트 전환'
+                })
+                
+                // 포인트 지급
+                await axios.post(`${API_BASE}/ticket-items/${currentTicketId}`, {
+                    item_type: 'point_request',
+                    item_data: {
+                        member_id: currentMember.id,
+                        point_type: direction === 'regular-to-betting' ? 'betting' : 'regular',
+                        transaction_type: 'add',
+                        amount: amount,
+                        description: `포인트 전환 (지급)`
+                    },
+                    notes: '포인트 전환'
+                })
+                
+                showToast('포인트 전환이 완료되었습니다', 'success')
+                closePointConversionModal()
+                
+                // 회원 정보 새로고침
+                const memberRes = await axios.get(`${API_BASE}/members/${currentMember.id}`)
+                currentMember = memberRes.data.member
+                
+                // 모든 잔액 표시 업데이트
+                updateModalBalances()
+                
+                // 티켓 상세 정보도 새로고침
+                await showTicketDetail(currentTicketId)
+                
+            } catch (error) {
+                console.error('포인트 전환 오류:', error)
+                showToast('포인트 전환 실패: ' + (error.response?.data?.error || error.message), 'error')
+            }
+        }
+        
+        // ==========================================
+        // 커스텀 확인 모달
+        // ==========================================
+        let confirmResolve = null
+        
+        function customConfirm(title, message) {
+            return new Promise((resolve) => {
+                confirmResolve = resolve
+                document.getElementById('confirm-modal-title').textContent = title
+                document.getElementById('confirm-modal-message').textContent = message
+                document.getElementById('custom-confirm-modal').classList.remove('hidden')
+            })
+        }
+        
+        function closeCustomConfirm(result) {
+            document.getElementById('custom-confirm-modal').classList.add('hidden')
+            if (confirmResolve) {
+                confirmResolve(result)
+                confirmResolve = null
             }
         }
     </script>
