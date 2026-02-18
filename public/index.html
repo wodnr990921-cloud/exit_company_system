@@ -14010,9 +14010,11 @@ console.log('권한 관리 함수 로드 완료')
         // 포인트 승인/거부
         async function approvePointApproval(id, action) {
             const actionText = action === 'approve' ? '승인' : '거부'
-            if (!confirm(`이 포인트 요청을 ${actionText}하시겠습니까?`)) {
-                return
-            }
+            const confirmed = await customConfirm(
+                `포인트 ${actionText}`,
+                `이 포인트 요청을 ${actionText}하시겠습니까?`
+            )
+            if (!confirmed) return
             
             try {
                 await axios.post(`${API_BASE}/points/approve/${id}`, {
@@ -14029,9 +14031,11 @@ console.log('권한 관리 함수 로드 완료')
         
         // 동결 포인트 해제
         async function releaseFrozenPoint(id) {
-            if (!confirm('동결된 포인트를 해제하시겠습니까?')) {
-                return
-            }
+            const confirmed = await customConfirm(
+                '동결 포인트 해제',
+                '동결된 포인트를 해제하시겠습니까?'
+            )
+            if (!confirmed) return
             
             try {
                 await axios.post(`${API_BASE}/points/release-frozen/${id}`, {
@@ -14047,9 +14051,11 @@ console.log('권한 관리 함수 로드 완료')
         
         // 배팅 정산 승인
         async function approveSettlementApproval(id) {
-            if (!confirm('이 정산을 승인하시겠습니까?')) {
-                return
-            }
+            const confirmed = await customConfirm(
+                '정산 승인',
+                '이 정산을 승인하시겠습니까?'
+            )
+            if (!confirmed) return
             
             try {
                 await axios.post(`${API_BASE}/betting/settlements/${id}/approve`, {
@@ -14065,12 +14071,15 @@ console.log('권한 관리 함수 로드 완료')
         
         // 배팅 정산 거부
         async function rejectSettlementApproval(id) {
-            if (!confirm('이 정산을 거부하시겠습니까?')) {
-                return
-            }
+            const confirmed = await customConfirm(
+                '정산 거부',
+                '이 정산을 거부하시겠습니까?'
+            )
+            if (!confirmed) return
             
             const reason = prompt('거부 사유를 입력하세요:')
             if (!reason) {
+                showToast('거부 사유는 필수입니다.', 'warning')
                 return
             }
             
@@ -14090,14 +14099,17 @@ console.log('권한 관리 함수 로드 완료')
         // 티켓 결재
         async function approveTicket(ticketId, action) {
             const actionText = action === 'approve' ? '승인' : action === 'reject' ? '거부' : '보류'
-            if (!confirm(`이 티켓을 ${actionText}하시겠습니까?`)) {
-                return
-            }
+            const confirmed = await customConfirm(
+                `티켓 ${actionText}`,
+                `이 티켓을 ${actionText}하시겠습니까?`
+            )
+            if (!confirmed) return
             
             let notes = null
             if (action !== 'approve') {
                 notes = prompt(`${actionText} 사유를 입력하세요:`)
                 if (!notes) {
+                    showToast(`${actionText} 사유는 필수입니다.`, 'warning')
                     return
                 }
             }
