@@ -7839,12 +7839,6 @@ console.log('권한 관리 함수 로드 완료')
                     }
                 }
 
-                // 댓글 로드
-                await loadTicketComments(ticketId)
-
-                // 경기 데이터는 로드되었지만 요청사항 탭의 배팅 추가 모달에서 사용됨
-                // showAddRequestModal('betting')에서 loadMatchesForBetting()를 호출하여 경기 목록 표시
-
                 // 우편물 이미지 로드 (mailroom_id가 있는 경우)
                 if (ticket.mailroom_id) {
                     try {
