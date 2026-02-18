@@ -2172,6 +2172,7 @@
                                 <thead class="bg-gray-50">
                                     <tr>
                                         <th class="px-2 py-2 text-left">경기명</th>
+                                        <th class="px-2 py-2 text-left">리그</th>
                                         <th class="px-2 py-2 text-left">홈 vs 원정</th>
                                         <th class="px-2 py-2 text-left">경기일시</th>
                                         <th class="px-2 py-2 text-left">타입</th>
@@ -2182,7 +2183,7 @@
                                 </thead>
                                 <tbody id="match-list-table" class="divide-y">
                                     <tr>
-                                        <td colspan="7" class="px-2 py-4 text-center text-gray-500">경기를 불러오는 중...</td>
+                                        <td colspan="8" class="px-2 py-4 text-center text-gray-500">경기를 불러오는 중...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -2225,6 +2226,26 @@
                                 <label class="block text-sm font-medium mb-1">원정 팀 *</label>
                                 <input type="text" id="new-away-team" class="w-full px-3 py-2 border rounded" placeholder="리버풀" required>
                             </div>
+                        </div>
+                        
+                        <!-- 리그 선택 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">리그</label>
+                            <select id="new-league" class="w-full px-3 py-2 border rounded">
+                                <option value="EPL">EPL (잉글리시 프리미어리그)</option>
+                                <option value="LA_LIGA">라리가 (스페인)</option>
+                                <option value="SERIE_A">세리에A (이탈리아)</option>
+                                <option value="BUNDESLIGA">분데스리가 (독일)</option>
+                                <option value="LIGUE_1">리그1 (프랑스)</option>
+                                <option value="K_LEAGUE">K리그</option>
+                                <option value="MLB">MLB (메이저리그)</option>
+                                <option value="KBO">KBO</option>
+                                <option value="NBA">NBA</option>
+                                <option value="KBL">KBL</option>
+                                <option value="NFL">NFL</option>
+                                <option value="NHL">NHL</option>
+                                <option value="ETC" selected>기타</option>
+                            </select>
                         </div>
                         
                         <!-- 배팅 타입 -->
@@ -5619,6 +5640,22 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
                 
+                const leagueNames = {
+                    'EPL': 'EPL',
+                    'LA_LIGA': '라리가',
+                    'SERIE_A': '세리에A',
+                    'BUNDESLIGA': '분데스',
+                    'LIGUE_1': '리그1',
+                    'K_LEAGUE': 'K리그',
+                    'MLB': 'MLB',
+                    'KBO': 'KBO',
+                    'NBA': 'NBA',
+                    'KBL': 'KBL',
+                    'NFL': 'NFL',
+                    'NHL': 'NHL',
+                    'ETC': '기타'
+                }
+                
                 container.innerHTML = matches.map(m => {
                     let bettingInfo = []
                     if (m.home_odds && m.draw_odds && m.away_odds) {
@@ -5635,7 +5672,12 @@ console.log('권한 관리 함수 로드 완료')
                         <div class="border rounded p-3 hover:bg-gray-50">
                             <div class="flex justify-between items-start mb-2">
                                 <div class="flex-1">
-                                    <p class="font-bold">${m.match_name}</p>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                                            ${leagueNames[m.league] || m.league || '기타'}
+                                        </span>
+                                        <p class="font-bold">${m.match_name}</p>
+                                    </div>
                                     <p class="text-sm text-gray-600">${m.home_team} vs ${m.away_team}</p>
                                 </div>
                                 <span class="text-xs px-2 py-1 rounded ${
@@ -6462,8 +6504,24 @@ console.log('권한 관리 함수 로드 완료')
                 if (!tbody) return
                 
                 if (matches.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="px-2 py-4 text-center text-gray-500">등록된 경기가 없습니다</td></tr>'
+                    tbody.innerHTML = '<tr><td colspan="8" class="px-2 py-4 text-center text-gray-500">등록된 경기가 없습니다</td></tr>'
                     return
+                }
+                
+                const leagueNames = {
+                    'EPL': 'EPL',
+                    'LA_LIGA': '라리가',
+                    'SERIE_A': '세리에A',
+                    'BUNDESLIGA': '분데스',
+                    'LIGUE_1': '리그1',
+                    'K_LEAGUE': 'K리그',
+                    'MLB': 'MLB',
+                    'KBO': 'KBO',
+                    'NBA': 'NBA',
+                    'KBL': 'KBL',
+                    'NFL': 'NFL',
+                    'NHL': 'NHL',
+                    'ETC': '기타'
                 }
                 
                 tbody.innerHTML = matches.map(m => {
@@ -6500,6 +6558,11 @@ console.log('권한 관리 함수 로드 완료')
                     return `
                         <tr class="hover:bg-gray-50">
                             <td class="px-2 py-2 font-medium">${m.match_name}</td>
+                            <td class="px-2 py-2 text-sm">
+                                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                                    ${leagueNames[m.league] || m.league || '기타'}
+                                </span>
+                            </td>
                             <td class="px-2 py-2">${m.home_team} vs ${m.away_team}</td>
                             <td class="px-2 py-2">${new Date(m.match_date).toLocaleString('ko-KR', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'})}</td>
                             <td class="px-2 py-2 text-xs">${bettingType.join(', ') || '-'}</td>
@@ -6521,7 +6584,7 @@ console.log('권한 관리 함수 로드 완료')
                 console.error('경기 관리 목록 로드 오류:', error)
                 const tbody = document.getElementById('match-list-table')
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="px-2 py-4 text-center text-red-500">경기 목록 로드 실패</td></tr>'
+                    tbody.innerHTML = '<tr><td colspan="8" class="px-2 py-4 text-center text-red-500">경기 목록 로드 실패</td></tr>'
                 }
             }
         }
@@ -6571,6 +6634,7 @@ console.log('권한 관리 함수 로드 완료')
                         home_team: document.getElementById('new-home-team').value,
                         away_team: document.getElementById('new-away-team').value,
                         match_date: document.getElementById('new-match-date').value,
+                        league: document.getElementById('new-league').value,
                         betting_type: document.getElementById('new-betting-type').value
                     }
                     
@@ -11157,13 +11221,36 @@ console.log('권한 관리 함수 로드 완료')
         // 경기 목록 로드
         async function loadMatchesForBetting() {
             try {
-                const response = await axios.get(`${API_BASE}/betting/matches?status=open`)
-                const matches = response.data.matches || []
+                // scheduled와 open 상태의 경기를 모두 가져오기
+                const response = await axios.get(`${API_BASE}/betting/matches`)
+                const allMatches = response.data.matches || []
+                const matches = allMatches.filter(m => m.status === 'open' || m.status === 'scheduled')
                 
                 const container = document.getElementById('modal-betting-matches-list')
+                if (!container) {
+                    console.error('modal-betting-matches-list 엘리먼트를 찾을 수 없습니다')
+                    return
+                }
+                
                 if (matches.length === 0) {
                     container.innerHTML = '<p class="text-gray-500 text-center">진행 중인 경기가 없습니다</p>'
                     return
+                }
+                
+                const leagueNames = {
+                    'EPL': 'EPL',
+                    'LA_LIGA': '라리가',
+                    'SERIE_A': '세리에A',
+                    'BUNDESLIGA': '분데스',
+                    'LIGUE_1': '리그1',
+                    'K_LEAGUE': 'K리그',
+                    'MLB': 'MLB',
+                    'KBO': 'KBO',
+                    'NBA': 'NBA',
+                    'KBL': 'KBL',
+                    'NFL': 'NFL',
+                    'NHL': 'NHL',
+                    'ETC': '기타'
                 }
                 
                 container.innerHTML = matches.map(m => {
@@ -11273,7 +11360,12 @@ console.log('권한 관리 함수 로드 완료')
                     return `
                         <div class="border rounded p-2 hover:bg-gray-50">
                             <div class="flex justify-between items-center mb-2">
-                                <span class="font-medium">${m.home_team} vs ${m.away_team}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                                        ${leagueNames[m.league] || m.league || '기타'}
+                                    </span>
+                                    <span class="font-medium">${m.home_team} vs ${m.away_team}</span>
+                                </div>
                                 <span class="text-xs text-gray-500">${new Date(m.match_date).toLocaleDateString()}</span>
                             </div>
                             ${optionsHtml}
@@ -12796,9 +12888,9 @@ console.log('권한 관리 함수 로드 완료')
         // 엑셀 템플릿 다운로드
         function downloadMatchTemplate() {
             const template = [
-                ['경기명', '홈팀', '원정팀', '경기일시', '홈승배당', '무승부배당', '원정승배당', '언오버기준', '오버배당', '언더배당', '핸디캡', '핸디캡홈배당', '핸디캡원정배당'],
-                ['EPL 10R', '맨체스터 유나이티드', '리버풀', '2026-02-20 20:00', '1.50', '3.20', '2.10', '2.5', '1.85', '1.95', '-0.5', '1.85', '1.95'],
-                ['라리가 12R', '레알 마드리드', 'FC 바르셀로나', '2026-02-21 23:00', '1.90', '3.50', '1.80', '', '', '', '', '', '']
+                ['경기명', '홈팀', '원정팀', '리그', '경기일시', '홈승배당', '무승부배당', '원정승배당', '언오버기준', '오버배당', '언더배당', '핸디캡', '핸디캡홈배당', '핸디캡원정배당'],
+                ['EPL 10R', '맨체스터 유나이티드', '리버풀', 'EPL', '2026-02-20 20:00', '1.50', '3.20', '2.10', '2.5', '1.85', '1.95', '-0.5', '1.85', '1.95'],
+                ['라리가 12R', '레알 마드리드', 'FC 바르셀로나', 'LA_LIGA', '2026-02-21 23:00', '1.90', '3.50', '1.80', '', '', '', '', '', '']
             ]
             
             const ws = XLSX.utils.aoa_to_sheet(template)
@@ -12860,24 +12952,25 @@ console.log('권한 관리 함수 로드 완료')
                         match_name: row[0],
                         home_team: row[1],
                         away_team: row[2],
-                        match_date: row[3],
+                        league: row[3] || 'ETC',
+                        match_date: row[4],
                         betting_type: 'win_draw_lose' // 기본값
                     }
                     
                     // 승무패 배당
-                    if (row[4]) match.home_odds = parseFloat(row[4])
-                    if (row[5]) match.draw_odds = parseFloat(row[5])
-                    if (row[6]) match.away_odds = parseFloat(row[6])
+                    if (row[5]) match.home_odds = parseFloat(row[5])
+                    if (row[6]) match.draw_odds = parseFloat(row[6])
+                    if (row[7]) match.away_odds = parseFloat(row[7])
                     
                     // 언오버 배당
-                    if (row[7]) match.over_line = parseFloat(row[7])
-                    if (row[8]) match.over_odds = parseFloat(row[8])
-                    if (row[9]) match.under_odds = parseFloat(row[9])
+                    if (row[8]) match.over_line = parseFloat(row[8])
+                    if (row[9]) match.over_odds = parseFloat(row[9])
+                    if (row[10]) match.under_odds = parseFloat(row[10])
                     
                     // 핸디캡 배당
-                    if (row[10]) match.handicap_line = parseFloat(row[10])
-                    if (row[11]) match.handicap_home_odds = parseFloat(row[11])
-                    if (row[12]) match.handicap_away_odds = parseFloat(row[12])
+                    if (row[11]) match.handicap_line = parseFloat(row[11])
+                    if (row[12]) match.handicap_home_odds = parseFloat(row[12])
+                    if (row[13]) match.handicap_away_odds = parseFloat(row[13])
                     
                     return match
                 })

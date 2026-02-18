@@ -57,7 +57,7 @@ betting.get('/matches', async (c) => {
 betting.post('/matches', async (c) => {
   try {
     const { 
-      match_name, match_date, home_team, away_team,
+      match_name, match_date, home_team, away_team, league,
       home_odds, away_odds, draw_odds,
       over_line, over_odds, under_odds,
       handicap_line, handicap_home_odds, handicap_away_odds
@@ -71,14 +71,14 @@ betting.post('/matches', async (c) => {
 
     const result = await c.env.DB.prepare(
       `INSERT INTO matches (
-        match_number, match_name, match_date, home_team, away_team,
+        match_number, match_name, match_date, home_team, away_team, league,
         home_odds, away_odds, draw_odds,
         over_line, over_odds, under_odds,
         handicap_line, handicap_home_odds, handicap_away_odds,
         status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
-      match_number, match_name, match_date, home_team, away_team,
+      match_number, match_name, match_date, home_team, away_team, league || 'ETC',
       home_odds || 1.0, away_odds || 1.0, draw_odds || null,
       over_line || null, over_odds || null, under_odds || null,
       handicap_line || null, handicap_home_odds || null, handicap_away_odds || null,
@@ -106,7 +106,7 @@ betting.post('/matches/bulk', async (c) => {
     }
 
     for (const match of matches) {
-      const { id, match_name, match_date, home_team, away_team, home_odds, draw_odds, away_odds } = match
+      const { id, match_name, match_date, home_team, away_team, league, home_odds, draw_odds, away_odds } = match
 
       if (!match_name || !match_date || !home_team || !away_team) {
         continue // 필수 필드 누락 시 스킵
@@ -116,11 +116,11 @@ betting.post('/matches/bulk', async (c) => {
         // 기존 경기 수정
         await c.env.DB.prepare(
           `UPDATE matches 
-           SET match_name = ?, match_date = ?, home_team = ?, away_team = ?,
+           SET match_name = ?, match_date = ?, home_team = ?, away_team = ?, league = ?,
                home_odds = ?, draw_odds = ?, away_odds = ?, updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`
         ).bind(
-          match_name, match_date, home_team, away_team,
+          match_name, match_date, home_team, away_team, league || 'ETC',
           home_odds || 1.0, draw_odds || null, away_odds || 1.0,
           id
         ).run()
@@ -129,14 +129,14 @@ betting.post('/matches/bulk', async (c) => {
         const match_number = `M${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
         await c.env.DB.prepare(
           `INSERT INTO matches (
-            match_number, match_name, match_date, home_team, away_team,
+            match_number, match_name, match_date, home_team, away_team, league,
             home_odds, away_odds, draw_odds,
             over_line, over_odds, under_odds,
             handicap_line, handicap_home_odds, handicap_away_odds,
             status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
-          match_number, match_name, match_date, home_team, away_team,
+          match_number, match_name, match_date, home_team, away_team, league || 'ETC',
           home_odds || 1.0, away_odds || 1.0, draw_odds || null,
           match.over_line || null, match.over_odds || null, match.under_odds || null,
           match.handicap_line || null, match.handicap_home_odds || null, match.handicap_away_odds || null,
