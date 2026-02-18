@@ -6656,7 +6656,7 @@ console.log('권한 관리 함수 로드 완료')
                 
                 await axios.patch(`${API_BASE}/staff/${currentEditingStaffId}`, updateData)
                 
-                alert('직원 정보가 업데이트되었습니다.')
+                showToast('직원 정보가 업데이트되었습니다.', 'success')
                 closeStaffDetail()
                 await loadStaff()
                 
@@ -6670,13 +6670,15 @@ console.log('권한 관리 함수 로드 완료')
         async function deleteStaff() {
             if (!currentEditingStaffId) return
             
-            if (!confirm('정말 이 직원을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
-                return
-            }
+            const confirmed = await customConfirm(
+                '직원 삭제',
+                '정말 이 직원을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.'
+            )
+            if (!confirmed) return
             
             try {
                 await axios.delete(`${API_BASE}/staff/${currentEditingStaffId}`)
-                alert('직원이 삭제되었습니다.')
+                showToast('직원이 삭제되었습니다.', 'success')
                 closeStaffDetail()
                 await loadStaff()
             } catch (error) {
@@ -6738,7 +6740,7 @@ console.log('권한 관리 함수 로드 완료')
                     role
                 })
                 
-                alert('직원이 등록되었습니다.')
+                showToast('직원이 등록되었습니다.', 'success')
                 closeNewStaffModal()
                 await loadStaff()
                 
@@ -6833,9 +6835,11 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
 
-                if (!confirm(`${date} 일일 마감을 실행하시겠습니까?\n\n마감 후에는 수정할 수 없습니다.`)) {
-                    return
-                }
+                const confirmed = await customConfirm(
+                    '일일 마감 실행',
+                    `${date} 일일 마감을 실행하시겠습니까?\n\n마감 후에는 수정할 수 없습니다.`
+                )
+                if (!confirmed) return
 
                 const notes = prompt('마감 메모를 입력하세요 (선택사항):')
 
@@ -7296,9 +7300,10 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 일괄 저장
                 await axios.post(`${API_BASE}/betting/matches/bulk`, { matches })
-                alert('경기가 저장되었습니다.')
+                showToast('경기가 저장되었습니다.', 'success')
                 closeMatchManagementModal()
-                await loadBetting()
+                await loadMatchManagement()
+                if (currentView === 'betting') await loadBetting()
             } catch (error) {
                 console.error('경기 저장 오류:', error)
                 alert('경기 저장 실패: ' + (error.response?.data?.error || error.message))
@@ -7312,11 +7317,15 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
             
-            if (!confirm('이 경기를 삭제하시겠습니까?')) return
+            const confirmed = await customConfirm(
+                '경기 삭제',
+                '이 경기를 삭제하시겠습니까?\n삭제된 경기는 복구할 수 없습니다.'
+            )
+            if (!confirmed) return
 
             try {
                 await axios.delete(`${API_BASE}/betting/matches/` + matchId)
-                alert('경기가 삭제되었습니다.')
+                showToast('경기가 삭제되었습니다.', 'success')
                 await loadMatchManagement()
             } catch (error) {
                 console.error('경기 삭제 오류:', error)
@@ -7471,8 +7480,9 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 await axios.post(`${API_BASE}/betting/matches`, data)
-                alert('경기가 등록되었습니다.')
+                showToast('경기가 등록되었습니다.', 'success')
                 closeNewMatchModal()
+                await loadMatchManagement()
                 if (currentView === 'betting') await loadBetting()
             } catch (error) {
                 alert('경기 등록 실패: ' + (error.response?.data?.error || error.message))
@@ -7502,8 +7512,9 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 await axios.post(`${API_BASE}/betting/matches/${currentMatchId}/result`, { result })
-                alert('경기 결과가 입력되고 자동 정산이 완료되었습니다.')
+                showToast('경기 결과가 입력되고 자동 정산이 완료되었습니다.', 'success')
                 closeMatchResultModal()
+                await loadMatchManagement()
                 if (currentView === 'betting') await loadBetting()
             } catch (error) {
                 alert('결과 입력 실패: ' + (error.response?.data?.error || error.message))
@@ -9161,7 +9172,7 @@ console.log('권한 관리 함수 로드 완료')
             try {
                 const response = await axios.post(`${API_BASE}/members`, data)
                 const newMemberId = response.data.member_id
-                alert('회원이 등록되었습니다.')
+                showToast('회원이 등록되었습니다.', 'success')
                 closeNewMemberModal()
                 
                 // 티켓 모달이 열려있으면 회원 목록 새로고침 및 자동 선택
@@ -9177,7 +9188,8 @@ console.log('권한 관리 함수 로드 완료')
                     document.getElementById('ticket-member').value = newMemberId
                 }
                 
-                if (currentView === 'members') await loadMembers()
+                // 회원 페이지에서든 티켓 페이지에서든 무조건 갱신
+                await loadMembers()
             } catch (error) {
                 alert('회원 등록 실패: ' + (error.response?.data?.error || error.message))
             }
@@ -9819,12 +9831,17 @@ console.log('권한 관리 함수 로드 완료')
         }
 
         async function deleteMailItem(mailroomId) {
-            if (!confirm('이 우편물을 삭제하시겠습니까?')) return
+            const confirmed = await customConfirm(
+                '우편물 삭제',
+                '이 우편물을 삭제하시겠습니까?\n삭제된 우편물은 복구할 수 없습니다.'
+            )
+            if (!confirmed) return
             
             try {
                 await axios.delete(`${API_BASE}/mailroom/${mailroomId}`)
-                alert('삭제되었습니다.')
+                showToast('삭제되었습니다.', 'success')
                 await loadPendingMail()
+                await loadMailroom()  // 우편물 전체 페이지도 갱신
             } catch (error) {
                 console.error('삭제 오류:', error)
                 alert('삭제 실패: ' + (error.response?.data?.error || error.message))
@@ -10096,16 +10113,21 @@ console.log('권한 관리 함수 로드 완료')
 
         async function deleteMailItem(mailId) {
             if (!isAdmin()) {
-                alert('우편물 삭제는 관리자만 가능합니다.')
+                showToast('우편물 삭제는 관리자만 가능합니다.', 'error')
                 return
             }
             
-            if (!confirm('이 우편물을 삭제하시겠습니까?')) return
+            const confirmed = await customConfirm(
+                '우편물 삭제',
+                '이 우편물을 삭제하시겠습니까?\n삭제된 우편물은 복구할 수 없습니다.'
+            )
+            if (!confirmed) return
 
             try {
                 await axios.delete(`${API_BASE}/mailroom/${mailId}`)
-                alert('우편물이 삭제되었습니다.')
+                showToast('우편물이 삭제되었습니다.', 'success')
                 await loadPendingMail()
+                await loadMailroom()  // 우편물 전체 페이지도 갱신
             } catch (error) {
                 console.error('우편물 삭제 오류:', error)
                 alert('삭제 실패: ' + (error.response?.data?.error || error.message))
@@ -11613,9 +11635,9 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 await axios.post(`${API_BASE}/books`, data)
-                alert('도서가 등록되었습니다.')
+                showToast('도서가 등록되었습니다.', 'success')
                 closeNewBookModal()
-                if (currentView === 'books') await loadBooks()
+                await loadBooks()
             } catch (error) {
                 alert('도서 등록 실패: ' + (error.response?.data?.error || error.message))
             }
@@ -11692,9 +11714,9 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 await axios.patch(`${API_BASE}/books/${currentBookId}`, data)
-                alert('도서 정보가 수정되었습니다.')
+                showToast('도서 정보가 수정되었습니다.', 'success')
                 closeBookDetail()
-                if (currentView === 'books') await loadBooks()
+                await loadBooks()
             } catch (error) {
                 alert('도서 수정 실패: ' + (error.response?.data?.error || error.message))
             }
@@ -11708,13 +11730,17 @@ console.log('권한 관리 함수 로드 완료')
             
             if (!currentBookId) return
 
-            if (!confirm('정말 이 도서를 삭제하시겠습니까?')) return
+            const confirmed = await customConfirm(
+                '도서 삭제',
+                '정말 이 도서를 삭제하시겠습니까?\n삭제된 도서는 복구할 수 없습니다.'
+            )
+            if (!confirmed) return
 
             try {
                 await axios.delete(`${API_BASE}/books/${currentBookId}`)
-                alert('도서가 삭제되었습니다.')
+                showToast('도서가 삭제되었습니다.', 'success')
                 closeBookDetail()
-                if (currentView === 'books') await loadBooks()
+                await loadBooks()
             } catch (error) {
                 alert('도서 삭제 실패: ' + (error.response?.data?.error || error.message))
             }
@@ -11776,9 +11802,9 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 await axios.post(`${API_BASE}/staff`, data)
-                alert('직원이 등록되었습니다.')
+                showToast('직원이 등록되었습니다.', 'success')
                 closeNewStaffModal()
-                if (currentView === 'staff') await loadStaff()
+                await loadStaff()
             } catch (error) {
                 alert('직원 등록 실패: ' + (error.response?.data?.error || error.message))
             }
@@ -11978,9 +12004,9 @@ console.log('권한 관리 함수 로드 완료')
 
             try {
                 await axios.patch(`${API_BASE}/staff/${currentStaffDetailId}`, data)
-                alert('직원 정보가 수정되었습니다.')
+                showToast('직원 정보가 수정되었습니다.', 'success')
                 closeStaffDetail()
-                if (currentView === 'staff') await loadStaff()
+                await loadStaff()
             } catch (error) {
                 alert('직원 수정 실패: ' + (error.response?.data?.error || error.message))
             }
@@ -11995,13 +12021,17 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
 
-            if (!confirm('정말 이 직원을 삭제하시겠습니까?\n\n직원과 관련된 모든 데이터는 유지되지만, 로그인할 수 없게 됩니다.')) return
+            const confirmed = await customConfirm(
+                '직원 삭제',
+                '정말 이 직원을 삭제하시겠습니까?\n\n직원과 관련된 모든 데이터는 유지되지만, 로그인할 수 없게 됩니다.'
+            )
+            if (!confirmed) return
 
             try {
                 await axios.delete(`${API_BASE}/staff/${currentStaffDetailId}`)
-                alert('직원이 삭제되었습니다.')
+                showToast('직원이 삭제되었습니다.', 'success')
                 closeStaffDetail()
-                if (currentView === 'staff') await loadStaff()
+                await loadStaff()
             } catch (error) {
                 alert('직원 삭제 실패: ' + (error.response?.data?.error || error.message))
             }
