@@ -9132,8 +9132,10 @@ console.log('권한 관리 함수 로드 완료')
             if (tab === 'responses') {
                 // 답변실 기간 디폴트 오늘로 설정
                 const today = new Date().toISOString().split('T')[0]
-                const responseDate = document.getElementById('response-date-filter')
-                if (responseDate) responseDate.value = today
+                const startDate = document.getElementById('response-start-date')
+                const endDate = document.getElementById('response-end-date')
+                if (startDate) startDate.value = today
+                if (endDate) endDate.value = today
                 loadResponses()
             }
         }
@@ -13251,6 +13253,8 @@ console.log('권한 관리 함수 로드 완료')
         function setAdminClosingDate() {
             const today = new Date().toISOString().split('T')[0]
             document.getElementById('admin-closing-date').value = today
+            // 자동으로 오늘 데이터 로드
+            loadAdminClosingData()
         }
         
         // 관리자 페이지 - 마감 데이터 로드
@@ -13463,16 +13467,32 @@ console.log('권한 관리 함수 로드 완료')
                 
                 showToast('결재 목록을 불러오는 중...', 'info')
                 
-                // 병렬로 모든 데이터 로드
-                const [pointsRes, settlementsRes, ticketsRes] = await Promise.all([
-                    axios.get(`${API_BASE}/points/approval-list?start_date=${startDate}&end_date=${endDate}${status ? '&status=' + status : ''}`),
-                    axios.get(`${API_BASE}/betting/settlements?start_date=${startDate}&end_date=${endDate}${status ? '&status=' + status : ''}`),
-                    axios.get(`${API_BASE}/tickets/approval-list?start_date=${startDate}&end_date=${endDate}${status ? '&status=' + status : ''}`)
+                // 병렬로 모든 데이터 로드 (존재하는 API 사용)
+                const [pointsRes, settlementsRes] = await Promise.all([
+                    axios.get(`${API_BASE}/points/pending`).catch(() => ({ data: { transactions: [] } })),
+                    axios.get(`${API_BASE}/betting/settlements/pending`).catch(() => ({ data: { settlements: [] } }))
                 ])
                 
                 let points = pointsRes.data.transactions || []
                 let settlements = settlementsRes.data.settlements || []
-                let tickets = ticketsRes.data.tickets || []
+                let tickets = [] // 티켓 결재는 아직 API 미구현
+                
+                // 날짜 필터 적용 (클라이언트 사이드)
+                points = points.filter(p => {
+                    const createdDate = new Date(p.created_at).toISOString().split('T')[0]
+                    return createdDate >= startDate && createdDate <= endDate
+                })
+                
+                settlements = settlements.filter(s => {
+                    const createdDate = new Date(s.created_at).toISOString().split('T')[0]
+                    return createdDate >= startDate && createdDate <= endDate
+                })
+                
+                // 상태 필터 적용
+                if (status) {
+                    points = points.filter(p => p.status === status)
+                    settlements = settlements.filter(s => s.status === status)
+                }
                 
                 // 타입 필터 적용
                 if (type === 'point') {
