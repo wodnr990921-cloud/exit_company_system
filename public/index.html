@@ -1167,6 +1167,9 @@
                     <button onclick="showAdminTab('staff')" id="admin-tab-staff" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 whitespace-nowrap">
                         <i class="fas fa-user-tie mr-1"></i>직원 관리
                     </button>
+                    <button onclick="showAdminTab('approval')" id="admin-tab-approval" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 whitespace-nowrap">
+                        <i class="fas fa-stamp mr-1"></i>결재
+                    </button>
                     <button onclick="showAdminTab('closing')" id="admin-tab-closing" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 whitespace-nowrap">
                         <i class="fas fa-calculator mr-1"></i>일일 마감
                     </button>
@@ -1207,6 +1210,82 @@
 
                     <!-- 직원 목록 -->
                     <div id="admin-staff-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- 결재 탭 -->
+                <div id="admin-approval-tab" class="admin-tab-content hidden">
+                    <h3 class="text-xl font-bold mb-6"><i class="fas fa-stamp mr-2"></i>결재</h3>
+
+                    <!-- 필터 -->
+                    <div class="card mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">시작일</label>
+                                <input type="date" id="approval-start-date" class="w-full px-3 py-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">종료일</label>
+                                <input type="date" id="approval-end-date" class="w-full px-3 py-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">상태</label>
+                                <select id="approval-status-filter" class="w-full px-3 py-2 border rounded">
+                                    <option value="pending">대기중</option>
+                                    <option value="approved">승인됨</option>
+                                    <option value="rejected">거부됨</option>
+                                    <option value="">전체</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">타입</label>
+                                <select id="approval-type-filter" class="w-full px-3 py-2 border rounded">
+                                    <option value="">전체</option>
+                                    <option value="point">포인트 충전</option>
+                                    <option value="settlement">배팅 정산</option>
+                                    <option value="ticket">티켓 결재</option>
+                                    <option value="frozen">동결 포인트</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="loadApprovals()" class="btn btn-primary w-full">
+                                    <i class="fas fa-search mr-2"></i>조회
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 통계 카드 -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="card bg-yellow-50">
+                            <div class="text-sm text-yellow-600">대기중</div>
+                            <div class="text-2xl font-bold text-yellow-800" id="approval-pending-count">0</div>
+                        </div>
+                        <div class="card bg-green-50">
+                            <div class="text-sm text-green-600">승인됨</div>
+                            <div class="text-2xl font-bold text-green-800" id="approval-approved-count">0</div>
+                        </div>
+                        <div class="card bg-red-50">
+                            <div class="text-sm text-red-600">거부됨</div>
+                            <div class="text-2xl font-bold text-red-800" id="approval-rejected-count">0</div>
+                        </div>
+                        <div class="card bg-blue-50">
+                            <div class="text-sm text-blue-600">전체</div>
+                            <div class="text-2xl font-bold text-blue-800" id="approval-total-count">0</div>
+                        </div>
+                    </div>
+
+                    <!-- 결재 목록 -->
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-bold">결재 목록</h4>
+                            <button onclick="loadApprovals()" class="btn btn-sm btn-primary">
+                                <i class="fas fa-sync mr-2"></i>새로고침
+                            </button>
+                        </div>
+                        <div id="approval-list" class="space-y-4">
+                            <p class="text-gray-500 text-center py-8">조회 버튼을 클릭하세요.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 일일 마감 탭 -->
@@ -13107,6 +13186,9 @@ console.log('권한 관리 함수 로드 완료')
             // 탭별 데이터 로드
             if (tabName === 'staff') {
                 loadAdminStaff()
+            } else if (tabName === 'approval') {
+                initApprovalFilters()
+                loadApprovals()
             } else if (tabName === 'closing') {
                 setAdminClosingDate()
             } else if (tabName === 'modifications') {
@@ -13361,6 +13443,341 @@ console.log('권한 관리 함수 로드 완료')
             printClosingReport()
         }
         
+        // ==================== 결재 탭 함수 ====================
+        
+        // 결재 필터 초기화
+        function initApprovalFilters() {
+            const today = new Date().toISOString().split('T')[0]
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            
+            document.getElementById('approval-start-date').value = weekAgo
+            document.getElementById('approval-end-date').value = today
+        }
+        
+        // 결재 목록 로드
+        async function loadApprovals() {
+            try {
+                const startDate = document.getElementById('approval-start-date').value
+                const endDate = document.getElementById('approval-end-date').value
+                const status = document.getElementById('approval-status-filter').value
+                const type = document.getElementById('approval-type-filter').value
+                
+                if (!startDate || !endDate) {
+                    showToast('날짜를 선택해주세요.', 'warning')
+                    return
+                }
+                
+                showToast('결재 목록을 불러오는 중...', 'info')
+                
+                // 병렬로 모든 데이터 로드
+                const [pointsRes, settlementsRes, ticketsRes] = await Promise.all([
+                    axios.get(`${API_BASE}/points/approval-list?start_date=${startDate}&end_date=${endDate}${status ? '&status=' + status : ''}`),
+                    axios.get(`${API_BASE}/betting/settlements?start_date=${startDate}&end_date=${endDate}${status ? '&status=' + status : ''}`),
+                    axios.get(`${API_BASE}/tickets/approval-list?start_date=${startDate}&end_date=${endDate}${status ? '&status=' + status : ''}`)
+                ])
+                
+                let points = pointsRes.data.transactions || []
+                let settlements = settlementsRes.data.settlements || []
+                let tickets = ticketsRes.data.tickets || []
+                
+                // 타입 필터 적용
+                if (type === 'point') {
+                    settlements = []
+                    tickets = []
+                } else if (type === 'settlement') {
+                    points = []
+                    tickets = []
+                } else if (type === 'ticket') {
+                    points = []
+                    settlements = []
+                } else if (type === 'frozen') {
+                    // 동결 포인트만 (frozen_points > 0인 포인트)
+                    points = points.filter(p => p.frozen_amount > 0)
+                    settlements = []
+                    tickets = []
+                }
+                
+                // 통계 업데이트
+                const allItems = [...points, ...settlements, ...tickets]
+                const pendingCount = allItems.filter(i => i.status === 'pending').length
+                const approvedCount = allItems.filter(i => i.status === 'approved').length
+                const rejectedCount = allItems.filter(i => i.status === 'rejected').length
+                
+                document.getElementById('approval-pending-count').textContent = pendingCount
+                document.getElementById('approval-approved-count').textContent = approvedCount
+                document.getElementById('approval-rejected-count').textContent = rejectedCount
+                document.getElementById('approval-total-count').textContent = allItems.length
+                
+                // 결재 목록 렌더링
+                renderApprovalList(points, settlements, tickets)
+                
+                showToast(`${allItems.length}건의 결재 항목을 불러왔습니다.`, 'success')
+            } catch (error) {
+                console.error('결재 목록 로드 오류:', error)
+                showToast(error.response?.data?.error || '결재 목록 로드 실패', 'error')
+            }
+        }
+        
+        // 결재 목록 렌더링
+        function renderApprovalList(points, settlements, tickets) {
+            const container = document.getElementById('approval-list')
+            
+            if (points.length === 0 && settlements.length === 0 && tickets.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">결재 항목이 없습니다.</p>'
+                return
+            }
+            
+            let html = ''
+            
+            // 포인트 충전 승인
+            if (points.length > 0) {
+                html += '<h4 class="font-bold text-lg mb-3 flex items-center"><i class="fas fa-coins mr-2 text-yellow-600"></i>포인트 충전 승인</h4>'
+                points.forEach(p => {
+                    const statusColor = p.status === 'pending' ? 'yellow' : p.status === 'approved' ? 'green' : 'red'
+                    const statusText = p.status === 'pending' ? '대기중' : p.status === 'approved' ? '승인됨' : '거부됨'
+                    const isFrozen = p.frozen_amount > 0
+                    
+                    html += `
+                        <div class="bg-${statusColor}-50 border border-${statusColor}-200 p-4 rounded-lg mb-3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="font-bold text-lg">${p.member_name}</span>
+                                        <span class="text-xs bg-${statusColor}-600 text-white px-2 py-1 rounded">${statusText}</span>
+                                        ${isFrozen ? '<span class="text-xs bg-orange-600 text-white px-2 py-1 rounded">동결</span>' : ''}
+                                    </div>
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <p><span class="font-semibold">금액:</span> ${Number(p.amount).toLocaleString()}P</p>
+                                        ${isFrozen ? `<p><span class="font-semibold">동결 금액:</span> ${Number(p.frozen_amount).toLocaleString()}P</p>` : ''}
+                                        <p><span class="font-semibold">타입:</span> ${p.point_type === 'regular' ? '일반 포인트' : '배팅 포인트'}</p>
+                                        <p><span class="font-semibold">설명:</span> ${p.description || '-'}</p>
+                                        <p><span class="font-semibold">요청일:</span> ${new Date(p.created_at).toLocaleString()}</p>
+                                        ${p.approved_at ? `<p><span class="font-semibold">처리일:</span> ${new Date(p.approved_at).toLocaleString()}</p>` : ''}
+                                        ${p.approved_by_name ? `<p><span class="font-semibold">처리자:</span> ${p.approved_by_name}</p>` : ''}
+                                    </div>
+                                </div>
+                                ${p.status === 'pending' ? `
+                                    <div class="flex flex-col gap-2 ml-4">
+                                        <button onclick="approvePointApproval(${p.id}, 'approve')" class="btn btn-success btn-sm whitespace-nowrap">
+                                            <i class="fas fa-check mr-1"></i>승인
+                                        </button>
+                                        <button onclick="approvePointApproval(${p.id}, 'reject')" class="btn btn-danger btn-sm whitespace-nowrap">
+                                            <i class="fas fa-times mr-1"></i>거부
+                                        </button>
+                                        ${isFrozen ? `
+                                            <button onclick="releaseFrozenPoint(${p.id})" class="btn btn-warning btn-sm whitespace-nowrap">
+                                                <i class="fas fa-unlock mr-1"></i>동결 해제
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `
+                })
+            }
+            
+            // 배팅 정산 승인
+            if (settlements.length > 0) {
+                html += '<h4 class="font-bold text-lg mb-3 mt-6 flex items-center"><i class="fas fa-trophy mr-2 text-green-600"></i>배팅 정산 승인</h4>'
+                settlements.forEach(s => {
+                    const statusColor = s.status === 'pending' ? 'yellow' : s.status === 'approved' ? 'green' : 'red'
+                    const statusText = s.status === 'pending' ? '대기중' : s.status === 'approved' ? '승인됨' : '거부됨'
+                    
+                    html += `
+                        <div class="bg-${statusColor}-50 border border-${statusColor}-200 p-4 rounded-lg mb-3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="font-bold text-lg">${s.member_name}</span>
+                                        <span class="text-xs bg-${statusColor}-600 text-white px-2 py-1 rounded">${statusText}</span>
+                                    </div>
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <p><span class="font-semibold">폴더:</span> ${s.folder_number}</p>
+                                        <p><span class="font-semibold">정산액:</span> ${Number(s.settlement_amount).toLocaleString()}P</p>
+                                        <p><span class="font-semibold">배팅액:</span> ${Number(s.bet_amount).toLocaleString()}P</p>
+                                        <p><span class="font-semibold">총 배당:</span> ${Number(s.total_odds).toFixed(2)}배</p>
+                                        <p><span class="font-semibold">요청일:</span> ${new Date(s.created_at).toLocaleString()}</p>
+                                        ${s.approved_at ? `<p><span class="font-semibold">처리일:</span> ${new Date(s.approved_at).toLocaleString()}</p>` : ''}
+                                        ${s.approved_by_name ? `<p><span class="font-semibold">처리자:</span> ${s.approved_by_name}</p>` : ''}
+                                    </div>
+                                </div>
+                                ${s.status === 'pending' ? `
+                                    <div class="flex flex-col gap-2 ml-4">
+                                        <button onclick="approveSettlementApproval(${s.id})" class="btn btn-success btn-sm whitespace-nowrap">
+                                            <i class="fas fa-check mr-1"></i>승인
+                                        </button>
+                                        <button onclick="rejectSettlementApproval(${s.id})" class="btn btn-danger btn-sm whitespace-nowrap">
+                                            <i class="fas fa-times mr-1"></i>거부
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `
+                })
+            }
+            
+            // 티켓 결재
+            if (tickets.length > 0) {
+                html += '<h4 class="font-bold text-lg mb-3 mt-6 flex items-center"><i class="fas fa-file-invoice mr-2 text-blue-600"></i>티켓 결재</h4>'
+                tickets.forEach(t => {
+                    const statusColor = t.approval_status === 'pending' ? 'yellow' : t.approval_status === 'approved' ? 'green' : 'red'
+                    const statusText = t.approval_status === 'pending' ? '대기중' : t.approval_status === 'approved' ? '승인됨' : '거부됨'
+                    
+                    html += `
+                        <div class="bg-${statusColor}-50 border border-${statusColor}-200 p-4 rounded-lg mb-3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="font-bold text-lg">${t.ticket_number}</span>
+                                        <span class="text-xs bg-${statusColor}-600 text-white px-2 py-1 rounded">${statusText}</span>
+                                    </div>
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <p><span class="font-semibold">제목:</span> ${t.title}</p>
+                                        <p><span class="font-semibold">회원:</span> ${t.member_name || '미지정'}</p>
+                                        <p><span class="font-semibold">유형:</span> ${t.ticket_type}</p>
+                                        <p><span class="font-semibold">담당:</span> ${t.assigned_to_name || '미배정'}</p>
+                                        <p><span class="font-semibold">생성일:</span> ${new Date(t.created_at).toLocaleString()}</p>
+                                        ${t.approval_date ? `<p><span class="font-semibold">결재일:</span> ${new Date(t.approval_date).toLocaleString()}</p>` : ''}
+                                        ${t.approval_by_name ? `<p><span class="font-semibold">결재자:</span> ${t.approval_by_name}</p>` : ''}
+                                    </div>
+                                </div>
+                                ${t.approval_status === 'pending' ? `
+                                    <div class="flex flex-col gap-2 ml-4">
+                                        <button onclick="approveTicket(${t.id}, 'approve')" class="btn btn-success btn-sm whitespace-nowrap">
+                                            <i class="fas fa-check mr-1"></i>승인
+                                        </button>
+                                        <button onclick="approveTicket(${t.id}, 'reject')" class="btn btn-danger btn-sm whitespace-nowrap">
+                                            <i class="fas fa-times mr-1"></i>거부
+                                        </button>
+                                        <button onclick="approveTicket(${t.id}, 'hold')" class="btn btn-warning btn-sm whitespace-nowrap">
+                                            <i class="fas fa-pause mr-1"></i>보류
+                                        </button>
+                                        <button onclick="showTicketDetail(${t.id})" class="btn btn-secondary btn-sm whitespace-nowrap">
+                                            <i class="fas fa-eye mr-1"></i>상세
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `
+                })
+            }
+            
+            container.innerHTML = html
+        }
+        
+        // 포인트 승인/거부
+        async function approvePointApproval(id, action) {
+            const actionText = action === 'approve' ? '승인' : '거부'
+            if (!confirm(`이 포인트 요청을 ${actionText}하시겠습니까?`)) {
+                return
+            }
+            
+            try {
+                await axios.post(`${API_BASE}/points/approve/${id}`, {
+                    approved_by: currentStaff.id,
+                    action
+                })
+                showToast(`포인트 요청이 ${actionText}되었습니다.`, 'success')
+                await loadApprovals()
+            } catch (error) {
+                console.error('포인트 승인 오류:', error)
+                showToast(error.response?.data?.error || `${actionText} 처리 실패`, 'error')
+            }
+        }
+        
+        // 동결 포인트 해제
+        async function releaseFrozenPoint(id) {
+            if (!confirm('동결된 포인트를 해제하시겠습니까?')) {
+                return
+            }
+            
+            try {
+                await axios.post(`${API_BASE}/points/release-frozen/${id}`, {
+                    released_by: currentStaff.id
+                })
+                showToast('동결 포인트가 해제되었습니다.', 'success')
+                await loadApprovals()
+            } catch (error) {
+                console.error('동결 해제 오류:', error)
+                showToast(error.response?.data?.error || '동결 해제 실패', 'error')
+            }
+        }
+        
+        // 배팅 정산 승인
+        async function approveSettlementApproval(id) {
+            if (!confirm('이 정산을 승인하시겠습니까?')) {
+                return
+            }
+            
+            try {
+                await axios.post(`${API_BASE}/betting/settlements/${id}/approve`, {
+                    approved_by: currentStaff.id
+                })
+                showToast('정산이 승인되었습니다.', 'success')
+                await loadApprovals()
+            } catch (error) {
+                console.error('정산 승인 오류:', error)
+                showToast(error.response?.data?.error || '정산 승인 실패', 'error')
+            }
+        }
+        
+        // 배팅 정산 거부
+        async function rejectSettlementApproval(id) {
+            if (!confirm('이 정산을 거부하시겠습니까?')) {
+                return
+            }
+            
+            const reason = prompt('거부 사유를 입력하세요:')
+            if (!reason) {
+                return
+            }
+            
+            try {
+                await axios.post(`${API_BASE}/betting/settlements/${id}/reject`, {
+                    rejected_by: currentStaff.id,
+                    reason
+                })
+                showToast('정산이 거부되었습니다.', 'success')
+                await loadApprovals()
+            } catch (error) {
+                console.error('정산 거부 오류:', error)
+                showToast(error.response?.data?.error || '정산 거부 실패', 'error')
+            }
+        }
+        
+        // 티켓 결재
+        async function approveTicket(ticketId, action) {
+            const actionText = action === 'approve' ? '승인' : action === 'reject' ? '거부' : '보류'
+            if (!confirm(`이 티켓을 ${actionText}하시겠습니까?`)) {
+                return
+            }
+            
+            let notes = null
+            if (action !== 'approve') {
+                notes = prompt(`${actionText} 사유를 입력하세요:`)
+                if (!notes) {
+                    return
+                }
+            }
+            
+            try {
+                await axios.post(`${API_BASE}/tickets/${ticketId}/approve`, {
+                    approval_status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'hold',
+                    approval_by: currentStaff.id,
+                    approval_notes: notes
+                })
+                showToast(`티켓이 ${actionText}되었습니다.`, 'success')
+                await loadApprovals()
+            } catch (error) {
+                console.error('티켓 결재 오류:', error)
+                showToast(error.response?.data?.error || `티켓 ${actionText} 실패`, 'error')
+            }
+        }
+        
+
         // 관리자 페이지 - 수정 요청 로드
         async function loadAdminModifications() {
             try {
