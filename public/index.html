@@ -832,6 +832,50 @@
                                 <i class="fas fa-cog mr-2"></i>경기 관리
                             </button>
                         </div>
+                        
+                        <!-- 경기 일정 필터 -->
+                        <div class="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">리그</label>
+                                <select id="schedule-league-filter" onchange="applyScheduleFilters()" class="w-full px-3 py-1.5 border rounded text-sm">
+                                    <option value="">전체</option>
+                                    <option value="EPL">EPL</option>
+                                    <option value="LA_LIGA">라리가</option>
+                                    <option value="SERIE_A">세리에A</option>
+                                    <option value="BUNDESLIGA">분데스리가</option>
+                                    <option value="LIGUE_1">리그1</option>
+                                    <option value="K_LEAGUE">K리그</option>
+                                    <option value="MLB">MLB</option>
+                                    <option value="KBO">KBO</option>
+                                    <option value="NBA">NBA</option>
+                                    <option value="WNBA">WNBA</option>
+                                    <option value="KBL">KBL</option>
+                                    <option value="WKBL">WKBL</option>
+                                    <option value="KOVO_M">KOVO남</option>
+                                    <option value="KOVO_W">KOVO여</option>
+                                    <option value="NFL">NFL</option>
+                                    <option value="NHL">NHL</option>
+                                    <option value="ETC">기타</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">팀 검색</label>
+                                <input type="text" id="schedule-team-filter" placeholder="팀명 입력..." 
+                                       onkeyup="applyScheduleFilters()" 
+                                       class="w-full px-3 py-1.5 border rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">상태</label>
+                                <select id="schedule-status-filter" onchange="applyScheduleFilters()" class="w-full px-3 py-1.5 border rounded text-sm">
+                                    <option value="">전체</option>
+                                    <option value="open" selected>진행중</option>
+                                    <option value="scheduled">예정</option>
+                                    <option value="closed">마감</option>
+                                    <option value="completed">완료</option>
+                                </select>
+                            </div>
+                        </div>
+                        
                         <p class="text-sm text-gray-600 mb-4">경기 종료 후 하루까지 표시됩니다</p>
                         <div id="match-schedule-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
                     </div>
@@ -5718,18 +5762,52 @@ console.log('권한 관리 함수 로드 완료')
 
         // 경기 일정 로드
         async function loadMatchSchedule() {
+            await applyScheduleFilters()
+        }
+        
+        // 경기 일정 필터 적용
+        async function applyScheduleFilters() {
             try {
-                // open, scheduled 상태 모두 조회
+                // 전체 경기 조회
                 const response = await axios.get(`${API_BASE}/betting/matches`)
-                const matches = (response.data.matches || []).filter(m => 
-                    m.status === 'open' || m.status === 'scheduled'
-                )
+                let matches = response.data.matches || []
+                
+                // 필터 값 가져오기
+                const leagueFilter = document.getElementById('schedule-league-filter')
+                const teamFilter = document.getElementById('schedule-team-filter')
+                const statusFilter = document.getElementById('schedule-status-filter')
+                
+                const league = leagueFilter ? leagueFilter.value : ''
+                const teamSearch = teamFilter ? teamFilter.value.toLowerCase().trim() : ''
+                const status = statusFilter ? statusFilter.value : ''
+                
+                // 리그 필터
+                if (league) {
+                    matches = matches.filter(m => m.league === league)
+                }
+                
+                // 팀 검색 필터
+                if (teamSearch) {
+                    matches = matches.filter(m => 
+                        m.home_team.toLowerCase().includes(teamSearch) || 
+                        m.away_team.toLowerCase().includes(teamSearch) ||
+                        m.match_name.toLowerCase().includes(teamSearch)
+                    )
+                }
+                
+                // 상태 필터 (기본값: open 또는 scheduled)
+                if (status) {
+                    matches = matches.filter(m => m.status === status)
+                } else {
+                    // 상태 필터가 비어있으면 진행중/예정만 표시
+                    matches = matches.filter(m => m.status === 'open' || m.status === 'scheduled')
+                }
                 
                 const container = document.getElementById('match-schedule-list')
                 if (!container) return
                 
                 if (matches.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-4">등록된 경기가 없습니다</p>'
+                    container.innerHTML = '<p class="text-gray-500 text-center py-4">조회된 경기가 없습니다</p>'
                     return
                 }
                 
