@@ -27,6 +27,7 @@ tickets.get('/', async (c) => {
       LEFT JOIN staff s ON t.assigned_to = s.id
       LEFT JOIN staff c ON t.created_by = c.id
       WHERE 1=1
+      AND t.ticket_number NOT LIKE 'TEMP-%'
     `
     const params: any[] = []
 
@@ -46,7 +47,7 @@ tickets.get('/', async (c) => {
     }
 
     // 총 개수 조회
-    let countQuery = `SELECT COUNT(*) as total FROM tickets t WHERE 1=1`
+    let countQuery = `SELECT COUNT(*) as total FROM tickets t WHERE 1=1 AND t.ticket_number NOT LIKE 'TEMP-%'`
     const countParams: any[] = []
     
     if (status && status !== 'all') {
