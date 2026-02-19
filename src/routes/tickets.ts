@@ -234,7 +234,14 @@ tickets.post('/', async (c) => {
     })
   } catch (error) {
     console.error('티켓 생성 오류:', error)
-    return c.json({ error: '티켓 생성 중 오류가 발생했습니다.' }, 500)
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
+    const errorStack = error instanceof Error ? error.stack : ''
+    console.error('에러 상세:', { message: errorMessage, stack: errorStack })
+    return c.json({ 
+      error: '티켓 생성 중 오류가 발생했습니다.', 
+      details: errorMessage,
+      stack: errorStack 
+    }, 500)
   }
 })
 
