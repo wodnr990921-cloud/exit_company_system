@@ -51,7 +51,7 @@ responses.get('/', async (c) => {
         r.*,
         m.name as member_name,
         m.member_number,
-        m.prison,
+        m.institution,
         t.ticket_number,
         t.title as ticket_title,
         s.name as printed_by_name
