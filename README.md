@@ -1,6 +1,16 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.5
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.6
 
-## ✅ 최근 업데이트 (v56.5 - 2026-02-19)
+## ✅ 최근 업데이트 (v56.6 - 2026-02-19)
+
+### ✨ 새로운 기능 (v56.6)
+- **🎫 티켓 생성 후 자동 상세 보기**: 
+  - 새 티켓 생성 시 자동으로 티켓 상세 모달 표시
+  - 이미지 업로드 시 좌측 이미지 뷰어에 바로 표시
+  - 티켓 생성 → 이미지 확인 → 작업 시작 흐름 간소화
+- **🖼️ image_keys 처리 개선**: 
+  - 배열/문자열 형태 모두 자동 처리
+  - `ticket.image_keys` 직접 사용 (metadata 불필요)
+  - 우편실 티켓과 일반 티켓 모두 동일한 이미지 표시 방식
 
 ### 🐛 버그 수정 (v56.5)
 - **🖼️ 이미지 표시 위치 수정**: 
@@ -22,11 +32,11 @@
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://76deb4fb.exit-company-system-5je.pages.dev/
-- **Build Size**: 152.70 kB (동일)
-- **Build Time**: 936 ms
-- **Deploy Time**: 10.3 sec
-- **Last Updated**: 2026-02-19 07:40 UTC
+- **Latest Preview**: https://a45e5014.exit-company-system-5je.pages.dev/
+- **Build Size**: 152.80 kB (동일)
+- **Build Time**: 919 ms
+- **Deploy Time**: 15.2 sec
+- **Last Updated**: 2026-02-19 08:15 UTC
 
 ## 🎯 주요 기능 (완료)
 
