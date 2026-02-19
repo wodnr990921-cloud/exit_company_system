@@ -8843,7 +8843,13 @@ console.log('권한 관리 함수 로드 완료')
                 const assignedSelect = document.getElementById('update-ticket-assigned')
                 if (assignedSelect) {
                     assignedSelect.innerHTML = '<option value="">미배정</option>' + 
-                        staffList.map(s => `<option value="${s.id}" ${ticket.assigned_to === s.id ? 'selected' : ''}>${s.name} (${s.role === 'admin' ? '관리자' : '직원'})</option>`).join('')
+                        staffList.map(s => {
+                            let roleText = '직원'
+                            if (s.role === 'admin') roleText = '관리자'
+                            else if (s.role === 'viewer') roleText = '뷰어'
+                            const selected = ticket.assigned_to === s.id ? 'selected' : ''
+                            return `<option value="${s.id}" ${selected}>${s.name} (${roleText})</option>`
+                        }).join('')
                 }
 
                 // 회원 관리 카드 렌더링
@@ -12153,7 +12159,8 @@ console.log('권한 관리 함수 로드 완료')
                     priority: 'normal',
                     title: `우편물 처리: ${memberName}`,
                     description: detailedDescription,
-                    metadata: mailroomData  // 우편물 메타데이터 (이미지, OCR 등)
+                    metadata: mailroomData,  // 우편물 메타데이터 (이미지, OCR 등)
+                    image_keys: imageKeys    // 이미지 키 배열 직접 전달
                 })
                 
                 const ticketNumber = ticketRes.data.ticket_number  // ticket.ticket_number → ticket_number

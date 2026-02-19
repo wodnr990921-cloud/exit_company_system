@@ -138,7 +138,7 @@ tickets.get('/:id', async (c) => {
 tickets.post('/', async (c) => {
   try {
     const body = await c.req.json()
-    const { title, description, member_id, ticket_type, priority, assigned_to, created_by, betting_data, metadata } = body
+    const { title, description, member_id, ticket_type, priority, assigned_to, created_by, betting_data, metadata, image_keys } = body
 
     if (!title || !ticket_type || !created_by) {
       return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
@@ -150,12 +150,17 @@ tickets.post('/', async (c) => {
     // 상태 설정: assigned_to가 있으면 'assigned', 없으면 'open'
     const status = assigned_to ? 'assigned' : 'open'
 
+    // image_keys를 JSON 문자열로 변환
+    const imageKeysJson = image_keys ? JSON.stringify(image_keys) : null
+    // metadata를 JSON 문자열로 변환
+    const metadataJson = metadata ? JSON.stringify(metadata) : null
+
     const result = await c.env.DB.prepare(
-      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, status, assigned_to, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, status, assigned_to, created_by, metadata, image_keys)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       ticket_number, title, description || '', member_id || null, 
-      ticket_type, priority || 'normal', status, assigned_to || null, created_by
+      ticket_type, priority || 'normal', status, assigned_to || null, created_by, metadataJson, imageKeysJson
     ).run()
 
     const ticketId = result.meta.last_row_id
