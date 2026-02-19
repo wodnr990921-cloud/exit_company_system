@@ -2611,7 +2611,7 @@
         </div>
 
         <!-- 신규 회원 등록 확인 모달 -->
-        <div id="member-registration-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4">
+        <div id="member-registration-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[9997] flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-md w-full">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
@@ -4262,7 +4262,7 @@
     </div>
 
     <!-- 커스텀 확인 모달 -->
-    <div id="custom-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[70]">
+    <div id="custom-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[9998]">
         <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-md">
             <div class="px-6 py-4 border-b">
                 <h3 class="text-lg font-bold text-gray-800" id="confirm-modal-title">확인</h3>
@@ -4550,7 +4550,7 @@ function showToast(message, type = 'info', duration = 3000) {
 function createToastContainer() {
   const container = document.createElement('div')
   container.id = 'toast-container'
-  container.className = 'fixed top-4 right-4 z-[9999] space-y-2'
+  container.className = 'fixed top-4 right-4 z-[99999] space-y-2'
   document.body.appendChild(container)
   return container
 }
