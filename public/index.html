@@ -11290,21 +11290,41 @@ console.log('권한 관리 함수 로드 완료')
             const number = document.getElementById('inspection-number').value
             const institution = document.getElementById('inspection-institution').value
             const notes = document.getElementById('inspection-notes').value
+            const ocrText = document.getElementById('inspection-ocr-text').value
             
             try {
+                // 현재 우편물 정보 조회 (기존 OCR 결과 구조 유지)
+                const mailRes = await axios.get(`${API_BASE}/mailroom/${currentInspectionId}`)
+                const mailItem = mailRes.data.mailroom_item
+                
+                // OCR 결과 업데이트 (기존 구조 유지하면서 텍스트만 변경)
+                let ocrResult = null
+                if (mailItem.ocr_result) {
+                    try {
+                        ocrResult = JSON.parse(mailItem.ocr_result)
+                        // 첫 번째 OCR 결과의 텍스트만 업데이트
+                        if (ocrResult.results && ocrResult.results.length > 0) {
+                            ocrResult.results[0].text = ocrText
+                        }
+                    } catch (e) {
+                        console.error('OCR 결과 파싱 오류:', e)
+                    }
+                }
+                
                 await axios.put(`${API_BASE}/mailroom/${currentInspectionId}`, {
                     notes,
                     member_name: name,
                     member_number: number,
-                    institution
+                    institution,
+                    ocr_result: ocrResult ? JSON.stringify(ocrResult) : null
                 })
                 
-                alert('임시 저장되었습니다.')
+                showToast('임시 저장되었습니다.', 'success')
                 closeInspectionDetail()
                 await loadProcessedMail()
             } catch (error) {
                 console.error('저장 오류:', error)
-                alert('저장 실패: ' + (error.response?.data?.error || error.message))
+                showToast('저장 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
         
