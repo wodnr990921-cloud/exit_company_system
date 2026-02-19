@@ -21,6 +21,8 @@ export function requireRole(minRole: Role) {
   return async (c: Context, next: Next) => {
     const staffId = c.req.header('X-Staff-ID')
     
+    console.log('[Auth Middleware] Staff ID:', staffId)
+    
     if (!staffId) {
       return c.json({ error: '인증이 필요합니다.' }, 401)
     }
@@ -31,6 +33,8 @@ export function requireRole(minRole: Role) {
         SELECT id, email, name, role FROM staff WHERE id = ?
       `).bind(parseInt(staffId)).first()
 
+      console.log('[Auth Middleware] Staff from DB:', staff)
+
       if (!staff) {
         return c.json({ error: '직원 정보를 찾을 수 없습니다.' }, 404)
       }
@@ -38,6 +42,8 @@ export function requireRole(minRole: Role) {
       const userRole = staff.role as Role
       const userLevel = ROLE_HIERARCHY[userRole] || 0
       const requiredLevel = ROLE_HIERARCHY[minRole]
+
+      console.log('[Auth Middleware] Role check:', { userRole, userLevel, requiredLevel })
 
       if (userLevel < requiredLevel) {
         return c.json({ 
@@ -49,9 +55,11 @@ export function requireRole(minRole: Role) {
 
       // Context에 직원 정보 저장
       c.set('staff', staff)
+      console.log('[Auth Middleware] Staff set in context:', staff)
       await next()
     } catch (error) {
-      console.error('권한 검증 오류:', error)
+      console.error('[Auth Middleware] 권한 검증 오류:', error)
+      console.error('[Auth Middleware] Error details:', error instanceof Error ? error.message : String(error))
       return c.json({ error: '권한 검증 중 오류가 발생했습니다.' }, 500)
     }
   }
