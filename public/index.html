@@ -11552,7 +11552,7 @@ console.log('권한 관리 함수 로드 완료')
                     
                     if (members.length === 0) {
                         // 신규 회원 등록 확인 모달 표시
-                        return new Promise((resolve) => {
+                        const shouldRegister = await new Promise((resolve) => {
                             // 모달에 정보 표시
                             document.getElementById('member-reg-number').textContent = number
                             document.getElementById('member-reg-institution').textContent = institution || '미지정'
@@ -11566,25 +11566,25 @@ console.log('권한 관리 함수 로드 완료')
                                 institution,
                                 mailboxAddress
                             }
-                        }).then(async (shouldRegister) => {
-                            if (shouldRegister) {
-                                const newMemberRes = await axios.post(`${API_BASE}/members`, {
-                                    name,
-                                    member_number: number,
-                                    inmate_number: number,
-                                    institution: institution || '미지정',
-                                    po_box_address: mailboxAddress || '',
-                                    depositor_name: name,
-                                    status: 'active',
-                                    notes: '우편물 검수에서 자동 등록'
-                                })
-                                
-                                memberId = newMemberRes.data.member.id
-                                memberName = name
-                                showToast(`신규 회원이 등록되었습니다: ${name}`, 'success')
-                            }
-                            // shouldRegister가 false면 memberId는 null로 유지
                         })
+                        
+                        if (shouldRegister) {
+                            const newMemberRes = await axios.post(`${API_BASE}/members`, {
+                                name,
+                                member_number: number,
+                                inmate_number: number,
+                                institution: institution || '미지정',
+                                po_box_address: mailboxAddress || '',
+                                depositor_name: name,
+                                status: 'active',
+                                notes: '우편물 검수에서 자동 등록'
+                            })
+                            
+                            memberId = newMemberRes.data.member.id
+                            memberName = name
+                            showToast(`신규 회원이 등록되었습니다: ${name}`, 'success')
+                        }
+                        // shouldRegister가 false면 memberId는 null로 유지
                     } else {
                         // 기존 회원 매칭
                         memberId = members[0].id
