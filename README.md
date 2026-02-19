@@ -4,6 +4,96 @@
 
 ## 🆕 최신 업데이트 (2026-02-19)
 
+### 🔥 v54.0 티켓/회원 삭제 기능 + 티켓 생성 디버깅 강화 ✅
+
+**삭제 기능 추가 (관리자 전용)**:
+- ✅ **티켓 삭제**: 티켓 목록에서 삭제 버튼 (Admin만 표시)
+- ✅ **회원 삭제**: 회원 목록에서 삭제 버튼 (Admin만 표시)
+- ✅ **안전 확인**: 삭제 전 확인 다이얼로그
+- ✅ **CASCADE 삭제**: 티켓 삭제 시 댓글/아이템도 함께 삭제
+- ✅ **제약 조건**: 회원 삭제 시 관련 티켓이 있으면 삭제 불가
+
+**티켓 생성 디버깅 강화**:
+- ✅ **currentStaff 검증**: 로그인 정보 확인 추가
+- ✅ **상세 에러 로깅**: response.data.details 표시
+- ✅ **Toast 알림 개선**: alert() → showToast()
+- ✅ **디버깅 로그**: currentStaff 상태 로그 추가
+
+**UI 변경**:
+```
+회원 목록 카드:
+┌─────────────────────────────────┐
+│ 홍길동              [수정] [삭제] │ ← 빨간색 삭제 버튼
+│ 수용기관: 서울구치소              │
+│ 일반 포인트: 10,000원             │
+└─────────────────────────────────┘
+
+티켓 목록 카드:
+┌─────────────────────────────────┐
+│ T1234: 도서 주문          [삭제] │ ← 우측 상단
+│ 홍길동                            │
+│ [진행중] [보통] [주문]            │
+└─────────────────────────────────┘
+```
+
+**삭제 함수**:
+```javascript
+// 회원 삭제
+async function deleteMember(memberId, memberName) {
+    if (!hasPermission('delete')) {
+        showToast('삭제 권한이 없습니다.', 'error')
+        return
+    }
+    
+    const confirmed = await customConfirm(
+        `회원 "${memberName}"을(를) 삭제하시겠습니까?\n\n` +
+        `⚠️ 경고: 이 작업은 되돌릴 수 없습니다.\n` +
+        `관련 티켓이 있는 경우 삭제할 수 없습니다.`
+    )
+    
+    await axios.delete(`${API_BASE}/members/${memberId}`)
+    showToast('회원이 삭제되었습니다.', 'success')
+    loadMembers()
+}
+
+// 티켓 삭제
+async function deleteTicket(ticketId, ticketNumber) {
+    if (!hasPermission('delete')) {
+        showToast('삭제 권한이 없습니다.', 'error')
+        return
+    }
+    
+    const confirmed = await customConfirm(
+        `티켓 "${ticketNumber}"을(를) 삭제하시겠습니까?\n\n` +
+        `⚠️ 경고: 이 작업은 되돌릴 수 없습니다.\n` +
+        `관련 댓글 및 아이템도 함께 삭제됩니다.`
+    )
+    
+    await axios.delete(`${API_BASE}/tickets/${ticketId}`)
+    showToast('티켓이 삭제되었습니다.', 'success')
+    loadTickets()
+}
+```
+
+**백엔드 API**:
+- `DELETE /api/members/:id` - 회원 삭제 (Admin only, 관련 티켓 있으면 실패)
+- `DELETE /api/tickets/:id` - 티켓 삭제 (CASCADE: 댓글, 아이템)
+
+**배포 URL**:
+- 🌐 **최신 배포**: https://0c0d5fbb.exit-company-system-5je.pages.dev
+- 🔗 **메인 사이트**: https://exit-company-system.pages.dev
+- 📦 **GitHub**: https://github.com/wodnr990921-cloud/exit_company_system
+
+**빌드 정보**:
+- 빌드 크기: 150.89 kB (↑0.17 kB for delete features)
+- 빌드 시간: 912ms
+- 배포 시간: 11.0 초
+- 커밋: 
+  - `feat: Add delete functionality for tickets and members (admin only)`
+  - `fix: Add detailed error logging and validation for ticket creation`
+
+---
+
 ### 🔥 v53.0 답변 출력 템플릿 개선 ✅
 
 **새로운 레터헤드 적용**:
