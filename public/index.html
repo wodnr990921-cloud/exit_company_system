@@ -8455,8 +8455,22 @@ console.log('권한 관리 함수 로드 완료')
                 logActivity('ticket_delete', { ticket_id: ticketId, ticket_number: ticketNumber })
             } catch (error) {
                 console.error('티켓 삭제 오류:', error)
+                console.error('Error response:', error.response)
+                console.error('Error response data:', error.response?.data)
+                
                 const errorMsg = error.response?.data?.error || '티켓 삭제 중 오류가 발생했습니다.'
-                showToast(errorMsg, 'error')
+                const errorDetails = error.response?.data?.details
+                const errorStack = error.response?.data?.stack
+                
+                let fullErrorMsg = errorMsg
+                if (errorDetails) {
+                    fullErrorMsg += '\n상세: ' + errorDetails
+                }
+                if (errorStack) {
+                    console.error('Server stack trace:', errorStack)
+                }
+                
+                showToast(fullErrorMsg, 'error', 5000)
             }
         }
         
@@ -11287,6 +11301,7 @@ console.log('권한 관리 함수 로드 완료')
         
         // 검수 상세 모달 표시
         let currentInspectionId = null
+        let currentInspectionData = null
         
         async function showInspectionDetail(mailId) {
             try {
@@ -11295,6 +11310,9 @@ console.log('권한 관리 함수 로드 완료')
                 // 우편물 상세 정보 조회
                 const response = await axios.get(`${API_BASE}/mailroom/${mailId}`)
                 const item = response.data.mailroom_item
+                
+                // 전역 변수에 저장 (티켓 생성 시 사용)
+                currentInspectionData = item
                 
                 // 이미지 표시
                 const imageKeys = item.image_keys ? JSON.parse(item.image_keys) : []
@@ -12034,11 +12052,35 @@ console.log('권한 관리 함수 로드 완료')
                     title: `우편물: ${name}`,
                     description: `우편물 검수를 통해 생성된 티켓\n수신자: ${name}\n번호: ${number}\n기관: ${institution || '미지정'}`,
                     priority: 'normal',
+                    ticket_type: 'MAIL_INSPECTION',
                     status: 'open',
-                    assigned_to: currentStaff.id
+                    assigned_to: currentStaff.id,
+                    created_by: currentStaff.id
                 })
                 
-                const ticketId = ticketRes.data.id
+                const ticketId = ticketRes.data.ticket_id
+                
+                // 우편물 이미지를 티켓 이미지로 복사
+                const mailItem = currentInspectionData
+                if (mailItem && mailItem.image_keys) {
+                    try {
+                        // image_keys가 문자열인 경우 파싱
+                        const imageKeys = typeof mailItem.image_keys === 'string' 
+                            ? JSON.parse(mailItem.image_keys) 
+                            : mailItem.image_keys
+                        
+                        if (Array.isArray(imageKeys) && imageKeys.length > 0) {
+                            // 이미지 키를 티켓에 복사
+                            await axios.post(`${API_BASE}/tickets/${ticketId}/copy-images`, {
+                                image_keys: imageKeys
+                            })
+                            console.log(`${imageKeys.length}개의 우편물 이미지가 티켓에 복사되었습니다.`)
+                        }
+                    } catch (imgError) {
+                        console.error('우편물 이미지 복사 오류:', imgError)
+                        // 이미지 복사 실패는 무시하고 계속 진행
+                    }
+                }
                 
                 // 우편물에 티켓 연결
                 await axios.put(`${API_BASE}/mailroom/${currentInspectionId}`, {

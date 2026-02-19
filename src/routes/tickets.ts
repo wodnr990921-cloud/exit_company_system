@@ -306,6 +306,48 @@ tickets.post('/:id/images', async (c) => {
   }
 })
 
+// 우편물 이미지 키를 티켓에 복사
+tickets.post('/:id/copy-images', async (c) => {
+  try {
+    const ticket_id = c.req.param('id')
+    const { image_keys } = await c.req.json()
+
+    if (!image_keys || !Array.isArray(image_keys)) {
+      return c.json({ error: '유효한 이미지 키 배열이 필요합니다.' }, 400)
+    }
+
+    // 티켓의 기존 image_keys 조회
+    const ticket = await c.env.DB.prepare(
+      'SELECT image_keys FROM tickets WHERE id = ?'
+    ).bind(ticket_id).first()
+
+    let existingKeys: string[] = []
+    if (ticket && ticket.image_keys) {
+      try {
+        existingKeys = JSON.parse(ticket.image_keys as string)
+      } catch (e) {
+        existingKeys = []
+      }
+    }
+
+    // 중복 제거 후 병합
+    const allKeys = [...existingKeys, ...image_keys.filter(key => !existingKeys.includes(key))]
+
+    await c.env.DB.prepare(
+      'UPDATE tickets SET image_keys = ? WHERE id = ?'
+    ).bind(JSON.stringify(allKeys), ticket_id).run()
+
+    return c.json({ 
+      success: true, 
+      copied_keys: image_keys,
+      all_keys: allKeys
+    })
+  } catch (error) {
+    console.error('이미지 복사 오류:', error)
+    return c.json({ error: '이미지 업로드 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 티켓 이미지 조회
 tickets.get('/:id/images/:key', async (c) => {
   try {
@@ -614,7 +656,14 @@ tickets.delete('/:id', async (c) => {
     return c.json({ success: true })
   } catch (error) {
     console.error('티켓 삭제 오류:', error)
-    return c.json({ error: '티켓 삭제 중 오류가 발생했습니다.' }, 500)
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
+    const errorStack = error instanceof Error ? error.stack : ''
+    console.error('에러 상세:', { message: errorMessage, stack: errorStack })
+    return c.json({ 
+      error: '티켓 삭제 중 오류가 발생했습니다.', 
+      details: errorMessage,
+      stack: errorStack 
+    }, 500)
   }
 })
 
