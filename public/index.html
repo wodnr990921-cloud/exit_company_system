@@ -3739,6 +3739,16 @@
                                 <div class="flex gap-6">
                                     <!-- 좌측: 원문/요약/답변 영역 (75%) -->
                                     <div class="flex-1 space-y-4">
+                                        <!-- 우편물 이미지 (우편물 티켓인 경우만 표시) -->
+                                        <div id="mailroom-images-container" class="hidden bg-white border border-gray-200 rounded-lg p-4">
+                                            <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                                <i class="fas fa-images mr-2 text-purple-600"></i>우편물 이미지
+                                            </h4>
+                                            <div class="space-y-2">
+                                                <!-- JavaScript로 이미지 표시 -->
+                                            </div>
+                                        </div>
+                                        
                                         <!-- 원문 섹션 -->
                                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                                             <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
@@ -8369,16 +8379,70 @@ console.log('권한 관리 함수 로드 완료')
                     detailTicketCreated.textContent = new Date(ticket.created_at).toLocaleString()
                 }
                 
-                // 원문 표시
-                const detailTicketDescription = document.getElementById('detail-ticket-description')
-                if (detailTicketDescription) {
-                    detailTicketDescription.textContent = ticket.original || ticket.description || '원문 없음'
+                // 원문과 요약 파싱 (우편물 티켓인 경우)
+                let mailroomImages = []
+                let ocrOriginal = ''
+                let summary4Lines = ''
+                
+                // metadata에서 우편물 정보 파싱
+                if (ticket.metadata) {
+                    try {
+                        const metadata = JSON.parse(ticket.metadata)
+                        if (metadata.image_keys) {
+                            mailroomImages = metadata.image_keys
+                        }
+                        if (metadata.ocr_text) {
+                            ocrOriginal = metadata.ocr_text
+                        }
+                        if (metadata.summary) {
+                            summary4Lines = metadata.summary
+                        }
+                    } catch (e) {
+                        console.log('metadata 파싱 오류:', e)
+                    }
                 }
                 
-                // 요약 표시
+                // description에서 원문과 요약 파싱 (레거시 지원)
+                if (!ocrOriginal && ticket.description) {
+                    const ocrMatch = ticket.description.match(/📄 편지 원문\n([\s\S]*?)(?:\n\n|$)/)
+                    if (ocrMatch) {
+                        ocrOriginal = ocrMatch[1].trim()
+                    }
+                }
+                
+                if (!summary4Lines && ticket.description) {
+                    const summaryMatch = ticket.description.match(/📌 4줄 요약\n([\s\S]*?)(?:\n\n|$)/)
+                    if (summaryMatch) {
+                        summary4Lines = summaryMatch[1].trim()
+                    }
+                }
+                
+                // 우편물 이미지 표시 (좌측)
+                const mailroomImagesContainer = document.getElementById('mailroom-images-container')
+                if (mailroomImagesContainer) {
+                    if (mailroomImages.length > 0) {
+                        mailroomImagesContainer.innerHTML = mailroomImages.map(key => `
+                            <img src="/api/mailroom/image/${key}" 
+                                 class="w-full rounded border mb-2 cursor-pointer hover:opacity-80" 
+                                 onclick="viewImage('/api/mailroom/image/${key}')"
+                                 alt="우편물 이미지">
+                        `).join('')
+                        mailroomImagesContainer.classList.remove('hidden')
+                    } else {
+                        mailroomImagesContainer.classList.add('hidden')
+                    }
+                }
+                
+                // 원문 표시 (내용만)
+                const detailTicketDescription = document.getElementById('detail-ticket-description')
+                if (detailTicketDescription) {
+                    detailTicketDescription.textContent = ocrOriginal || ticket.description || '원문 없음'
+                }
+                
+                // 요약 표시 (4줄 요약만)
                 const summaryEl = document.getElementById('ticket-summary')
                 if (summaryEl) {
-                    summaryEl.textContent = ticket.summary || ticket.description || '요약 없음'
+                    summaryEl.textContent = summary4Lines || '요약 없음'
                 }
 
                 // 회원 잔액 표시 (우측 사이드바) - 2종류
@@ -11613,37 +11677,37 @@ console.log('권한 관리 함수 로드 완료')
                 })
                 
                 // 3. 티켓 생성 및 확정 (임시 티켓 → 정식 티켓)
-                // 상세 설명 작성 (OCR 원문, 요약, 이미지 포함)
-                let detailedDescription = '=== 우편물 검수 완료 ===\n\n'
+                // 상세 설명 작성 (발신자 정보, 4줄 요약, 원문)
+                let detailedDescription = ''
                 
                 if (memberId) {
                     detailedDescription += `📝 발신자 정보\n`
-                    detailedDescription += `- 이름: ${name}\n`
-                    detailedDescription += `- 수용번호: ${number}\n`
-                    detailedDescription += `- 기관: ${institution || '미지정'}\n\n`
+                    detailedDescription += `이름: ${name}\n`
+                    detailedDescription += `수용번호: ${number}\n`
+                    detailedDescription += `기관: ${institution || '미지정'}\n\n`
                 } else {
-                    detailedDescription += `⚠️ 회원: 미지정 (담당자가 추후 회원을 연결해주세요)\n\n`
+                    detailedDescription += `⚠️ 회원 미지정\n담당자가 추후 회원을 연결해주세요.\n\n`
                 }
                 
                 if (summary) {
-                    detailedDescription += `📌 4줄 요약:\n${summary}\n\n`
+                    detailedDescription += `📌 4줄 요약\n${summary}\n\n`
                 }
                 
                 if (ocrText) {
-                    detailedDescription += `📄 편지 원문:\n${ocrText}\n\n`
-                }
-                
-                if (imageKeys.length > 0) {
-                    detailedDescription += `📷 첨부 이미지 (${imageKeys.length}장):\n`
-                    imageKeys.forEach((key, idx) => {
-                        detailedDescription += `이미지 ${idx + 1}: /api/mailroom/image/${key}\n`
-                    })
-                    detailedDescription += '\n'
+                    detailedDescription += `📄 편지 원문\n${ocrText}\n\n`
                 }
                 
                 if (notes) {
-                    detailedDescription += `💬 비고:\n${notes}\n`
+                    detailedDescription += `💬 비고\n${notes}\n`
                 }
+                
+                // 이미지 키를 JSON으로 저장 (티켓 메타데이터로 사용)
+                const mailroomData = JSON.stringify({
+                    mailroom_id: currentInspectionId,
+                    image_keys: imageKeys,
+                    ocr_text: ocrText,
+                    summary: summary
+                })
                 
                 const ticketRes = await axios.post(`${API_BASE}/tickets`, {
                     member_id: memberId,  // null 가능 (미지정)
@@ -11652,7 +11716,8 @@ console.log('권한 관리 함수 로드 완료')
                     ticket_type: 'mailroom',
                     priority: 'normal',
                     title: `우편물 처리: ${memberName}`,
-                    description: detailedDescription
+                    description: detailedDescription,
+                    metadata: mailroomData  // 우편물 메타데이터 (이미지, OCR 등)
                 })
                 
                 const ticketNumber = ticketRes.data.ticket.ticket_number
