@@ -9686,7 +9686,24 @@ console.log('권한 관리 함수 로드 완료')
                 // 대시보드에서 생성한 경우 대시보드도 갱신
                 if (currentView === 'dashboard') await loadDashboard()
             } catch (error) {
-                alert('티켓 생성 실패: ' + (error.response?.data?.error || error.message))
+                console.error('티켓 생성 오류:', error)
+                console.error('Error response:', error.response)
+                console.error('Error response data:', error.response?.data)
+                console.error('Error response status:', error.response?.status)
+                
+                const errorMsg = error.response?.data?.error || error.message
+                const errorDetails = error.response?.data?.details
+                const errorStack = error.response?.data?.stack
+                
+                let fullErrorMsg = '티켓 생성 실패: ' + errorMsg
+                if (errorDetails) {
+                    fullErrorMsg += '\n상세: ' + errorDetails
+                }
+                if (errorStack) {
+                    console.error('Server stack trace:', errorStack)
+                }
+                
+                showToast(fullErrorMsg, 'error', 5000)
             }
         }
 
