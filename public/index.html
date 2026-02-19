@@ -14028,41 +14028,101 @@ console.log('권한 관리 함수 로드 완료')
                     <meta charset="UTF-8">
                     <title>답변서 출력</title>
                     <style>
-                        @page { margin: 2cm; }
-                        body { font-family: 'Noto Sans KR', sans-serif; line-height: 1.6; }
-                        .response { page-break-after: always; padding: 20px; }
-                        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-                        .notice { background: #f0f0f0; padding: 10px; margin: 10px 0; border-left: 4px solid #0066cc; }
-                        .content { margin: 20px 0; min-height: 200px; white-space: pre-wrap; }
-                        .footer { margin-top: 30px; }
-                        .recipient { text-align: right; margin-top: 20px; }
+                        @page { 
+                            margin: 0;
+                            size: A4;
+                        }
+                        body { 
+                            font-family: 'Noto Sans KR', sans-serif; 
+                            line-height: 1.8;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .response { 
+                            page-break-after: always;
+                            position: relative;
+                            width: 210mm;
+                            min-height: 297mm;
+                            padding: 0;
+                            margin: 0 auto;
+                            background: white;
+                        }
+                        .letterhead {
+                            width: 100%;
+                            height: auto;
+                            display: block;
+                        }
+                        .content-wrapper {
+                            padding: 20px 40px 40px 40px;
+                        }
+                        .recipient {
+                            text-align: left;
+                            margin: 30px 0 40px 0;
+                            font-size: 14pt;
+                            line-height: 1.6;
+                        }
+                        .recipient strong {
+                            font-size: 15pt;
+                        }
+                        .notice { 
+                            background: #f8f9fa; 
+                            padding: 15px; 
+                            margin: 20px 0; 
+                            border-left: 4px solid #1E40AF;
+                            font-size: 11pt;
+                        }
+                        .greeting {
+                            margin: 20px 0;
+                            font-size: 12pt;
+                            line-height: 1.8;
+                        }
+                        .content { 
+                            margin: 30px 0;
+                            min-height: 300px;
+                            white-space: pre-wrap;
+                            font-size: 12pt;
+                            line-height: 2.0;
+                        }
+                        .footer { 
+                            margin-top: 40px;
+                            text-align: right;
+                            font-size: 11pt;
+                        }
+                        .signature {
+                            text-align: center;
+                            margin-top: 60px;
+                            padding-top: 20px;
+                            border-top: 2px solid #333;
+                        }
+                        .signature img {
+                            width: 80px;
+                            height: auto;
+                            margin-bottom: 10px;
+                        }
                     </style>
                 </head>
                 <body>
                     ${responses.map(r => `
                         <div class="response">
-                            <div class="header">
-                                <h2>답변서</h2>
-                                <p>티켓번호: ${r.ticket_number || 'N/A'}</p>
-                            </div>
+                            <img src="https://www.genspark.ai/api/files/s/cwz3ZZQG" class="letterhead" alt="EXIT COMPANY">
                             
-                            ${responseSettings.header_notice ? `<div class="notice">${responseSettings.header_notice}</div>` : ''}
-                            
-                            <div class="recipient">
-                                <p>${r.recipient_name} 님 귀하</p>
-                                <p>${r.recipient_institution || ''}</p>
-                                ${responseSettings.show_received_date === 'true' ? `<p>수령일: ${new Date().toLocaleDateString()}</p>` : ''}
-                            </div>
-                            
-                            ${responseSettings.greeting ? `<div class="greeting">${responseSettings.greeting}</div>` : ''}
-                            
-                            <div class="content">${r.content}</div>
-                            
-                            ${responseSettings.footer ? `<div class="footer">${responseSettings.footer}</div>` : ''}
-                            
-                            <div class="footer">
-                                <p>EXIT COMPANY</p>
-                                <p>${new Date().toLocaleDateString()}</p>
+                            <div class="content-wrapper">
+                                <div class="recipient">
+                                    <strong>${r.po_box_address || r.recipient_institution || ''} ${r.recipient_number || ''} ${r.recipient_name} 님 귀하</strong>
+                                </div>
+                                
+                                ${responseSettings.header_notice ? `<div class="notice">${responseSettings.header_notice}</div>` : ''}
+                                
+                                ${responseSettings.greeting ? `<div class="greeting">${responseSettings.greeting}</div>` : ''}
+                                
+                                <div class="content">${r.content}</div>
+                                
+                                ${responseSettings.footer ? `<div class="footer">${responseSettings.footer}</div>` : ''}
+                                
+                                <div class="footer">
+                                    <p>${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                    <p style="margin-top: 20px; font-weight: bold;">EXIT COMPANY</p>
+                                </div>
                             </div>
                         </div>
                     `).join('')}
