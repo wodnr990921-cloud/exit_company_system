@@ -2616,7 +2616,7 @@
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold text-gray-800">
-                            <i class="fas fa-user-plus mr-2 text-blue-600"></i>회원 등록
+                            <i class="fas fa-user-plus mr-2 text-blue-600"></i>회원 등록 확인
                         </h3>
                         <button onclick="closeMemberRegistrationModal()" class="text-gray-500 hover:text-gray-700">
                             <i class="fas fa-times text-xl"></i>
@@ -2630,31 +2630,41 @@
                                 수용번호 "<strong id="member-reg-number"></strong>"를 
                                 "<strong id="member-reg-institution"></strong>"에서 찾을 수 없습니다.
                             </p>
+                            <p class="text-xs text-yellow-700 mt-2">
+                                💡 <strong>수용번호</strong>는 교도소 내부 번호입니다. (예: 343, 1234)<br>
+                                💡 <strong>회원번호</strong>는 시스템 고유번호입니다. (예: M0001, M0002)
+                            </p>
                         </div>
                         
                         <p class="text-sm text-gray-600 mb-2">처리 방법을 선택하세요:</p>
                         <div class="space-y-2">
                             <div class="bg-blue-50 border border-blue-200 rounded p-3">
                                 <p class="text-sm font-medium text-blue-800">
-                                    <i class="fas fa-user-plus mr-2"></i>신규 회원 등록
+                                    <i class="fas fa-ticket-alt mr-2"></i>티켓 등록
                                 </p>
-                                <p class="text-xs text-blue-600 mt-1">새로운 회원으로 시스템에 등록됩니다.</p>
+                                <p class="text-xs text-blue-600 mt-1">
+                                    신규 회원을 자동으로 생성하고 티켓을 등록합니다.<br>
+                                    회원번호는 자동으로 부여됩니다. (예: M0001)
+                                </p>
                             </div>
                             <div class="bg-gray-50 border border-gray-200 rounded p-3">
                                 <p class="text-sm font-medium text-gray-800">
-                                    <i class="fas fa-user-slash mr-2"></i>미지정으로 처리
+                                    <i class="fas fa-user-slash mr-2"></i>미지정 등록
                                 </p>
-                                <p class="text-xs text-gray-600 mt-1">회원 정보 없이 티켓만 생성됩니다. 담당자가 추후 연결할 수 있습니다.</p>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    회원 정보 없이 티켓만 생성됩니다.<br>
+                                    담당자가 티켓 상세에서 신규 회원을 등록하고 연결할 수 있습니다.
+                                </p>
                             </div>
                         </div>
                     </div>
                     
                     <div class="flex gap-2">
                         <button onclick="registerNewMember()" class="btn btn-primary flex-1">
-                            <i class="fas fa-user-plus mr-2"></i>신규 등록
+                            <i class="fas fa-ticket-alt mr-2"></i>티켓 등록
                         </button>
                         <button onclick="proceedAsUnassigned()" class="btn btn-secondary flex-1">
-                            <i class="fas fa-user-slash mr-2"></i>미지정 처리
+                            <i class="fas fa-user-slash mr-2"></i>미지정 등록
                         </button>
                     </div>
                 </div>
@@ -11571,7 +11581,6 @@ console.log('권한 관리 함수 로드 완료')
                         if (shouldRegister) {
                             const newMemberRes = await axios.post(`${API_BASE}/members`, {
                                 name,
-                                member_number: number,
                                 inmate_number: number,
                                 institution: institution || '미지정',
                                 po_box_address: mailboxAddress || '',
@@ -11580,9 +11589,10 @@ console.log('권한 관리 함수 로드 완료')
                                 notes: '우편물 검수에서 자동 등록'
                             })
                             
-                            memberId = newMemberRes.data.member.id
+                            memberId = newMemberRes.data.member_id
                             memberName = name
-                            showToast(`신규 회원이 등록되었습니다: ${name}`, 'success')
+                            const memberNumber = newMemberRes.data.member_number
+                            showToast(`신규 회원이 등록되었습니다: ${name} (${memberNumber})`, 'success')
                         }
                         // shouldRegister가 false면 memberId는 null로 유지
                     } else {
