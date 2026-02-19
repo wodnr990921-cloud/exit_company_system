@@ -137,7 +137,7 @@ tickets.get('/:id', async (c) => {
 tickets.post('/', async (c) => {
   try {
     const body = await c.req.json()
-    const { title, description, member_id, ticket_type, priority, assigned_to, created_by, betting_data } = body
+    const { title, description, member_id, ticket_type, priority, assigned_to, created_by, betting_data, metadata } = body
 
     if (!title || !ticket_type || !created_by) {
       return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
@@ -150,11 +150,11 @@ tickets.post('/', async (c) => {
     const status = assigned_to ? 'assigned' : 'open'
 
     const result = await c.env.DB.prepare(
-      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, status, assigned_to, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, status, assigned_to, created_by, metadata)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       ticket_number, title, description || '', member_id || null, 
-      ticket_type, priority || 'normal', status, assigned_to || null, created_by
+      ticket_type, priority || 'normal', status, assigned_to || null, created_by, metadata || null
     ).run()
 
     const ticketId = result.meta.last_row_id
