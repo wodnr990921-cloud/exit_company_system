@@ -1,13 +1,13 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v55.2
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v55.3
 
-## ✅ 최근 업데이트 (v55.2 - 2026-02-19)
+## ✅ 최근 업데이트 (v55.3 - 2026-02-19)
 
 ### 🐛 버그 수정
+- **티켓 삭제 Foreign Key 오류 해결**: 모든 관련 테이블(orders, bet_folders, bets, ticket_responses, point_transactions, mail_items) CASCADE 삭제 구현
 - **우편물 이미지 누락 문제 해결**: 우편물에서 티켓 생성 시 이미지가 자동으로 복사되도록 개선
 - **티켓 삭제 오류 로깅 강화**: 삭제 실패 시 상세 오류 메시지와 스택 트레이스 표시
 - **삭제 권한 문제 해결**: `ROLE_HIERARCHY`에 `delete` 권한 추가 (admin 레벨 3)
 - **티켓 생성 500 오류 해결**: `metadata` 컬럼이 DB 스키마에 없어 발생한 SQLITE_ERROR 수정
-- **오류 메시지 개선**: 서버 오류 발생 시 `details`와 `stack trace`를 콘솔과 Toast로 표시
 
 ### ✨ 새로운 기능
 - **우편물 이미지 복사 API**: `POST /api/tickets/:id/copy-images` 엔드포인트 추가
@@ -20,11 +20,11 @@
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://e098b208.exit-company-system-5je.pages.dev/
-- **Build Size**: 151.74 kB (↑ 0.87 kB)
-- **Build Time**: 879 ms
-- **Deploy Time**: 10.5 sec
-- **Last Updated**: 2026-02-19 05:00 UTC
+- **Latest Preview**: https://3e0ab3b4.exit-company-system-5je.pages.dev/
+- **Build Size**: 152.61 kB (↑ 0.87 kB)
+- **Build Time**: 878 ms
+- **Deploy Time**: 9.3 sec
+- **Last Updated**: 2026-02-19 05:15 UTC
 
 ## 🎯 주요 기능 (완료)
 
@@ -150,7 +150,7 @@ npm run db:migrate:prod
 
 ## 🐛 알려진 이슈
 
-없음 (v55.2 기준)
+없음 (v55.3 기준)
 
 ## 📝 다음 단계 권장사항
 
@@ -168,5 +168,5 @@ npm run db:migrate:prod
 ---
 
 **Last Updated**: 2026-02-19  
-**Version**: v55.2  
+**Version**: v55.3  
 **Status**: ✅ Production Ready
