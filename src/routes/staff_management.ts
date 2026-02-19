@@ -7,8 +7,8 @@ type Bindings = {
 
 const staff = new Hono<{ Bindings: Bindings }>()
 
-// 직원 목록 조회 - admin 권한 필요
-staff.get('/', requireRole(ROLES.ADMIN), async (c) => {
+// 직원 목록 조회 - staff 이상 권한 필요 (티켓 배정 등에 사용)
+staff.get('/', requireRole(ROLES.STAFF), async (c) => {
   try {
     const { results } = await c.env.DB.prepare(
       `SELECT id, email, name, role, created_at FROM staff ORDER BY created_at DESC`
