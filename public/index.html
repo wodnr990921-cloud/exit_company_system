@@ -8768,40 +8768,23 @@ console.log('권한 관리 함수 로드 완료')
                     }
                 }
                 
-                // 우편물 이미지 표시 (좌측)
-                console.log('🖼️ 이미지 컨테이너 렌더링 시작, 이미지 개수:', mailroomImages.length)
+                // 우편물 이미지 표시 (좌측 이미지 뷰어만 사용)
+                console.log('🖼️ 이미지 뷰어 초기화 시작, 이미지 개수:', mailroomImages.length)
                 
                 // 좌측 이미지 뷰어 초기화
                 if (mailroomImages.length > 0) {
-                    console.log('✅ 이미지 뷰어 초기화:', mailroomImages)
+                    console.log('✅ 좌측 이미지 뷰어 초기화:', mailroomImages)
                     initMailImageViewer(mailroomImages, ticket.id)
                 } else {
                     console.log('⚠️ 이미지가 없어서 뷰어 숨김')
                     initMailImageViewer([], ticket.id)
                 }
                 
-                // 우측 티켓 정보 탭의 이미지 컨테이너 (레거시)
+                // 우측 티켓 정보 탭의 이미지 컨테이너는 항상 숨김 (좌측 뷰어 사용)
                 const mailroomImagesContainer = document.getElementById('mailroom-images-container')
                 if (mailroomImagesContainer) {
-                    if (mailroomImages.length > 0) {
-                        // 티켓 이미지 엔드포인트 사용
-                        mailroomImagesContainer.innerHTML = mailroomImages.map((key, index) => {
-                            const imageUrl = `/api/tickets/${ticket.id}/images/${encodeURIComponent(key)}`
-                            console.log(`  이미지 ${index + 1}/${mailroomImages.length}:`, imageUrl)
-                            return `
-                                <img src="${imageUrl}" 
-                                     class="w-full rounded border mb-2 cursor-pointer hover:opacity-80" 
-                                     onclick="viewImage('${imageUrl}')"
-                                     onerror="console.error('이미지 로드 실패:', '${imageUrl}')"
-                                     alt="우편물 이미지 ${index + 1}">
-                            `
-                        }).join('')
-                        mailroomImagesContainer.classList.remove('hidden')
-                        console.log('✅ 우측 이미지 컨테이너 표시됨')
-                    } else {
-                        mailroomImagesContainer.classList.add('hidden')
-                        console.log('⚠️ 우측 이미지가 없어서 컨테이너 숨김')
-                    }
+                    mailroomImagesContainer.classList.add('hidden')
+                    console.log('🚫 우측 이미지 컨테이너 숨김 (좌측 뷰어 사용)')
                 }
                 
                 // 원문 표시 (내용만)
