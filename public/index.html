@@ -13270,13 +13270,18 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
                 
-                container.innerHTML = requests.map(req => `
+                container.innerHTML = requests.map(req => {
+                    const fieldLabel = getFieldLabel(req.field_name)
+                    const targetInfo = getTargetInfo(req)
+                    
+                    return `
                     <div class="border rounded-lg p-4 mb-3 hover:bg-gray-50">
                         <div class="flex justify-between items-start mb-3">
                             <div>
                                 <span class="font-medium text-blue-600">${getTargetTypeText(req.target_type)}</span>
+                                ${targetInfo ? `<span class="text-gray-400 mx-2">|</span><span class="text-gray-700">${targetInfo}</span>` : ''}
                                 <span class="text-gray-400 mx-2">|</span>
-                                <span class="text-gray-600">${req.field_name}</span>
+                                <span class="text-gray-600">${fieldLabel}</span>
                             </div>
                             <span class="text-xs text-gray-500">${new Date(req.created_at).toLocaleString()}</span>
                         </div>
@@ -13309,7 +13314,7 @@ console.log('권한 관리 함수 로드 완료')
                             </div>
                         </div>
                     </div>
-                `).join('')
+                `}).join('')
             } catch (error) {
                 console.error('수정 요청 로드 오류:', error)
                 document.getElementById('pending-modifications-list').innerHTML = 
@@ -13318,7 +13323,8 @@ console.log('권한 관리 함수 로드 완료')
         }
         
         async function reviewModification(requestId, action) {
-            if (!confirm(`이 수정 요청을 ${action === 'approve' ? '승인' : '거부'}하시겠습니까?`)) return
+            const confirmed = await customConfirm(`이 수정 요청을 ${action === 'approve' ? '승인' : '거부'}하시겠습니까?`)
+            if (!confirmed) return
             
             try {
                 await axios.post(`${API_BASE}/modifications/${requestId}/review`, {
@@ -13326,10 +13332,11 @@ console.log('권한 관리 함수 로드 완료')
                     reviewed_by: currentStaff.id
                 })
                 
-                alert(action === 'approve' ? '수정이 승인되고 적용되었습니다.' : '수정 요청이 거부되었습니다.')
+                showToast(action === 'approve' ? '수정이 승인되고 적용되었습니다.' : '수정 요청이 거부되었습니다.', 'success')
                 await loadPendingModifications()
             } catch (error) {
-                alert('처리 실패: ' + (error.response?.data?.error || error.message))
+                console.error('수정 승인 처리 오류:', error)
+                showToast(error.response?.data?.error || '처리 실패', 'error')
             }
         }
         
@@ -13342,6 +13349,43 @@ console.log('권한 관리 함수 로드 완료')
                 'staff': '직원'
             }
             return typeMap[type] || type
+        }
+        
+        function getFieldLabel(fieldName) {
+            const fieldMap = {
+                // 회원 필드
+                'name': '이름',
+                'member_number': '회원번호',
+                'inmate_number': '수용번호',
+                'institution': '수용기관',
+                'po_box_address': '사서함 주소',
+                'depositor_name': '입금자명',
+                'notes': '비고',
+                // 도서 필드
+                'title': '제목',
+                'author': '저자',
+                'publisher': '출판사',
+                'isbn': 'ISBN',
+                'price': '가격',
+                'quantity': '수량',
+                // 경기 필드
+                'match_name': '경기명',
+                'home_team': '홈팀',
+                'away_team': '원정팀',
+                'match_datetime': '경기일시',
+                'home_odds': '홈 배당',
+                'draw_odds': '무승부 배당',
+                'away_odds': '원정 배당'
+            }
+            return fieldMap[fieldName] || fieldName
+        }
+        
+        function getTargetInfo(req) {
+            // 회원 정보 수정인 경우 회원명과 회원번호 표시
+            if (req.target_type === 'member' && req.member_name) {
+                return `${req.member_name} (${req.member_number || '미배정'})`
+            }
+            return ''
         }
         
         // ==================== 회원 변경 모달 ====================

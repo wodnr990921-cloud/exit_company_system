@@ -37,9 +37,12 @@ modifications.get('/pending', requireRole(ROLES.ADMIN), async (c) => {
     const { results } = await c.env.DB.prepare(
       `SELECT mr.*, 
               s.name as requester_name,
-              s.role as requester_role
+              s.role as requester_role,
+              m.name as member_name,
+              m.member_number
        FROM modification_requests mr
        LEFT JOIN staff s ON mr.requested_by = s.id
+       LEFT JOIN members m ON mr.target_type = 'member' AND mr.target_id = m.id
        WHERE mr.status = 'pending'
        ORDER BY mr.created_at DESC`
     ).all()
