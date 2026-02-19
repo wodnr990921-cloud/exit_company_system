@@ -11725,12 +11725,13 @@ console.log('권한 관리 함수 로드 완료')
                     metadata: mailroomData  // 우편물 메타데이터 (이미지, OCR 등)
                 })
                 
-                const ticketNumber = ticketRes.data.ticket.ticket_number
+                const ticketNumber = ticketRes.data.ticket_number  // ticket.ticket_number → ticket_number
+                const ticketId = ticketRes.data.ticket_id          // ticket.id → ticket_id
                 
                 // 4. 우편물에 티켓 연결
                 await axios.patch(`${API_BASE}/mailroom/${currentInspectionId}/status`, {
                     status: 'assigned',
-                    ticket_id: ticketRes.data.ticket.id
+                    ticket_id: ticketId  // ticketRes.data.ticket.id → ticketId
                 })
                 
                 const message = memberId 
