@@ -647,8 +647,43 @@ tickets.delete('/:id', async (c) => {
     }
     
     // 관련 데이터 삭제 (CASCADE 효과)
+    // 1. 티켓 댓글 삭제
     await DB.prepare('DELETE FROM ticket_comments WHERE ticket_id = ?').bind(id).run()
+    
+    // 2. 티켓 아이템 삭제
     await DB.prepare('DELETE FROM ticket_items WHERE ticket_id = ?').bind(id).run()
+    
+    // 3. 티켓 답변 삭제
+    await DB.prepare('DELETE FROM ticket_responses WHERE ticket_id = ?').bind(id).run()
+    
+    // 4. 배팅 폴더 관련 삭제
+    // 먼저 배팅 폴더 ID 조회
+    const folders = await DB.prepare('SELECT id FROM bet_folders WHERE ticket_id = ?').bind(id).all()
+    if (folders.results && folders.results.length > 0) {
+      for (const folder of folders.results) {
+        // 개별 배팅 삭제
+        await DB.prepare('DELETE FROM bets WHERE folder_id = ?').bind(folder.id).run()
+      }
+      // 배팅 폴더 삭제
+      await DB.prepare('DELETE FROM bet_folders WHERE ticket_id = ?').bind(id).run()
+    }
+    
+    // 5. 주문 관련 삭제
+    const orders = await DB.prepare('SELECT id FROM orders WHERE ticket_id = ?').bind(id).all()
+    if (orders.results && orders.results.length > 0) {
+      for (const order of orders.results) {
+        // 주문 아이템 삭제
+        await DB.prepare('DELETE FROM order_items WHERE order_id = ?').bind(order.id).run()
+      }
+      // 주문 삭제
+      await DB.prepare('DELETE FROM orders WHERE ticket_id = ?').bind(id).run()
+    }
+    
+    // 6. 포인트 거래 내역 (ticket_id를 NULL로 설정 - 거래 기록은 유지)
+    await DB.prepare('UPDATE point_transactions SET ticket_id = NULL WHERE ticket_id = ?').bind(id).run()
+    
+    // 7. 우편물 연결 해제 (mailroom에서 ticket_id를 NULL로 설정)
+    await DB.prepare('UPDATE mail_items SET ticket_id = NULL WHERE ticket_id = ?').bind(id).run()
     
     // 티켓 삭제
     await DB.prepare('DELETE FROM tickets WHERE id = ?').bind(id).run()
