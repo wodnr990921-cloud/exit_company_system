@@ -2,9 +2,59 @@
 
 **EXIT COMPANY 통합 교정시설 관리 시스템 - 티켓, 회원, 배팅, 우편실, 일일 마감**
 
-## 🆕 최신 업데이트 (2026-02-17)
+## 🆕 최신 업데이트 (2026-02-19)
 
-### 🔥 v12.3.2 루트 경로 접근 수정 ✅
+### 🔥 v52.0 답변 상세 모달 + 티켓 열기 버튼 ✅
+
+**답변 관리 개선**:
+- ✅ **답변 상세 모달**: 답변 목록에서 클릭 시 상세 정보 표시
+- ✅ **티켓 열기 버튼**: 답변 상세에서 연결된 티켓 바로 열기 (경량화용)
+- ✅ **회원 정보 표시**: 회원명, 수용번호, 시설, 사서함
+- ✅ **티켓 정보 표시**: 티켓 번호 및 빠른 접근 버튼
+- ✅ **출력 상태 표시**: 대기/완료/오류 상태 및 출력일시
+- ✅ **답변 내용 표시**: 전체 답변 텍스트
+- ✅ **모달에서 출력**: 상세 모달에서 바로 출력 가능
+
+**UI 개선**:
+- 답변 목록 카드: 클릭 가능 (cursor-pointer)
+- 체크박스/출력 버튼: 이벤트 전파 방지 (stopPropagation)
+- z-index 계층: 답변 상세 모달 z-[9997]
+- 반응형 디자인: 모바일/데스크톱 최적화
+
+**백엔드 API 개선**:
+- ✅ `GET /api/responses?response_id=123`: 개별 답변 조회 지원
+- ✅ 회원 po_box_address 필드 포함
+- ✅ 티켓 정보 조인 (ticket_number, ticket_id)
+- ✅ 출력자 정보 조인 (printed_by_name)
+
+**JavaScript 함수**:
+```javascript
+showResponseDetail(responseId, event)     // 답변 상세 모달 열기
+closeResponseDetail()                     // 답변 상세 모달 닫기
+openTicketFromResponse()                  // 답변에서 티켓 열기
+printResponseFromDetail()                 // 답변 상세에서 출력
+```
+
+**사용 방법**:
+1. 우편실 → 답변 탭
+2. 답변 목록에서 항목 클릭
+3. 상세 정보 확인 (회원, 티켓, 내용)
+4. "티켓 열기" 버튼으로 연결된 티켓 확인
+5. "출력" 버튼으로 답변 출력
+
+**배포 URL**:
+- 🌐 **최신 배포**: https://f291a037.exit-company-system-5je.pages.dev
+- 🔗 **메인 사이트**: https://exit-company-system.pages.dev
+- 📦 **GitHub**: https://github.com/wodnr990921-cloud/exit_company_system
+
+**빌드 정보**:
+- 빌드 크기: 150.72 kB (↑0.70 kB for detail modal)
+- 배포 시간: 37.3 초
+- 커밋: `feat: Add response detail modal with ticket open button`
+
+---
+
+### 🔥 v51.0 답변 등록 스키마 수정 ✅
 
 **긴급 수정**:
 - ✅ **index.html 추가**: 루트 경로(`/`)에서 앱이 정상 로드되도록 수정
