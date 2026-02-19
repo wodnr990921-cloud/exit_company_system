@@ -2610,6 +2610,103 @@
             </div>
         </div>
 
+        <!-- 배당 수정 모달 -->
+        <div id="edit-odds-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-edit mr-2"></i>배당 수정</h3>
+                        <button onclick="closeEditOddsModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <!-- 경기 정보 표시 -->
+                        <div class="bg-gray-50 rounded p-4">
+                            <h4 class="font-bold mb-2">경기 정보</h4>
+                            <p class="text-sm"><strong>경기:</strong> <span id="edit-odds-match-name"></span></p>
+                            <p class="text-sm"><strong>팀:</strong> <span id="edit-odds-teams"></span></p>
+                            <p class="text-sm"><strong>일시:</strong> <span id="edit-odds-date"></span></p>
+                        </div>
+                        
+                        <!-- 승무패 배당 -->
+                        <div class="border rounded p-4">
+                            <h4 class="font-bold mb-3 flex items-center">
+                                <input type="checkbox" id="edit-odds-enable-wdl" class="mr-2" onchange="toggleEditOddsFields('wdl')">
+                                승무패 배당
+                            </h4>
+                            <div id="edit-odds-wdl-fields" class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">홈 승</label>
+                                    <input type="number" step="0.01" id="edit-home-odds" class="w-full px-3 py-2 border rounded" placeholder="1.50">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">무승부</label>
+                                    <input type="number" step="0.01" id="edit-draw-odds" class="w-full px-3 py-2 border rounded" placeholder="3.20">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">원정 승</label>
+                                    <input type="number" step="0.01" id="edit-away-odds" class="w-full px-3 py-2 border rounded" placeholder="2.10">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 언오버 배당 -->
+                        <div class="border rounded p-4">
+                            <h4 class="font-bold mb-3 flex items-center">
+                                <input type="checkbox" id="edit-odds-enable-ou" class="mr-2" onchange="toggleEditOddsFields('ou')">
+                                언오버 배당
+                            </h4>
+                            <div id="edit-odds-ou-fields" class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">기준 골</label>
+                                    <input type="number" step="0.5" id="edit-over-line" class="w-full px-3 py-2 border rounded" placeholder="2.5">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">오버</label>
+                                    <input type="number" step="0.01" id="edit-over-odds" class="w-full px-3 py-2 border rounded" placeholder="1.80">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">언더</label>
+                                    <input type="number" step="0.01" id="edit-under-odds" class="w-full px-3 py-2 border rounded" placeholder="1.90">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 핸디캡 배당 -->
+                        <div class="border rounded p-4">
+                            <h4 class="font-bold mb-3 flex items-center">
+                                <input type="checkbox" id="edit-odds-enable-handicap" class="mr-2" onchange="toggleEditOddsFields('handicap')">
+                                핸디캡 배당
+                            </h4>
+                            <div id="edit-odds-handicap-fields" class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">핸디캡</label>
+                                    <input type="number" step="0.5" id="edit-handicap-line" class="w-full px-3 py-2 border rounded" placeholder="-0.5">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">홈</label>
+                                    <input type="number" step="0.01" id="edit-handicap-home-odds" class="w-full px-3 py-2 border rounded" placeholder="1.85">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">원정</label>
+                                    <input type="number" step="0.01" id="edit-handicap-away-odds" class="w-full px-3 py-2 border rounded" placeholder="1.95">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end gap-2 pt-4 border-t">
+                            <button onclick="closeEditOddsModal()" class="btn btn-secondary">취소</button>
+                            <button onclick="saveMatchOdds()" class="btn btn-primary">
+                                <i class="fas fa-check mr-2"></i>저장
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 이미지 뷰어 모달 -->
         <div id="image-viewer-modal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
             <div class="relative w-full h-full flex items-center justify-center">
@@ -7096,7 +7193,10 @@ console.log('권한 관리 함수 로드 완료')
                                 </span>
                             </td>
                             <td class="px-2 py-2 text-center">
-                                <button onclick="deleteMatch(${m.id})" class="text-red-500 hover:text-red-700 text-sm">
+                                <button onclick="showEditOddsModal(${m.id})" class="text-blue-500 hover:text-blue-700 text-sm mr-2" title="배당 수정">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteMatch(${m.id})" class="text-red-500 hover:text-red-700 text-sm" title="삭제">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -7332,6 +7432,170 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('경기 삭제 오류:', error)
                 alert('경기 삭제 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 배당 수정 모달 관련 변수
+        let currentEditMatchId = null
+        
+        // 배당 수정 모달 열기
+        async function showEditOddsModal(matchId) {
+            try {
+                currentEditMatchId = matchId
+                
+                // 경기 정보 조회
+                const response = await axios.get(`${API_BASE}/betting/matches`)
+                const matches = response.data.matches || []
+                const match = matches.find(m => m.id === matchId)
+                
+                if (!match) {
+                    showToast('경기를 찾을 수 없습니다.', 'error')
+                    return
+                }
+                
+                // 경기 정보 표시
+                document.getElementById('edit-odds-match-name').textContent = match.match_name
+                document.getElementById('edit-odds-teams').textContent = `${match.home_team} vs ${match.away_team}`
+                document.getElementById('edit-odds-date').textContent = new Date(match.match_date).toLocaleString('ko-KR')
+                
+                // 승무패 배당
+                const hasWDL = match.home_odds || match.draw_odds || match.away_odds
+                document.getElementById('edit-odds-enable-wdl').checked = hasWDL
+                document.getElementById('edit-home-odds').value = match.home_odds || ''
+                document.getElementById('edit-draw-odds').value = match.draw_odds || ''
+                document.getElementById('edit-away-odds').value = match.away_odds || ''
+                document.getElementById('edit-odds-wdl-fields').style.opacity = hasWDL ? '1' : '0.5'
+                
+                // 언오버 배당
+                const hasOU = match.over_line || match.over_odds || match.under_odds
+                document.getElementById('edit-odds-enable-ou').checked = hasOU
+                document.getElementById('edit-over-line').value = match.over_line || ''
+                document.getElementById('edit-over-odds').value = match.over_odds || ''
+                document.getElementById('edit-under-odds').value = match.under_odds || ''
+                document.getElementById('edit-odds-ou-fields').style.opacity = hasOU ? '1' : '0.5'
+                
+                // 핸디캡 배당
+                const hasHandicap = match.handicap_line !== null || match.handicap_home_odds || match.handicap_away_odds
+                document.getElementById('edit-odds-enable-handicap').checked = hasHandicap
+                document.getElementById('edit-handicap-line').value = match.handicap_line !== null ? match.handicap_line : ''
+                document.getElementById('edit-handicap-home-odds').value = match.handicap_home_odds || ''
+                document.getElementById('edit-handicap-away-odds').value = match.handicap_away_odds || ''
+                document.getElementById('edit-odds-handicap-fields').style.opacity = hasHandicap ? '1' : '0.5'
+                
+                // 모달 표시
+                document.getElementById('edit-odds-modal').classList.remove('hidden')
+            } catch (error) {
+                console.error('배당 수정 모달 오류:', error)
+                showToast('경기 정보를 불러올 수 없습니다.', 'error')
+            }
+        }
+        
+        // 배당 수정 모달 닫기
+        function closeEditOddsModal() {
+            document.getElementById('edit-odds-modal').classList.add('hidden')
+            currentEditMatchId = null
+        }
+        
+        // 배당 필드 토글
+        function toggleEditOddsFields(type) {
+            const checkboxes = {
+                'wdl': 'edit-odds-enable-wdl',
+                'ou': 'edit-odds-enable-ou',
+                'handicap': 'edit-odds-enable-handicap'
+            }
+            
+            const fields = {
+                'wdl': 'edit-odds-wdl-fields',
+                'ou': 'edit-odds-ou-fields',
+                'handicap': 'edit-odds-handicap-fields'
+            }
+            
+            const checkbox = document.getElementById(checkboxes[type])
+            const fieldDiv = document.getElementById(fields[type])
+            
+            if (checkbox.checked) {
+                fieldDiv.style.opacity = '1'
+                fieldDiv.querySelectorAll('input').forEach(input => input.disabled = false)
+            } else {
+                fieldDiv.style.opacity = '0.5'
+                fieldDiv.querySelectorAll('input').forEach(input => {
+                    input.disabled = true
+                    input.value = ''
+                })
+            }
+        }
+        
+        // 배당 저장
+        async function saveMatchOdds() {
+            if (!currentEditMatchId) return
+            
+            try {
+                const data = {}
+                
+                // 승무패 배당
+                if (document.getElementById('edit-odds-enable-wdl').checked) {
+                    const homeOdds = parseFloat(document.getElementById('edit-home-odds').value)
+                    const drawOdds = parseFloat(document.getElementById('edit-draw-odds').value)
+                    const awayOdds = parseFloat(document.getElementById('edit-away-odds').value)
+                    
+                    if (homeOdds && drawOdds && awayOdds) {
+                        data.home_odds = homeOdds
+                        data.draw_odds = drawOdds
+                        data.away_odds = awayOdds
+                    }
+                } else {
+                    data.home_odds = null
+                    data.draw_odds = null
+                    data.away_odds = null
+                }
+                
+                // 언오버 배당
+                if (document.getElementById('edit-odds-enable-ou').checked) {
+                    const overLine = parseFloat(document.getElementById('edit-over-line').value)
+                    const overOdds = parseFloat(document.getElementById('edit-over-odds').value)
+                    const underOdds = parseFloat(document.getElementById('edit-under-odds').value)
+                    
+                    if (overLine && overOdds && underOdds) {
+                        data.over_line = overLine
+                        data.over_odds = overOdds
+                        data.under_odds = underOdds
+                    }
+                } else {
+                    data.over_line = null
+                    data.over_odds = null
+                    data.under_odds = null
+                }
+                
+                // 핸디캡 배당
+                if (document.getElementById('edit-odds-enable-handicap').checked) {
+                    const handicapLine = parseFloat(document.getElementById('edit-handicap-line').value)
+                    const handicapHomeOdds = parseFloat(document.getElementById('edit-handicap-home-odds').value)
+                    const handicapAwayOdds = parseFloat(document.getElementById('edit-handicap-away-odds').value)
+                    
+                    if (!isNaN(handicapLine) && handicapHomeOdds && handicapAwayOdds) {
+                        data.handicap_line = handicapLine
+                        data.handicap_home_odds = handicapHomeOdds
+                        data.handicap_away_odds = handicapAwayOdds
+                    }
+                } else {
+                    data.handicap_line = null
+                    data.handicap_home_odds = null
+                    data.handicap_away_odds = null
+                }
+                
+                // API 호출
+                await axios.patch(`${API_BASE}/betting/matches/${currentEditMatchId}`, data)
+                showToast('배당이 수정되었습니다.', 'success')
+                closeEditOddsModal()
+                await loadMatchManagement()
+                
+                // 배팅 페이지가 열려있다면 갱신
+                if (currentView === 'betting') {
+                    await loadBetting()
+                }
+            } catch (error) {
+                console.error('배당 저장 오류:', error)
+                showToast('배당 저장 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
 
