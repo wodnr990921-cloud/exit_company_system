@@ -202,8 +202,11 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
     const body = await c.req.json()
     const user = c.get('user')
 
-    if (!user) {
-      console.error('User not found in context')
+    console.log('[Member Update] User:', user)
+    console.log('[Member Update] Body:', body)
+
+    if (!user || !user.id) {
+      console.error('[Member Update] User not found or user.id missing:', user)
       return c.json({ error: '사용자 인증 정보를 찾을 수 없습니다.' }, 401)
     }
 
@@ -213,6 +216,8 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
     const currentMember = await c.env.DB.prepare(
       'SELECT * FROM members WHERE id = ?'
     ).bind(id).first()
+
+    console.log('[Member Update] Current member:', currentMember)
 
     if (!currentMember) {
       return c.json({ error: '회원을 찾을 수 없습니다.' }, 404)
@@ -242,12 +247,16 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
       fieldMap['notes'] = { old: currentMember.notes, new: notes }
     }
 
+    console.log('[Member Update] Field map:', fieldMap)
+
     if (Object.keys(fieldMap).length === 0) {
       return c.json({ error: '수정할 내용이 없습니다.' }, 400)
     }
 
     // 관리자는 즉시 수정, 일반 직원은 수정 요청 생성
     if (user.role === 'admin') {
+      console.log('[Member Update] Admin direct update')
+      
       const updates: string[] = []
       const params: any[] = []
 
@@ -260,14 +269,21 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
       params.push(id)
 
       const setClause = updates.join(', ')
-      await c.env.DB.prepare(
-        `UPDATE members SET ${setClause} WHERE id = ?`
-      ).bind(...params).run()
+      const query = `UPDATE members SET ${setClause} WHERE id = ?`
+      
+      console.log('[Member Update] SQL:', query)
+      console.log('[Member Update] Params:', params)
+      
+      await c.env.DB.prepare(query).bind(...params).run()
 
       return c.json({ success: true, message: '회원 정보가 수정되었습니다.' })
     } else {
+      console.log('[Member Update] Staff creating modification requests')
+      
       // 일반 직원: 수정 요청 생성
       for (const [field, values] of Object.entries(fieldMap)) {
+        console.log(`[Member Update] Creating request for field: ${field}`)
+        
         await c.env.DB.prepare(`
           INSERT INTO modification_requests (target_type, target_id, field_name, old_value, new_value, reason, requested_by)
           VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -289,8 +305,8 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
       })
     }
   } catch (error) {
-    console.error('회원 수정 오류:', error)
-    console.error('Error details:', error instanceof Error ? error.message : String(error))
+    console.error('[Member Update] Error:', error)
+    console.error('[Member Update] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return c.json({ 
       error: '회원 수정 중 오류가 발생했습니다.',
       details: error instanceof Error ? error.message : String(error)
