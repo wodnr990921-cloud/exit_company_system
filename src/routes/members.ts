@@ -202,6 +202,11 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
     const body = await c.req.json()
     const user = c.get('user')
 
+    if (!user) {
+      console.error('User not found in context')
+      return c.json({ error: '사용자 인증 정보를 찾을 수 없습니다.' }, 401)
+    }
+
     const { name, member_number, inmate_number, institution, po_box_address, depositor_name, notes, change_reason } = body
 
     // 현재 회원 정보 조회
@@ -270,8 +275,8 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
           'member',
           id,
           field,
-          values.old || '',
-          values.new,
+          String(values.old || ''),
+          String(values.new),
           change_reason || '회원 정보 수정',
           user.id
         ).run()
@@ -285,7 +290,11 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
     }
   } catch (error) {
     console.error('회원 수정 오류:', error)
-    return c.json({ error: '회원 수정 중 오류가 발생했습니다.' }, 500)
+    console.error('Error details:', error instanceof Error ? error.message : String(error))
+    return c.json({ 
+      error: '회원 수정 중 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : String(error)
+    }, 500)
   }
 })
 
