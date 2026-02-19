@@ -1,37 +1,41 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.1
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.3
 
-## ✅ 최근 업데이트 (v56.1 - 2026-02-19)
+## ✅ 최근 업데이트 (v56.3 - 2026-02-19)
 
-### ✨ 새로운 기능
+### 🐛 버그 수정 (v56.3)
+- **🖼️ 티켓 상세 모달 이미지 표시 문제 해결**: 
+  - `showTicketDetail` 함수가 `metadata.image_keys` 대신 **`ticket.image_keys`** 컬럼에서 이미지를 읽도록 수정
+  - 이미지 엔드포인트를 `/api/mailroom/image/` → **`/api/tickets/:id/images/`**로 변경
+  - 이미지 로드 실패 시 콘솔에 오류 로그 출력
+  - 모든 티켓 생성 경로(직접 생성, 담당자 배정)에서 이미지가 정상 표시됨
+
+### ✨ 새로운 기능 (v56.2)
+- **경기 관리 일괄 작업**: 체크박스 선택 후 일괄 상태 변경, 일괄 삭제, 선택 상태 변경, 선택 삭제 기능 추가
+- **디버깅 로그 강화**: 담당자 배정 시 이미지 복사 과정을 콘솔에 상세 로깅 (`currentInspectionId`, `mailItem`, `imageKeys`, API 결과)
+
+### ✨ 새로운 기능 (v56.1)
 - **임시 티켓 필터링**: OCR 처리 전 생성되는 임시 티켓(TEMP-*)이 티켓 관리 목록에 표시되지 않음
 - **깔끔한 티켓 목록**: 정식 티켓만 표시되어 관리가 용이함
 
-### 🐛 버그 수정
+### 🐛 버그 수정 (v56.0 이하)
 - **담당자 배정 시 이미지 복사 누락 수정**: 우편물 검수에서 담당자 배정 시 이미지가 티켓에 자동으로 복사되도록 수정
 - **이미지 복사 로직 완성**: 두 가지 티켓 생성 경로 모두에서 이미지 복사 구현
 - **테이블 이름 오류 수정**: `mail_items` → `mailroom_items` 정정 (티켓 삭제 시)
 - **티켓 삭제 Foreign Key 오류 해결**: 모든 관련 테이블(orders, bet_folders, bets, ticket_responses, point_transactions, mailroom_items) CASCADE 삭제 구현
-- **우편물 이미지 누락 문제 해결**: 우편물에서 티켓 생성 시 이미지가 자동으로 복사되도록 개선
-- **티켓 삭제 오류 로깅 강화**: 삭제 실패 시 상세 오류 메시지와 스택 트레이스 표시
-- **삭제 권한 문제 해결**: `ROLE_HIERARCHY`에 `delete` 권한 추가 (admin 레벨 3)
-- **티켓 생성 500 오류 해결**: `metadata` 컬럼이 DB 스키마에 없어 발생한 SQLITE_ERROR 수정
-
-### ✨ 새로운 기능
-- **우편물 이미지 복사 API**: `POST /api/tickets/:id/copy-images` 엔드포인트 추가
-- **이미지 자동 연결**: 우편물 검수에서 티켓 생성 시 `image_keys` 자동 복사
 
 ### 🔍 디버깅 개선
 - 티켓 생성/삭제 시 입력값, currentStaff, 전송 데이터를 콘솔에 로깅
 - 서버 오류 응답의 `error`, `details`, `stack` 정보를 모두 표시
 - Toast 메시지에 상세 오류 정보 포함 (5초 표시)
+- 이미지 렌더링 과정을 콘솔에 로깅 (이미지 개수, URL, 로드 실패 등)
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://b82dc1aa.exit-company-system-5je.pages.dev/
-- **Build Size**: 152.70 kB (↑ 0.08 kB)
-- **Build Time**: 942 ms
-- **Deploy Time**: 10.9 sec
-- **Last Updated**: 2026-02-19 05:45 UTC
+- **Latest Preview**: https://f47b84ec.exit-company-system-5je.pages.dev/
+- **Build Size**: 152.70 kB (동일)
+- **Build Time**: 814 ms
+- **Deploy Time**: 16.8 sec
+- **Last Updated**: 2026-02-19 07:15 UTC
 
 ## 🎯 주요 기능 (완료)
 
