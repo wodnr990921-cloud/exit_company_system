@@ -150,11 +150,11 @@ tickets.post('/', async (c) => {
     const status = assigned_to ? 'assigned' : 'open'
 
     const result = await c.env.DB.prepare(
-      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, status, assigned_to, created_by, metadata)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, status, assigned_to, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       ticket_number, title, description || '', member_id || null, 
-      ticket_type, priority || 'normal', status, assigned_to || null, created_by, metadata || null
+      ticket_type, priority || 'normal', status, assigned_to || null, created_by
     ).run()
 
     const ticketId = result.meta.last_row_id
