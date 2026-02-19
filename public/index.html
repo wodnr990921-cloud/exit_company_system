@@ -9545,7 +9545,7 @@ console.log('권한 관리 함수 로드 완료')
             const assignedTo = document.getElementById('ticket-assigned-to').value
 
             // 디버깅: 입력값 확인
-            console.log('티켓 생성 입력값:', { ticketType, title, description })
+            console.log('티켓 생성 입력값:', { ticketType, title, description, memberId, priority, assignedTo })
             console.log('currentStaff:', currentStaff)
             console.log('currentStaff.id:', currentStaff?.id)
             
@@ -9632,6 +9632,7 @@ console.log('권한 관리 함수 로드 완료')
             }
 
             try {
+                console.log('전송할 데이터:', JSON.stringify(data, null, 2))
                 const ticketResponse = await axios.post(`${API_BASE}/tickets`, data)
                 const ticketId = ticketResponse.data.ticket_id
 
