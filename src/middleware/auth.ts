@@ -24,7 +24,8 @@ export function requireRole(minRole: Role) {
     console.log('[Auth Middleware] Staff ID:', staffId)
     
     if (!staffId) {
-      return c.json({ error: '인증이 필요합니다.' }, 401)
+      console.log('[Auth Middleware] No staff ID provided')
+      return c.json({ error: '인증이 필요합니다.', details: 'X-Staff-ID 헤더가 없습니다.' }, 401)
     }
 
     try {
@@ -36,7 +37,8 @@ export function requireRole(minRole: Role) {
       console.log('[Auth Middleware] Staff from DB:', staff)
 
       if (!staff) {
-        return c.json({ error: '직원 정보를 찾을 수 없습니다.' }, 404)
+        console.log('[Auth Middleware] Staff not found in DB')
+        return c.json({ error: '직원 정보를 찾을 수 없습니다.', details: `Staff ID ${staffId}를 DB에서 찾을 수 없습니다.` }, 404)
       }
 
       const userRole = staff.role as Role
@@ -46,21 +48,31 @@ export function requireRole(minRole: Role) {
       console.log('[Auth Middleware] Role check:', { userRole, userLevel, requiredLevel })
 
       if (userLevel < requiredLevel) {
+        console.log('[Auth Middleware] Insufficient permissions')
         return c.json({ 
           error: '접근 권한이 없습니다.',
           required: minRole,
-          current: userRole
+          current: userRole,
+          details: `${userRole} 권한으로는 ${minRole} 권한이 필요한 작업을 수행할 수 없습니다.`
         }, 403)
       }
 
       // Context에 직원 정보 저장
       c.set('staff', staff)
-      console.log('[Auth Middleware] Staff set in context:', staff)
+      console.log('[Auth Middleware] Staff set in context, calling next()')
       await next()
+      console.log('[Auth Middleware] Returned from next()')
     } catch (error) {
       console.error('[Auth Middleware] 권한 검증 오류:', error)
-      console.error('[Auth Middleware] Error details:', error instanceof Error ? error.message : String(error))
-      return c.json({ error: '권한 검증 중 오류가 발생했습니다.' }, 500)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorStack = error instanceof Error ? error.stack : 'No stack trace'
+      console.error('[Auth Middleware] Error details:', errorMessage)
+      console.error('[Auth Middleware] Error stack:', errorStack)
+      return c.json({ 
+        error: '권한 검증 중 오류가 발생했습니다.',
+        details: errorMessage,
+        stack: errorStack
+      }, 500)
     }
   }
 }
