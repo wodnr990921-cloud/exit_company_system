@@ -2042,6 +2042,96 @@
             </div>
         </div>
 
+        <!-- 답변 상세 모달 -->
+        <div id="response-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[9997] flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-file-alt mr-2"></i>답변 상세</h3>
+                        <button onclick="closeResponseDetail()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <!-- 답변 정보 -->
+                    <div class="space-y-4">
+                        <!-- 회원 정보 -->
+                        <div class="border rounded p-4 bg-gray-50">
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <span class="font-medium text-gray-700">회원명:</span>
+                                    <span id="detail-response-member-name" class="ml-2"></span>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-700">수용번호:</span>
+                                    <span id="detail-response-member-number" class="ml-2"></span>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-700">시설:</span>
+                                    <span id="detail-response-institution" class="ml-2"></span>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-700">사서함:</span>
+                                    <span id="detail-response-po-box" class="ml-2"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 티켓 정보 -->
+                        <div class="border rounded p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div>
+                                    <span class="font-medium text-gray-700">티켓 번호:</span>
+                                    <span id="detail-response-ticket-number" class="ml-2 font-mono"></span>
+                                </div>
+                                <button id="detail-response-open-ticket-btn" onclick="openTicketFromResponse()" class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+                                    <i class="fas fa-external-link-alt mr-1"></i>티켓 열기
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 답변 상태 -->
+                        <div class="border rounded p-4">
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <span class="font-medium text-gray-700">출력 상태:</span>
+                                    <span id="detail-response-print-status" class="ml-2"></span>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-700">생성일:</span>
+                                    <span id="detail-response-created-at" class="ml-2"></span>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-700">출력일:</span>
+                                    <span id="detail-response-printed-at" class="ml-2"></span>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-700">출력자:</span>
+                                    <span id="detail-response-printed-by" class="ml-2"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 답변 내용 -->
+                        <div class="border rounded p-4">
+                            <div class="font-medium text-gray-700 mb-2">
+                                <i class="fas fa-comment-dots mr-1"></i>답변 내용
+                            </div>
+                            <div id="detail-response-content" class="bg-gray-50 p-4 rounded whitespace-pre-wrap text-sm"></div>
+                        </div>
+                    </div>
+
+                    <!-- 하단 버튼 -->
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button onclick="closeResponseDetail()" class="btn btn-secondary">닫기</button>
+                        <button id="detail-response-print-btn" onclick="printResponseFromDetail()" class="btn btn-primary">
+                            <i class="fas fa-print mr-2"></i>출력
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 답변 양식 설정 모달 -->
         <div id="response-settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -13797,10 +13887,10 @@ console.log('권한 관리 함수 로드 완료')
                 }
                 
                 container.innerHTML = responses.map(r => `
-                    <div class="border rounded p-3 hover:bg-gray-50">
+                    <div class="border rounded p-3 hover:bg-gray-50 cursor-pointer transition-all" onclick="showResponseDetail(${r.id}, event)">
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-2">
-                                <input type="checkbox" class="response-checkbox" value="${r.id}" onchange="updateSelectedResponses()">
+                                <input type="checkbox" class="response-checkbox" value="${r.id}" onchange="updateSelectedResponses()" onclick="event.stopPropagation()">
                                 <span class="font-medium">${r.member_name} (${r.member_number})</span>
                                 <span class="text-xs px-2 py-1 rounded ${
                                     r.print_status === 'printed' ? 'bg-green-100 text-green-700' :
@@ -13811,14 +13901,14 @@ console.log('권한 관리 함수 로드 완료')
                                       r.print_status === 'pending' ? '출력 대기' : '오류'}
                                 </span>
                             </div>
-                            <button onclick="printResponse(${r.id})" class="text-blue-600 hover:text-blue-800">
+                            <button onclick="event.stopPropagation(); printResponse(${r.id})" class="text-blue-600 hover:text-blue-800">
                                 <i class="fas fa-print mr-1"></i>출력
                             </button>
                         </div>
                         <div class="text-sm text-gray-600">
                             <div class="flex gap-4">
                                 <span><i class="fas fa-ticket mr-1"></i>${r.ticket_number || 'N/A'}</span>
-                                <span><i class="fas fa-building mr-1"></i>${r.prison || 'N/A'}</span>
+                                <span><i class="fas fa-building mr-1"></i>${r.institution || r.prison || 'N/A'}</span>
                                 <span><i class="fas fa-calendar mr-1"></i>${new Date(r.created_at).toLocaleDateString()}</span>
                             </div>
                         </div>
@@ -14002,6 +14092,107 @@ console.log('권한 관리 함수 로드 완료')
                     
                     loadResponses()
                 }
+            } catch (error) {
+                console.error('답변 출력 오류:', error)
+                showToast('답변 출력 실패', 'error')
+            }
+        }
+        
+        // 답변 상세 모달 열기
+        let currentResponseDetail = null
+        
+        async function showResponseDetail(responseId, event) {
+            // 체크박스나 출력 버튼 클릭 시 모달 열지 않음
+            if (event && (event.target.type === 'checkbox' || event.target.closest('button'))) {
+                return
+            }
+            
+            try {
+                const response = await axios.get(`${API_BASE}/responses?response_id=${responseId}`)
+                if (!response.data.responses || response.data.responses.length === 0) {
+                    showToast('답변 정보를 찾을 수 없습니다', 'error')
+                    return
+                }
+                
+                const r = response.data.responses[0]
+                currentResponseDetail = r
+                
+                // 회원 정보
+                document.getElementById('detail-response-member-name').textContent = r.member_name || 'N/A'
+                document.getElementById('detail-response-member-number').textContent = r.member_number || 'N/A'
+                document.getElementById('detail-response-institution').textContent = r.institution || r.prison || 'N/A'
+                document.getElementById('detail-response-po-box').textContent = r.po_box_address || 'N/A'
+                
+                // 티켓 정보
+                document.getElementById('detail-response-ticket-number').textContent = r.ticket_number || 'N/A'
+                const openTicketBtn = document.getElementById('detail-response-open-ticket-btn')
+                if (r.ticket_id) {
+                    openTicketBtn.style.display = 'inline-block'
+                } else {
+                    openTicketBtn.style.display = 'none'
+                }
+                
+                // 출력 상태
+                const statusBadge = r.print_status === 'printed' ? '<span class="px-2 py-1 rounded bg-green-100 text-green-700 text-xs">출력 완료</span>' :
+                                    r.print_status === 'pending' ? '<span class="px-2 py-1 rounded bg-yellow-100 text-yellow-700 text-xs">출력 대기</span>' :
+                                    '<span class="px-2 py-1 rounded bg-red-100 text-red-700 text-xs">오류</span>'
+                document.getElementById('detail-response-print-status').innerHTML = statusBadge
+                
+                document.getElementById('detail-response-created-at').textContent = r.created_at ? 
+                    new Date(r.created_at).toLocaleString('ko-KR') : 'N/A'
+                document.getElementById('detail-response-printed-at').textContent = r.printed_at ? 
+                    new Date(r.printed_at).toLocaleString('ko-KR') : '-'
+                document.getElementById('detail-response-printed-by').textContent = r.printed_by_name || '-'
+                
+                // 답변 내용
+                document.getElementById('detail-response-content').textContent = r.content || '내용 없음'
+                
+                // 모달 표시
+                document.getElementById('response-detail-modal').classList.remove('hidden')
+                
+            } catch (error) {
+                console.error('답변 상세 로드 오류:', error)
+                showToast('답변 정보를 불러올 수 없습니다', 'error')
+            }
+        }
+        
+        // 답변 상세 모달 닫기
+        function closeResponseDetail() {
+            document.getElementById('response-detail-modal').classList.add('hidden')
+            currentResponseDetail = null
+        }
+        
+        // 답변 상세에서 티켓 열기
+        function openTicketFromResponse() {
+            if (!currentResponseDetail || !currentResponseDetail.ticket_id) {
+                showToast('티켓 정보가 없습니다', 'error')
+                return
+            }
+            
+            closeResponseDetail()
+            showTicketDetail(currentResponseDetail.ticket_id)
+        }
+        
+        // 답변 상세에서 출력
+        async function printResponseFromDetail() {
+            if (!currentResponseDetail) {
+                showToast('답변 정보가 없습니다', 'error')
+                return
+            }
+            
+            try {
+                printResponsesWindow([currentResponseDetail])
+                
+                // 출력 상태 업데이트
+                await axios.patch(`${API_BASE}/responses/${currentResponseDetail.id}`, {
+                    print_status: 'printed',
+                    printed_by: currentStaff.id
+                })
+                
+                showToast('답변이 출력되었습니다', 'success')
+                closeResponseDetail()
+                loadResponses()
+                
             } catch (error) {
                 console.error('답변 출력 오류:', error)
                 showToast('답변 출력 실패', 'error')

@@ -14,6 +14,7 @@ responses.get('/', async (c) => {
   const endDate = c.req.query('end_date')
   const status = c.req.query('status') // pending, printed, error
   const memberId = c.req.query('member_id')
+  const responseId = c.req.query('response_id') // 개별 답변 조회
   const page = parseInt(c.req.query('page') || '1')
   const limit = parseInt(c.req.query('limit') || '50')
   const offset = (page - 1) * limit
@@ -21,6 +22,37 @@ responses.get('/', async (c) => {
   try {
     const conditions = []
     const values = []
+    
+    // 개별 답변 조회
+    if (responseId) {
+      const query = `
+        SELECT 
+          r.*,
+          m.name as member_name,
+          m.member_number,
+          m.institution,
+          m.po_box_address,
+          t.ticket_number,
+          t.title as ticket_title,
+          s.name as printed_by_name
+        FROM responses r
+        LEFT JOIN members m ON r.member_id = m.id
+        LEFT JOIN tickets t ON r.ticket_id = t.id
+        LEFT JOIN staff s ON r.printed_by = s.id
+        WHERE r.id = ?
+      `
+      const result = await DB.prepare(query).bind(responseId).first()
+      
+      return c.json({
+        responses: result ? [result] : [],
+        stats: {
+          total: result ? 1 : 0,
+          pending: result && result.print_status === 'pending' ? 1 : 0,
+          printed: result && result.print_status === 'printed' ? 1 : 0,
+          error: result && result.print_status === 'error' ? 1 : 0
+        }
+      })
+    }
     
     // 날짜 필터
     if (date) {
