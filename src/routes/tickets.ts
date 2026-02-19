@@ -682,8 +682,8 @@ tickets.delete('/:id', async (c) => {
     // 6. 포인트 거래 내역 (ticket_id를 NULL로 설정 - 거래 기록은 유지)
     await DB.prepare('UPDATE point_transactions SET ticket_id = NULL WHERE ticket_id = ?').bind(id).run()
     
-    // 7. 우편물 연결 해제 (mailroom에서 ticket_id를 NULL로 설정)
-    await DB.prepare('UPDATE mail_items SET ticket_id = NULL WHERE ticket_id = ?').bind(id).run()
+    // 7. 우편물 연결 해제 (mailroom_items에서 ticket_id를 NULL로 설정)
+    await DB.prepare('UPDATE mailroom_items SET ticket_id = NULL WHERE ticket_id = ?').bind(id).run()
     
     // 티켓 삭제
     await DB.prepare('DELETE FROM tickets WHERE id = ?').bind(id).run()
