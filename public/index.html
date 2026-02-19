@@ -9609,9 +9609,12 @@ console.log('권한 관리 함수 로드 완료')
                 const staffRes = await axios.get(`${API_BASE}/staff`)
                 const staff = staffRes.data.staff || []
                 
-                const staffOptions = staff.map(s => 
-                    `<option value="${s.id}">${s.name} (${s.role === 'admin' ? '관리자' : '직원'})</option>`
-                ).join('')
+                const staffOptions = staff.map(s => {
+                    let roleText = '직원'
+                    if (s.role === 'admin') roleText = '관리자'
+                    else if (s.role === 'viewer') roleText = '뷰어'
+                    return `<option value="${s.id}">${s.name} (${roleText})</option>`
+                }).join('')
                 document.getElementById('ticket-assigned-to').innerHTML = '<option value="">미배정</option>' + staffOptions
 
                 // 모달 열기
@@ -11572,9 +11575,12 @@ console.log('권한 관리 함수 로드 완료')
                 
                 const staffSelect = document.getElementById('inspection-staff')
                 staffSelect.innerHTML = '<option value="">-- 담당자를 선택하세요 --</option>' +
-                    staffList.map(staff => `
-                        <option value="${staff.id}">${staff.name} (${staff.role === 'admin' ? '관리자' : staff.role === 'manager' ? '매니저' : '직원'})</option>
-                    `).join('')
+                    staffList.map(staff => {
+                        let roleText = '직원'
+                        if (staff.role === 'admin') roleText = '관리자'
+                        else if (staff.role === 'viewer') roleText = '뷰어'
+                        return `<option value="${staff.id}">${staff.name} (${roleText})</option>`
+                    }).join('')
             } catch (error) {
                 console.error('담당자 목록 로드 오류:', error)
             }
