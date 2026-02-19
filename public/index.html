@@ -11186,8 +11186,15 @@ console.log('권한 관리 함수 로드 완료')
             const institution = document.getElementById('inspection-institution').value.trim()
             const mailboxAddress = document.getElementById('inspection-address').value.trim()
             const notes = document.getElementById('inspection-notes').value.trim()
+            const ocrText = document.getElementById('inspection-ocr-text').value
+            const summary = document.getElementById('inspection-summary').value
             
             try {
+                // 우편물 정보 조회 (이미지 키 가져오기)
+                const mailItemRes = await axios.get(`${API_BASE}/mailroom/${currentInspectionId}`)
+                const mailItem = mailItemRes.data.mailroom_item
+                const imageKeys = mailItem.image_keys ? JSON.parse(mailItem.image_keys) : []
+                
                 let memberId = null
                 let memberName = '미지정'
                 
@@ -11238,15 +11245,45 @@ console.log('권한 관리 함수 로드 완료')
                 })
                 
                 // 3. 티켓 생성 및 확정 (임시 티켓 → 정식 티켓)
+                // 상세 설명 작성 (OCR 원문, 요약, 이미지 포함)
+                let detailedDescription = '=== 우편물 검수 완료 ===\n\n'
+                
+                if (memberId) {
+                    detailedDescription += `📝 발신자 정보\n`
+                    detailedDescription += `- 이름: ${name}\n`
+                    detailedDescription += `- 수용번호: ${number}\n`
+                    detailedDescription += `- 기관: ${institution || '미지정'}\n\n`
+                } else {
+                    detailedDescription += `⚠️ 회원: 미지정 (담당자가 추후 회원을 연결해주세요)\n\n`
+                }
+                
+                if (summary) {
+                    detailedDescription += `📌 4줄 요약:\n${summary}\n\n`
+                }
+                
+                if (ocrText) {
+                    detailedDescription += `📄 편지 원문:\n${ocrText}\n\n`
+                }
+                
+                if (imageKeys.length > 0) {
+                    detailedDescription += `📷 첨부 이미지 (${imageKeys.length}장):\n`
+                    imageKeys.forEach((key, idx) => {
+                        detailedDescription += `이미지 ${idx + 1}: /api/mailroom/image/${key}\n`
+                    })
+                    detailedDescription += '\n'
+                }
+                
+                if (notes) {
+                    detailedDescription += `💬 비고:\n${notes}\n`
+                }
+                
                 const ticketRes = await axios.post(`${API_BASE}/tickets`, {
                     member_id: memberId,  // null 가능 (미지정)
                     staff_id: parseInt(staffId),
                     ticket_type: 'mailroom',
                     priority: 'normal',
                     title: `우편물 처리: ${memberName}`,
-                    description: memberId 
-                        ? `우편물 검수 완료\n발신자: ${name}\n수용번호: ${number}\n기관: ${institution}`
-                        : `우편물 검수 완료\n회원: 미지정\n담당자가 추후 회원을 연결해주세요.`,
+                    description: detailedDescription,
                     status: 'in_progress'
                 })
                 
