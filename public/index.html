@@ -8755,24 +8755,39 @@ console.log('권한 관리 함수 로드 완료')
                 let summary4Lines = ''
                 
                 // 티켓의 image_keys 컬럼에서 이미지 가져오기
-                console.log('🖼️ 티켓 이미지 확인:', {
-                    ticket_id: ticket.id,
-                    ticket_number: ticket.ticket_number,
-                    image_keys: ticket.image_keys
-                })
+                console.log('🖼️ === 티켓 이미지 확인 시작 ===')
+                console.log('ticket 전체 객체:', ticket)
+                console.log('ticket.id:', ticket.id)
+                console.log('ticket.ticket_number:', ticket.ticket_number)
+                console.log('ticket.image_keys 원본:', ticket.image_keys)
+                console.log('ticket.image_keys 타입:', typeof ticket.image_keys)
+                console.log('ticket.metadata:', ticket.metadata)
                 
                 // ticket.image_keys 파싱 (배열 또는 JSON 문자열 처리)
                 if (ticket.image_keys) {
                     try {
+                        console.log('🔍 image_keys 파싱 시도...')
                         // 이미 배열이면 그대로 사용, 문자열이면 JSON 파싱
-                        mailroomImages = Array.isArray(ticket.image_keys) 
-                            ? ticket.image_keys 
-                            : JSON.parse(ticket.image_keys)
-                        console.log('✅ 티켓 이미지 키 로드:', mailroomImages)
+                        if (Array.isArray(ticket.image_keys)) {
+                            mailroomImages = ticket.image_keys
+                            console.log('✅ image_keys는 이미 배열:', mailroomImages)
+                        } else if (typeof ticket.image_keys === 'string') {
+                            mailroomImages = JSON.parse(ticket.image_keys)
+                            console.log('✅ image_keys 문자열 파싱 완료:', mailroomImages)
+                        } else {
+                            console.warn('⚠️ image_keys 타입이 예상과 다름:', typeof ticket.image_keys)
+                            mailroomImages = []
+                        }
+                        console.log('✅ 최종 mailroomImages:', mailroomImages)
+                        console.log('✅ mailroomImages.length:', mailroomImages.length)
                     } catch (e) {
                         console.error('❌ image_keys 파싱 오류:', e)
+                        console.error('오류 상세:', e.message)
+                        console.error('파싱 시도한 값:', ticket.image_keys)
                         mailroomImages = []
                     }
+                } else {
+                    console.log('⚠️ ticket.image_keys가 비어있음 (null/undefined/빈문자열)')
                 }
                 
                 // metadata에서 우편물 정보 파싱 (OCR 원문과 요약)
