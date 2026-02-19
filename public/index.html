@@ -2000,17 +2000,18 @@
                             
                             <div>
                                 <label class="block text-sm font-medium mb-2">
-                                    편지 내용 (AI 추출)
+                                    4줄 요약
+                                    <span class="text-xs text-gray-500 ml-1">(AI 생성, 수정 가능)</span>
                                 </label>
-                                <textarea id="inspection-letter-content" class="w-full px-3 py-2 border rounded h-32" readonly></textarea>
+                                <textarea id="inspection-summary" class="w-full px-3 py-2 border rounded h-24" placeholder="편지 내용을 4줄로 요약..."></textarea>
                             </div>
                             
                             <div>
                                 <label class="block text-sm font-medium mb-2">
-                                    OCR 원문 (편집 가능)
+                                    원문
                                     <span class="text-xs text-gray-500 ml-1">(오타 수정 가능)</span>
                                 </label>
-                                <textarea id="inspection-ocr-text" class="w-full px-3 py-2 border rounded h-32"></textarea>
+                                <textarea id="inspection-ocr-text" class="w-full px-3 py-2 border rounded h-32" placeholder="편지 원문..."></textarea>
                             </div>
                             
                             <div>
@@ -10714,42 +10715,36 @@ console.log('권한 관리 함수 로드 완료')
                 
                 // OCR 결과 파싱
                 const ocrData = item.ocr_result ? JSON.parse(item.ocr_result) : {}
-                const ocrResults = ocrData.results || []
                 
-                // 발신자 정보 추출 (봉투가 있는 이미지에서)
-                const envelopeResult = ocrResults.find(r => r.has_envelope && r.sender_info)
-                const senderInfo = envelopeResult?.sender_info || null
+                // 새로운 간단한 구조인지 확인
+                let ocrText = ''
+                let summary = ''
                 
-                // 편지 내용 추출 (모든 이미지에서)
-                const letterContents = ocrResults
-                    .map(r => r.letter_content)
-                    .filter(c => c)
-                    .join('\n\n')
-                
-                // OCR 원문 (전체)
-                const ocrText = ocrResults.map(r => r.text).join('\n\n')
-                
-                // 폼 채우기 - 발신자 정보가 있으면 자동 입력
-                if (senderInfo) {
-                    document.getElementById('inspection-name').value = senderInfo.sender_name || ''
-                    document.getElementById('inspection-number').value = senderInfo.inmate_number || ''
-                    document.getElementById('inspection-institution').value = senderInfo.institution || ''
-                    document.getElementById('inspection-address').value = senderInfo.po_box_address || senderInfo.mailbox_address || senderInfo.full_address || ''
+                if (ocrData.text) {
+                    // 새로운 간단한 구조 (text, summary)
+                    ocrText = ocrData.text
+                    summary = ocrData.summary || ''
                 } else {
-                    // OCR 실패 시 기존 정보 표시
-                    document.getElementById('inspection-name').value = item.member_name || ''
-                    document.getElementById('inspection-number').value = item.member_number || ''
-                    document.getElementById('inspection-institution').value = item.institution || ''
-                    document.getElementById('inspection-address').value = item.po_box_address || item.mailbox_address || ''
+                    // 기존 복잡한 구조 (results 배열)
+                    const ocrResults = ocrData.results || []
+                    ocrText = ocrResults.map(r => r.text).join('\n\n')
+                    
+                    // 4줄 요약 생성 (원문에서 처음 4줄 추출)
+                    const lines = ocrText.split('\n').filter(line => line.trim())
+                    summary = lines.slice(0, 4).join('\n')
                 }
                 
+                // 폼 채우기
+                document.getElementById('inspection-name').value = item.member_name || ''
+                document.getElementById('inspection-number').value = item.member_number || ''
+                document.getElementById('inspection-institution').value = item.institution || ''
                 document.getElementById('inspection-ocr-text').value = ocrText
-                document.getElementById('inspection-letter-content').value = letterContents
+                document.getElementById('inspection-summary').value = summary
                 document.getElementById('inspection-notes').value = item.notes || ''
                 
                 // 회원 자동 매칭 (수용번호 기반)
-                if (senderInfo && senderInfo.inmate_number) {
-                    await searchAndMatchMember(senderInfo.inmate_number)
+                if (item.member_number) {
+                    await searchAndMatchMember(item.member_number)
                 }
                 
                 // 담당자 목록 로드
@@ -10759,7 +10754,7 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('inspection-detail-modal').classList.remove('hidden')
             } catch (error) {
                 console.error('검수 상세 조회 오류:', error)
-                alert('우편물 정보를 불러올 수 없습니다.')
+                showToast('우편물 정보를 불러올 수 없습니다.', 'error')
             }
         }
         
@@ -11182,7 +11177,7 @@ console.log('권한 관리 함수 로드 완료')
             const staffId = document.getElementById('inspection-staff').value
             
             if (!staffId) {
-                alert('담당자를 선택해주세요.')
+                showToast('담당자를 선택해주세요.', 'warning')
                 return
             }
             
@@ -11204,7 +11199,10 @@ console.log('권한 관리 함수 로드 완료')
                     
                     if (members.length === 0) {
                         // 신규 회원 등록
-                        const confirmCreate = window.confirm(`수용번호 "${number}"를 찾을 수 없습니다.\n\n신규 회원으로 등록하시겠습니까?\n\n(취소 시 미지정 회원으로 처리됩니다)`)
+                        const confirmCreate = await customConfirm(
+                            `수용번호 "${number}"를 찾을 수 없습니다.\n\n신규 회원으로 등록하시겠습니까?\n\n(취소 시 미지정 회원으로 처리됩니다)`,
+                            '신규 회원 등록'
+                        )
                         
                         if (confirmCreate) {
                             const newMemberRes = await axios.post(`${API_BASE}/members`, {
@@ -11220,7 +11218,7 @@ console.log('권한 관리 함수 로드 완료')
                             
                             memberId = newMemberRes.data.member.id
                             memberName = name
-                            alert(`신규 회원이 등록되었습니다: ${name}`)
+                            showToast(`신규 회원이 등록되었습니다: ${name}`, 'success')
                         }
                     } else {
                         // 기존 회원 매칭
@@ -11261,17 +11259,17 @@ console.log('권한 관리 함수 로드 완료')
                 })
                 
                 const message = memberId 
-                    ? `담당자 배정 완료!\n\n티켓 번호: ${ticketNumber}\n회원: ${memberName}\n담당자가 배정되었습니다.`
-                    : `담당자 배정 완료!\n\n티켓 번호: ${ticketNumber}\n회원: 미지정\n\n담당자가 티켓 상세에서 회원을 등록할 수 있습니다.`
+                    ? `담당자 배정 완료! 티켓: ${ticketNumber}, 회원: ${memberName}`
+                    : `담당자 배정 완료! 티켓: ${ticketNumber}, 회원: 미지정`
                 
-                alert(message)
+                showToast(message, 'success')
                 
                 closeInspectionDetail()
                 await loadProcessedMail()
                 await loadPendingMail()
             } catch (error) {
                 console.error('담당자 배정 오류:', error)
-                alert('담당자 배정 실패: ' + (error.response?.data?.error || error.message))
+                showToast('담당자 배정 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
         
@@ -11284,24 +11282,14 @@ console.log('권한 관리 함수 로드 완료')
             const institution = document.getElementById('inspection-institution').value
             const notes = document.getElementById('inspection-notes').value
             const ocrText = document.getElementById('inspection-ocr-text').value
+            const summary = document.getElementById('inspection-summary').value
             
             try {
-                // 현재 우편물 정보 조회 (기존 OCR 결과 구조 유지)
-                const mailRes = await axios.get(`${API_BASE}/mailroom/${currentInspectionId}`)
-                const mailItem = mailRes.data.mailroom_item
-                
-                // OCR 결과 업데이트 (기존 구조 유지하면서 텍스트만 변경)
-                let ocrResult = null
-                if (mailItem.ocr_result) {
-                    try {
-                        ocrResult = JSON.parse(mailItem.ocr_result)
-                        // 첫 번째 OCR 결과의 텍스트만 업데이트
-                        if (ocrResult.results && ocrResult.results.length > 0) {
-                            ocrResult.results[0].text = ocrText
-                        }
-                    } catch (e) {
-                        console.error('OCR 결과 파싱 오류:', e)
-                    }
+                // 간단하게 텍스트 그대로 저장
+                const ocrResult = {
+                    text: ocrText,
+                    summary: summary,
+                    updated_at: new Date().toISOString()
                 }
                 
                 await axios.put(`${API_BASE}/mailroom/${currentInspectionId}`, {
@@ -11309,7 +11297,7 @@ console.log('권한 관리 함수 로드 완료')
                     member_name: name,
                     member_number: number,
                     institution,
-                    ocr_result: ocrResult ? JSON.stringify(ocrResult) : null
+                    ocr_result: JSON.stringify(ocrResult)
                 })
                 
                 showToast('임시 저장되었습니다.', 'success')
@@ -11330,7 +11318,7 @@ console.log('권한 관리 함수 로드 완료')
             const institution = document.getElementById('inspection-institution').value
             
             if (!name || !number) {
-                alert('수신자 이름과 번호를 입력해주세요.')
+                showToast('수신자 이름과 번호를 입력해주세요.', 'warning')
                 return
             }
             
@@ -11343,7 +11331,10 @@ console.log('권한 관리 함수 로드 완료')
                 
                 if (members.length === 0) {
                     // 신규 회원 등록
-                    const confirm = window.confirm(`회원번호 "${number}"를 찾을 수 없습니다.\n\n신규 회원으로 등록하시겠습니까?`)
+                    const confirm = await customConfirm(
+                        `회원번호 "${number}"를 찾을 수 없습니다.\n\n신규 회원으로 등록하시겠습니까?`,
+                        '신규 회원 등록'
+                    )
                     if (!confirm) return
                     
                     const newMemberRes = await axios.post(`${API_BASE}/members`, {
@@ -11357,7 +11348,7 @@ console.log('권한 관리 함수 로드 완료')
                     })
                     
                     memberId = newMemberRes.data.id
-                    alert('신규 회원이 등록되었습니다.')
+                    showToast('신규 회원이 등록되었습니다.', 'success')
                 } else {
                     memberId = members[0].id
                 }
@@ -11381,19 +11372,19 @@ console.log('권한 관리 함수 로드 완료')
                     status: 'assigned'
                 })
                 
-                alert(`티켓이 생성되었습니다.\n티켓 번호: ${ticketRes.data.ticket_number}`)
+                showToast(`티켓이 생성되었습니다 (${ticketRes.data.ticket_number})`, 'success')
                 closeInspectionDetail()
                 await loadProcessedMail()
             } catch (error) {
                 console.error('티켓 생성 오류:', error)
-                alert('티켓 생성 실패: ' + (error.response?.data?.error || error.message))
+                showToast('티켓 생성 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
         
         // 선택된 우편물 일괄 배당 (직원 선택 모달)
         async function assignSelectedMail() {
             if (selectedMailItems.length === 0) {
-                alert('선택된 우편물이 없습니다.')
+                showToast('선택된 우편물이 없습니다.', 'warning')
                 return
             }
             
@@ -11403,7 +11394,7 @@ console.log('권한 관리 함수 로드 완료')
                 const staffList = staffRes.data.staff || []
                 
                 if (staffList.length === 0) {
-                    alert('담당자를 찾을 수 없습니다.')
+                    showToast('담당자를 찾을 수 없습니다.', 'warning')
                     return
                 }
                 
