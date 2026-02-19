@@ -1,30 +1,27 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.8
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.9
 
-## ✅ 최근 업데이트 (v56.8 - 2026-02-19)
+## ✅ 최근 업데이트 (v56.9 - 2026-02-19)
+
+### 🐛 버그 수정 (v56.9)
+- **🚨 무한 로딩 오류 수정**: 
+  - `memberSearchTimeout` 변수 중복 선언으로 인한 SyntaxError 수정
+  - 페이지 로딩 정상화
+- **🔍 이미지 디버깅 로그 추가**: 
+  - 티켓 상세 모달에서 `image_keys` 파싱 과정을 콘솔에 상세 로깅
+  - 이미지 표시 문제 원인 파악을 위한 디버그 정보 추가
 
 ### 🐛 버그 수정 (v56.8)
 - **💾 담당자 배정 500 오류 수정**: 
   - `tickets` 테이블에 `metadata` 컬럼 추가 (마이그레이션 0021)
   - 담당자 배정 시 티켓 생성 실패 문제 해결
-  - 프로덕션 DB에 마이그레이션 적용 완료
-- **🎫 임시 티켓 필터링 확인**: 
-  - 백엔드에서 `TEMP-*` 티켓 자동 필터링 (이미 구현됨)
-  - 티켓 목록 및 카운트 쿼리에서 임시 티켓 제외
-
-### ✨ 새로운 기능 (v56.7)
-- **🔍 회원 실시간 검색 (자동완성)**: 
-  - 기존 select 드롭다운을 **검색 가능한 입력 필드**로 변경
-  - 회원 이름 또는 수용번호 입력 시 **실시간 검색** (300ms 디바운스)
-  - 검색 결과를 **드롭다운**으로 표시 (최대 50명)
-  - 회원 선택 시 **확인 태그** 표시 (이름, 수용번호, 기관)
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://93077189.exit-company-system-5je.pages.dev/
+- **Latest Preview**: https://90622df4.exit-company-system-5je.pages.dev/
 - **Build Size**: 152.80 kB (동일)
-- **Build Time**: 899 ms
-- **Deploy Time**: 9.3 sec
-- **Last Updated**: 2026-02-19 08:20 UTC
+- **Build Time**: 886 ms
+- **Deploy Time**: 13.9 sec
+- **Last Updated**: 2026-02-19 08:35 UTC
 
 ## 🎯 주요 기능 (완료)
 
