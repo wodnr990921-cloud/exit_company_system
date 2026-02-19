@@ -1,25 +1,30 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v55.1
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v55.2
 
-## ✅ 최근 업데이트 (v55.1 - 2026-02-19)
+## ✅ 최근 업데이트 (v55.2 - 2026-02-19)
 
 ### 🐛 버그 수정
+- **우편물 이미지 누락 문제 해결**: 우편물에서 티켓 생성 시 이미지가 자동으로 복사되도록 개선
+- **티켓 삭제 오류 로깅 강화**: 삭제 실패 시 상세 오류 메시지와 스택 트레이스 표시
 - **삭제 권한 문제 해결**: `ROLE_HIERARCHY`에 `delete` 권한 추가 (admin 레벨 3)
 - **티켓 생성 500 오류 해결**: `metadata` 컬럼이 DB 스키마에 없어 발생한 SQLITE_ERROR 수정
 - **오류 메시지 개선**: 서버 오류 발생 시 `details`와 `stack trace`를 콘솔과 Toast로 표시
-- **에러 핸들링 강화**: `error.response.data.details` 상세 정보를 UI에 표시
+
+### ✨ 새로운 기능
+- **우편물 이미지 복사 API**: `POST /api/tickets/:id/copy-images` 엔드포인트 추가
+- **이미지 자동 연결**: 우편물 검수에서 티켓 생성 시 `image_keys` 자동 복사
 
 ### 🔍 디버깅 개선
-- 티켓 생성 시 입력값, currentStaff, 전송 데이터를 콘솔에 로깅
+- 티켓 생성/삭제 시 입력값, currentStaff, 전송 데이터를 콘솔에 로깅
 - 서버 오류 응답의 `error`, `details`, `stack` 정보를 모두 표시
 - Toast 메시지에 상세 오류 정보 포함 (5초 표시)
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://f5ebb8c8.exit-company-system-5je.pages.dev/
-- **Build Size**: 150.87 kB
-- **Build Time**: 854 ms
-- **Deploy Time**: 10.2 sec
-- **Last Updated**: 2026-02-19 04:45 UTC
+- **Latest Preview**: https://e098b208.exit-company-system-5je.pages.dev/
+- **Build Size**: 151.74 kB (↑ 0.87 kB)
+- **Build Time**: 879 ms
+- **Deploy Time**: 10.5 sec
+- **Last Updated**: 2026-02-19 05:00 UTC
 
 ## 🎯 주요 기능 (완료)
 
@@ -145,7 +150,7 @@ npm run db:migrate:prod
 
 ## 🐛 알려진 이슈
 
-없음 (v55.1 기준)
+없음 (v55.2 기준)
 
 ## 📝 다음 단계 권장사항
 
@@ -163,5 +168,5 @@ npm run db:migrate:prod
 ---
 
 **Last Updated**: 2026-02-19  
-**Version**: v55.1  
+**Version**: v55.2  
 **Status**: ✅ Production Ready
