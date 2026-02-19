@@ -11830,10 +11830,20 @@ console.log('권한 관리 함수 로드 완료')
             const summary = document.getElementById('inspection-summary').value
             
             try {
+                console.log('=== 담당자 배정 시작 ===')
+                console.log('currentInspectionId:', currentInspectionId)
+                
                 // 우편물 정보 조회 (이미지 키 가져오기)
                 const mailItemRes = await axios.get(`${API_BASE}/mailroom/${currentInspectionId}`)
+                console.log('우편물 정보 응답:', mailItemRes.data)
+                
                 const mailItem = mailItemRes.data.mailroom_item
+                console.log('mailItem:', mailItem)
+                console.log('mailItem.image_keys (raw):', mailItem.image_keys)
+                
                 const imageKeys = mailItem.image_keys ? JSON.parse(mailItem.image_keys) : []
+                console.log('imageKeys (parsed):', imageKeys)
+                console.log('imageKeys.length:', imageKeys.length)
                 
                 let memberId = null
                 let memberName = '미지정'
@@ -11945,26 +11955,51 @@ console.log('권한 관리 함수 로드 완료')
                 const ticketNumber = ticketRes.data.ticket_number  // ticket.ticket_number → ticket_number
                 const ticketId = ticketRes.data.ticket_id          // ticket.id → ticket_id
                 
-                console.log('=== 담당자 배정 시 이미지 복사 ===')
-                console.log('imageKeys:', imageKeys)
+                console.log('=== 티켓 생성 완료 ===')
+                console.log('ticketNumber:', ticketNumber)
                 console.log('ticketId:', ticketId)
+                console.log('ticketRes.data:', ticketRes.data)
+                
+                console.log('=== 담당자 배정 시 이미지 복사 시작 ===')
+                console.log('imageKeys:', imageKeys)
+                console.log('imageKeys 타입:', typeof imageKeys)
+                console.log('imageKeys.length:', imageKeys ? imageKeys.length : 'undefined')
                 
                 // 3.5. 우편물 이미지를 티켓에 복사
-                if (imageKeys && imageKeys.length > 0) {
+                if (imageKeys && Array.isArray(imageKeys) && imageKeys.length > 0) {
                     try {
-                        console.log(`${imageKeys.length}개의 이미지 키를 티켓 ${ticketId}에 복사 중...`)
+                        console.log(`🚀 ${imageKeys.length}개의 이미지 키를 티켓 ${ticketId}에 복사 시작...`)
+                        console.log('복사할 이미지 키들:', JSON.stringify(imageKeys, null, 2))
+                        
                         const copyResult = await axios.post(`${API_BASE}/tickets/${ticketId}/copy-images`, {
                             image_keys: imageKeys
                         })
+                        
+                        console.log('✅ 이미지 복사 API 호출 성공!')
                         console.log('이미지 복사 결과:', copyResult.data)
                         console.log(`✅ ${imageKeys.length}개의 우편물 이미지가 티켓에 복사되었습니다.`)
+                        
+                        // 복사 성공 확인용 Toast
+                        showToast(`${imageKeys.length}개의 이미지가 티켓에 복사되었습니다.`, 'success', 2000)
                     } catch (imgError) {
                         console.error('❌ 우편물 이미지 복사 오류:', imgError)
+                        console.error('오류 메시지:', imgError.message)
+                        console.error('오류 응답:', imgError.response)
                         console.error('오류 상세:', imgError.response?.data)
+                        
+                        // 복사 실패 알림
+                        showToast('⚠️ 이미지 복사 실패: ' + (imgError.response?.data?.error || imgError.message), 'warning', 5000)
                         // 이미지 복사 실패해도 계속 진행
                     }
                 } else {
                     console.warn('⚠️ 복사할 이미지 키가 없습니다.')
+                    console.warn('imageKeys:', imageKeys)
+                    console.warn('조건 체크:')
+                    console.warn('  - imageKeys 존재:', !!imageKeys)
+                    console.warn('  - Array 타입:', Array.isArray(imageKeys))
+                    console.warn('  - length > 0:', imageKeys ? imageKeys.length > 0 : false)
+                    
+                    showToast('⚠️ 우편물에 이미지가 없습니다.', 'warning', 3000)
                 }
                 
                 // 4. 우편물에 티켓 연결
