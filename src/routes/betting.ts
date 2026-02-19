@@ -152,6 +152,53 @@ betting.post('/matches/bulk', async (c) => {
   }
 })
 
+// 경기 배당 수정
+betting.patch('/matches/:id', async (c) => {
+  try {
+    const match_id = c.req.param('id')
+    const { 
+      home_odds, draw_odds, away_odds,
+      over_line, over_odds, under_odds,
+      handicap_line, handicap_home_odds, handicap_away_odds
+    } = await c.req.json()
+
+    // 경기 존재 여부 확인
+    const match = await c.env.DB.prepare(
+      'SELECT * FROM matches WHERE id = ?'
+    ).bind(match_id).first()
+
+    if (!match) {
+      return c.json({ error: '경기를 찾을 수 없습니다.' }, 404)
+    }
+
+    // 배당 업데이트
+    await c.env.DB.prepare(
+      `UPDATE matches 
+       SET home_odds = ?, draw_odds = ?, away_odds = ?,
+           over_line = ?, over_odds = ?, under_odds = ?,
+           handicap_line = ?, handicap_home_odds = ?, handicap_away_odds = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`
+    ).bind(
+      home_odds !== undefined ? home_odds : null,
+      draw_odds !== undefined ? draw_odds : null,
+      away_odds !== undefined ? away_odds : null,
+      over_line !== undefined ? over_line : null,
+      over_odds !== undefined ? over_odds : null,
+      under_odds !== undefined ? under_odds : null,
+      handicap_line !== undefined ? handicap_line : null,
+      handicap_home_odds !== undefined ? handicap_home_odds : null,
+      handicap_away_odds !== undefined ? handicap_away_odds : null,
+      match_id
+    ).run()
+
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('경기 배당 수정 오류:', error)
+    return c.json({ error: '경기 배당 수정 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 경기 삭제
 betting.delete('/matches/:id', async (c) => {
   try {
