@@ -8430,11 +8430,40 @@ console.log('권한 관리 함수 로드 완료')
             const imgElement = document.getElementById('current-mail-image')
             
             console.log(`🖼️ 이미지 ${index + 1}/${currentMailImages.length} 표시:`, imageUrl)
+            console.log('  - Image Key:', imageKey)
+            console.log('  - Ticket ID:', currentTicketIdForImages)
+            console.log('  - Encoded URL:', imageUrl)
             
             imgElement.src = imageUrl
             imgElement.style.transform = 'rotate(0deg) scale(1)'
             imgElement.style.cursor = 'default'
-            imgElement.onerror = () => console.error('이미지 로드 실패:', imageUrl)
+            
+            imgElement.onerror = (e) => {
+                console.error('❌ 이미지 로드 실패:', imageUrl)
+                console.error('  - 404 또는 500 오류 가능성')
+                console.error('  - R2에 이미지가 없거나 경로가 잘못됨')
+                // 에러 이미지 표시
+                const container = document.getElementById('mail-image-container')
+                if (container) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-center p-8">
+                            <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+                            <p class="text-lg font-semibold text-gray-800 mb-2">이미지 로드 실패</p>
+                            <p class="text-sm text-gray-600 mb-4">이미지를 찾을 수 없습니다.</p>
+                            <p class="text-xs text-gray-500 font-mono bg-gray-100 p-2 rounded break-all max-w-full">
+                                ${imageUrl}
+                            </p>
+                            <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                                새로고침
+                            </button>
+                        </div>
+                    `
+                }
+            }
+            
+            imgElement.onload = () => {
+                console.log('✅ 이미지 로드 성공:', imageUrl)
+            }
 
             // 카운터 업데이트
             document.getElementById('image-counter').textContent = `${index + 1}/${currentMailImages.length}`
