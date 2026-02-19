@@ -8701,13 +8701,26 @@ console.log('권한 관리 함수 로드 완료')
                 let ocrOriginal = ''
                 let summary4Lines = ''
                 
-                // metadata에서 우편물 정보 파싱
+                // 티켓의 image_keys 컬럼에서 이미지 가져오기
+                console.log('🖼️ 티켓 이미지 확인:', {
+                    ticket_id: ticket.id,
+                    ticket_number: ticket.ticket_number,
+                    image_keys: ticket.image_keys
+                })
+                
+                if (ticket.image_keys) {
+                    try {
+                        mailroomImages = JSON.parse(ticket.image_keys)
+                        console.log('✅ 파싱된 이미지 키 배열:', mailroomImages)
+                    } catch (e) {
+                        console.error('❌ image_keys 파싱 오류:', e)
+                    }
+                }
+                
+                // metadata에서 우편물 정보 파싱 (OCR 원문과 요약)
                 if (ticket.metadata) {
                     try {
                         const metadata = JSON.parse(ticket.metadata)
-                        if (metadata.image_keys) {
-                            mailroomImages = metadata.image_keys
-                        }
                         if (metadata.ocr_text) {
                             ocrOriginal = metadata.ocr_text
                         }
@@ -8735,18 +8748,27 @@ console.log('권한 관리 함수 로드 완료')
                 }
                 
                 // 우편물 이미지 표시 (좌측)
+                console.log('🖼️ 이미지 컨테이너 렌더링 시작, 이미지 개수:', mailroomImages.length)
                 const mailroomImagesContainer = document.getElementById('mailroom-images-container')
                 if (mailroomImagesContainer) {
                     if (mailroomImages.length > 0) {
-                        mailroomImagesContainer.innerHTML = mailroomImages.map(key => `
-                            <img src="/api/mailroom/image/${key}" 
-                                 class="w-full rounded border mb-2 cursor-pointer hover:opacity-80" 
-                                 onclick="viewImage('/api/mailroom/image/${key}')"
-                                 alt="우편물 이미지">
-                        `).join('')
+                        // 티켓 이미지 엔드포인트 사용
+                        mailroomImagesContainer.innerHTML = mailroomImages.map((key, index) => {
+                            const imageUrl = `/api/tickets/${ticket.id}/images/${encodeURIComponent(key)}`
+                            console.log(`  이미지 ${index + 1}/${mailroomImages.length}:`, imageUrl)
+                            return `
+                                <img src="${imageUrl}" 
+                                     class="w-full rounded border mb-2 cursor-pointer hover:opacity-80" 
+                                     onclick="viewImage('${imageUrl}')"
+                                     onerror="console.error('이미지 로드 실패:', '${imageUrl}')"
+                                     alt="우편물 이미지 ${index + 1}">
+                            `
+                        }).join('')
                         mailroomImagesContainer.classList.remove('hidden')
+                        console.log('✅ 이미지 컨테이너 표시됨')
                     } else {
                         mailroomImagesContainer.classList.add('hidden')
+                        console.log('⚠️ 이미지가 없어서 컨테이너 숨김')
                     }
                 }
                 
