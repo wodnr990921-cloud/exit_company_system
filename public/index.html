@@ -11543,12 +11543,12 @@ console.log('권한 관리 함수 로드 완료')
                 
                 const ticketRes = await axios.post(`${API_BASE}/tickets`, {
                     member_id: memberId,  // null 가능 (미지정)
-                    staff_id: parseInt(staffId),
+                    assigned_to: parseInt(staffId),
+                    created_by: currentStaff.id,
                     ticket_type: 'mailroom',
                     priority: 'normal',
                     title: `우편물 처리: ${memberName}`,
-                    description: detailedDescription,
-                    status: 'in_progress'
+                    description: detailedDescription
                 })
                 
                 const ticketNumber = ticketRes.data.ticket.ticket_number
