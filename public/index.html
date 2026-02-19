@@ -3075,11 +3075,29 @@
                         <div id="ticket-member-field" class="hidden">
                             <label class="block text-sm font-medium mb-1">회원 선택 *</label>
                             <div class="flex gap-2">
-                                <select id="ticket-member" class="flex-1 px-3 py-2 border rounded">
-                                    <option value="">선택하세요</option>
-                                </select>
+                                <div class="flex-1 relative">
+                                    <input 
+                                        type="text" 
+                                        id="ticket-member-search" 
+                                        placeholder="회원 이름 또는 수용번호 검색..."
+                                        class="w-full px-3 py-2 border rounded"
+                                        oninput="searchMembersForTicket(this.value)"
+                                        onfocus="showMemberSearchResults()"
+                                    >
+                                    <input type="hidden" id="ticket-member" value="">
+                                    <!-- 검색 결과 드롭다운 -->
+                                    <div id="member-search-results" class="hidden absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                        <!-- 검색 결과가 여기에 표시됨 -->
+                                    </div>
+                                </div>
                                 <button type="button" onclick="showNewMemberModalFromTicket()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 whitespace-nowrap">
                                     <i class="fas fa-user-plus mr-1"></i>신규 회원
+                                </button>
+                            </div>
+                            <div id="selected-member-info" class="hidden mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                                <span id="selected-member-text"></span>
+                                <button type="button" onclick="clearSelectedMember()" class="ml-2 text-red-500 hover:text-red-700">
+                                    <i class="fas fa-times"></i>
                                 </button>
                             </div>
                         </div>
@@ -5262,11 +5280,25 @@ console.log('권한 관리 함수 로드 완료')
         
         // 알림 드롭다운 외부 클릭 시 닫기
         document.addEventListener('click', (e) => {
+            // 알림 드롭다운 숨김
             const dropdown = document.getElementById('notifications-dropdown')
             const button = e.target.closest('[onclick="toggleNotifications()"]')
             
             if (!button && !dropdown?.contains(e.target)) {
                 dropdown?.classList.add('hidden')
+            }
+            
+            // 회원 검색 결과 드롭다운 숨김
+            const memberSearchResults = document.getElementById('member-search-results')
+            const memberSearchInput = document.getElementById('ticket-member-search')
+            
+            if (memberSearchResults && memberSearchInput) {
+                const isClickInsideSearch = memberSearchInput.contains(e.target)
+                const isClickInsideResults = memberSearchResults.contains(e.target)
+                
+                if (!isClickInsideSearch && !isClickInsideResults) {
+                    memberSearchResults.classList.add('hidden')
+                }
             }
         })
         
@@ -9607,15 +9639,6 @@ console.log('권한 관리 함수 로드 완료')
         // 티켓 생성 모달
         async function showNewTicketModal() {
             try {
-                // 회원 목록 로드
-                const membersRes = await axios.get(`${API_BASE}/members`)
-                const members = membersRes.data.members || []
-                
-                const memberOptions = members.map(m => 
-                    `<option value="${m.id}">${m.name} (${m.institution})</option>`
-                ).join('')
-                document.getElementById('ticket-member').innerHTML = '<option value="">선택하세요</option>' + memberOptions
-
                 // 직원 목록 로드
                 const staffRes = await axios.get(`${API_BASE}/staff`)
                 const staff = staffRes.data.staff || []
@@ -9636,16 +9659,107 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
 
+        // 회원 검색 (실시간)
+        let memberSearchTimeout = null
+        async function searchMembersForTicket(query) {
+            clearTimeout(memberSearchTimeout)
+            
+            const resultsContainer = document.getElementById('member-search-results')
+            
+            if (!query || query.trim().length === 0) {
+                resultsContainer.classList.add('hidden')
+                return
+            }
+            
+            memberSearchTimeout = setTimeout(async () => {
+                try {
+                    console.log('🔍 회원 검색:', query)
+                    const response = await axios.get(`${API_BASE}/members?search=${encodeURIComponent(query)}&limit=50`)
+                    const members = response.data.members || []
+                    
+                    console.log('✅ 검색 결과:', members.length, '명')
+                    
+                    if (members.length === 0) {
+                        resultsContainer.innerHTML = `
+                            <div class="p-3 text-center text-gray-500 text-sm">
+                                <i class="fas fa-search mr-1"></i>
+                                검색 결과가 없습니다
+                            </div>
+                        `
+                    } else {
+                        resultsContainer.innerHTML = members.map(m => `
+                            <div class="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0" 
+                                 onclick="selectMemberForTicket(${m.id}, '${m.name.replace(/'/g, "\\'")}', '${m.inmate_number || ''}', '${(m.institution || '').replace(/'/g, "\\'")}')">
+                                <div class="font-medium text-gray-800">${m.name}</div>
+                                <div class="text-sm text-gray-600">
+                                    수용번호: ${m.inmate_number || '-'} | ${m.institution || '-'}
+                                </div>
+                            </div>
+                        `).join('')
+                    }
+                    
+                    resultsContainer.classList.remove('hidden')
+                } catch (error) {
+                    console.error('회원 검색 오류:', error)
+                    resultsContainer.innerHTML = `
+                        <div class="p-3 text-center text-red-500 text-sm">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            검색 실패
+                        </div>
+                    `
+                    resultsContainer.classList.remove('hidden')
+                }
+            }, 300) // 300ms 디바운스
+        }
+
+        // 회원 선택 결과 표시
+        function showMemberSearchResults() {
+            const resultsContainer = document.getElementById('member-search-results')
+            const searchInput = document.getElementById('ticket-member-search')
+            
+            if (searchInput.value.trim().length > 0) {
+                searchMembersForTicket(searchInput.value)
+            }
+        }
+
+        // 회원 선택
+        function selectMemberForTicket(id, name, inmateNumber, institution) {
+            document.getElementById('ticket-member').value = id
+            document.getElementById('ticket-member-search').value = `${name} (${inmateNumber || '수용번호 없음'})`
+            
+            const infoContainer = document.getElementById('selected-member-info')
+            const infoText = document.getElementById('selected-member-text')
+            infoText.innerHTML = `
+                <i class="fas fa-user text-blue-500 mr-1"></i>
+                <strong>${name}</strong> | 수용번호: ${inmateNumber || '-'} | ${institution || '-'}
+            `
+            infoContainer.classList.remove('hidden')
+            
+            // 검색 결과 숨김
+            document.getElementById('member-search-results').classList.add('hidden')
+            
+            console.log('✅ 회원 선택됨:', { id, name, inmateNumber, institution })
+        }
+
+        // 회원 선택 해제
+        function clearSelectedMember() {
+            document.getElementById('ticket-member').value = ''
+            document.getElementById('ticket-member-search').value = ''
+            document.getElementById('selected-member-info').classList.add('hidden')
+            console.log('🚫 회원 선택 해제됨')
+        }
+
         function closeNewTicketModal() {
             document.getElementById('new-ticket-modal').classList.add('hidden')
             // 폼 초기화
             document.getElementById('ticket-type').value = ''
             document.getElementById('ticket-title').value = ''
             document.getElementById('ticket-description').value = ''
-            document.getElementById('ticket-member').value = ''
+            clearSelectedMember() // 회원 선택 초기화
             document.getElementById('ticket-priority').value = 'normal'
             document.getElementById('ticket-assigned-to').value = ''
             document.getElementById('point-amount').value = ''
+            document.getElementById('member-search-results').classList.add('hidden')
             toggleTicketFields()
         }
 
