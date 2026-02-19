@@ -201,7 +201,7 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
     const id = c.req.param('id')
     const body = await c.req.json()
 
-    const { name, member_number, inmate_number, institution, po_box_address, notes } = body
+    const { name, member_number, inmate_number, institution, po_box_address, depositor_name, notes } = body
 
     const updates: string[] = []
     const params: any[] = []
@@ -225,6 +225,10 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
     if (po_box_address !== undefined) {
       updates.push('po_box_address = ?')
       params.push(po_box_address)
+    }
+    if (depositor_name !== undefined) {
+      updates.push('depositor_name = ?')
+      params.push(depositor_name)
     }
     if (notes !== undefined) {
       updates.push('notes = ?')
