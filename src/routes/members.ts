@@ -200,54 +200,89 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
+    const user = c.get('user')
 
-    const { name, member_number, inmate_number, institution, po_box_address, depositor_name, notes } = body
+    const { name, member_number, inmate_number, institution, po_box_address, depositor_name, notes, change_reason } = body
 
-    const updates: string[] = []
-    const params: any[] = []
+    // 현재 회원 정보 조회
+    const currentMember = await c.env.DB.prepare(
+      'SELECT * FROM members WHERE id = ?'
+    ).bind(id).first()
 
-    if (name !== undefined) {
-      updates.push('name = ?')
-      params.push(name)
-    }
-    if (member_number !== undefined) {
-      updates.push('member_number = ?')
-      params.push(member_number)
-    }
-    if (inmate_number !== undefined) {
-      updates.push('inmate_number = ?')
-      params.push(inmate_number)
-    }
-    if (institution !== undefined) {
-      updates.push('institution = ?')
-      params.push(institution)
-    }
-    if (po_box_address !== undefined) {
-      updates.push('po_box_address = ?')
-      params.push(po_box_address)
-    }
-    if (depositor_name !== undefined) {
-      updates.push('depositor_name = ?')
-      params.push(depositor_name)
-    }
-    if (notes !== undefined) {
-      updates.push('notes = ?')
-      params.push(notes)
+    if (!currentMember) {
+      return c.json({ error: '회원을 찾을 수 없습니다.' }, 404)
     }
 
-    if (updates.length === 0) {
+    const fieldMap: Record<string, { old: any, new: any }> = {}
+
+    if (name !== undefined && name !== currentMember.name) {
+      fieldMap['name'] = { old: currentMember.name, new: name }
+    }
+    if (member_number !== undefined && member_number !== currentMember.member_number) {
+      fieldMap['member_number'] = { old: currentMember.member_number, new: member_number }
+    }
+    if (inmate_number !== undefined && inmate_number !== currentMember.inmate_number) {
+      fieldMap['inmate_number'] = { old: currentMember.inmate_number, new: inmate_number }
+    }
+    if (institution !== undefined && institution !== currentMember.institution) {
+      fieldMap['institution'] = { old: currentMember.institution, new: institution }
+    }
+    if (po_box_address !== undefined && po_box_address !== currentMember.po_box_address) {
+      fieldMap['po_box_address'] = { old: currentMember.po_box_address, new: po_box_address }
+    }
+    if (depositor_name !== undefined && depositor_name !== currentMember.depositor_name) {
+      fieldMap['depositor_name'] = { old: currentMember.depositor_name, new: depositor_name }
+    }
+    if (notes !== undefined && notes !== currentMember.notes) {
+      fieldMap['notes'] = { old: currentMember.notes, new: notes }
+    }
+
+    if (Object.keys(fieldMap).length === 0) {
       return c.json({ error: '수정할 내용이 없습니다.' }, 400)
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP')
-    params.push(id)
+    // 관리자는 즉시 수정, 일반 직원은 수정 요청 생성
+    if (user.role === 'admin') {
+      const updates: string[] = []
+      const params: any[] = []
 
-    const setClause = updates.join(', ')
-    await c.env.DB.prepare(
-      `UPDATE members SET ${setClause} WHERE id = ?`
-    ).bind(...params).run()
+      Object.keys(fieldMap).forEach(field => {
+        updates.push(`${field} = ?`)
+        params.push(fieldMap[field].new)
+      })
 
-    return c.json({ success: true })
+      updates.push('updated_at = CURRENT_TIMESTAMP')
+      params.push(id)
+
+      const setClause = updates.join(', ')
+      await c.env.DB.prepare(
+        `UPDATE members SET ${setClause} WHERE id = ?`
+      ).bind(...params).run()
+
+      return c.json({ success: true, message: '회원 정보가 수정되었습니다.' })
+    } else {
+      // 일반 직원: 수정 요청 생성
+      for (const [field, values] of Object.entries(fieldMap)) {
+        await c.env.DB.prepare(`
+          INSERT INTO modification_requests (target_type, target_id, field_name, old_value, new_value, reason, requested_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          'member',
+          id,
+          field,
+          values.old || '',
+          values.new,
+          change_reason || '회원 정보 수정',
+          user.id
+        ).run()
+      }
+
+      return c.json({ 
+        success: true, 
+        message: '수정 요청이 제출되었습니다. 관리자 승인 후 적용됩니다.',
+        requiresApproval: true 
+      })
+    }
   } catch (error) {
     console.error('회원 수정 오류:', error)
     return c.json({ error: '회원 수정 중 오류가 발생했습니다.' }, 500)
@@ -274,6 +309,92 @@ members.delete('/:id', requireRole(ROLES.ADMIN), async (c) => {
   } catch (error) {
     console.error('회원 삭제 오류:', error)
     return c.json({ error: '회원 삭제 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 수정 요청 목록 조회 (관리자 전용)
+members.get('/requests/pending', requireRole(ROLES.ADMIN), async (c) => {
+  try {
+    const result = await c.env.DB.prepare(`
+      SELECT 
+        mr.*,
+        m.name as member_name,
+        m.member_number,
+        s.name as requester_name
+      FROM modification_requests mr
+      LEFT JOIN members m ON mr.target_id = m.id AND mr.target_type = 'member'
+      LEFT JOIN staff s ON mr.requested_by = s.id
+      WHERE mr.target_type = 'member' AND mr.status = 'pending'
+      ORDER BY mr.created_at DESC
+    `).all()
+
+    return c.json(result.results || [])
+  } catch (error) {
+    console.error('수정 요청 조회 오류:', error)
+    return c.json({ error: '수정 요청 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 수정 요청 승인 (관리자 전용)
+members.post('/requests/:requestId/approve', requireRole(ROLES.ADMIN), async (c) => {
+  try {
+    const requestId = c.req.param('requestId')
+    const user = c.get('user')
+
+    // 수정 요청 조회
+    const request = await c.env.DB.prepare(
+      'SELECT * FROM modification_requests WHERE id = ? AND status = ?'
+    ).bind(requestId, 'pending').first()
+
+    if (!request) {
+      return c.json({ error: '수정 요청을 찾을 수 없습니다.' }, 404)
+    }
+
+    // 회원 정보 업데이트
+    await c.env.DB.prepare(
+      `UPDATE members SET ${request.field_name as string} = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+    ).bind(request.new_value, request.target_id).run()
+
+    // 수정 요청 상태 업데이트
+    await c.env.DB.prepare(`
+      UPDATE modification_requests 
+      SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind('approved', user.id, requestId).run()
+
+    return c.json({ success: true, message: '수정 요청이 승인되었습니다.' })
+  } catch (error) {
+    console.error('수정 요청 승인 오류:', error)
+    return c.json({ error: '수정 요청 승인 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 수정 요청 거부 (관리자 전용)
+members.post('/requests/:requestId/reject', requireRole(ROLES.ADMIN), async (c) => {
+  try {
+    const requestId = c.req.param('requestId')
+    const user = c.get('user')
+
+    // 수정 요청 조회
+    const request = await c.env.DB.prepare(
+      'SELECT * FROM modification_requests WHERE id = ? AND status = ?'
+    ).bind(requestId, 'pending').first()
+
+    if (!request) {
+      return c.json({ error: '수정 요청을 찾을 수 없습니다.' }, 404)
+    }
+
+    // 수정 요청 상태 업데이트
+    await c.env.DB.prepare(`
+      UPDATE modification_requests 
+      SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind('rejected', user.id, requestId).run()
+
+    return c.json({ success: true, message: '수정 요청이 거부되었습니다.' })
+  } catch (error) {
+    console.error('수정 요청 거부 오류:', error)
+    return c.json({ error: '수정 요청 거부 중 오류가 발생했습니다.' }, 500)
   }
 })
 

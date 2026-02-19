@@ -11550,39 +11550,39 @@ console.log('권한 관리 함수 로드 완료')
             }
             
             if (changes.length === 0) {
-                alert('변경된 내용이 없습니다.')
+                showToast('변경된 내용이 없습니다.', 'warning')
                 return
             }
             
             // 확인
-            const confirmMsg = `다음 정보를 수정하시겠습니까?\n\n${changes.join('\n')}\n\n※ 이 변경은 관리자 승인이 필요합니다.`
-            if (!confirm(confirmMsg)) return
+            const confirmMsg = currentStaff.role === 'admin'
+                ? `다음 정보를 수정하시겠습니까?\n\n${changes.join('\n')}`
+                : `다음 정보의 수정을 요청하시겠습니까?\n\n${changes.join('\n')}\n\n※ 관리자 승인 후 적용됩니다.`
+            
+            const confirmed = await customConfirm(confirmMsg)
+            if (!confirmed) return
             
             try {
-                // 회원 정보 수정 요청 (관리자 전체 필드 수정)
-                await axios.put(`${API_BASE}/members/${currentEditingMemberId}`, {
+                // 회원 정보 수정 요청
+                const response = await axios.put(`${API_BASE}/members/${currentEditingMemberId}`, {
                     name: newName,
                     member_number: newMemberNumber,
                     inmate_number: newInmateNumber,
                     institution: newInstitution,
                     po_box_address: newMailbox,
                     depositor_name: newDepositor,
-                    change_reason: reason || changes.join(', '),
-                    approval_required: currentStaff.role !== 'admin'
+                    change_reason: reason || changes.join(', ')
                 })
                 
-                const successMsg = currentStaff.role === 'admin'
-                    ? `회원 정보가 수정되었습니다.\n\n변경 내역:\n${changes.join('\n')}`
-                    : `회원 정보 수정 요청이 저장되었습니다.\n\n변경 내역:\n${changes.join('\n')}\n\n※ 관리자 승인 후 반영됩니다.`
-                
-                alert(successMsg)
+                // 서버 응답 메시지 표시
+                showToast(response.data.message || '처리되었습니다.', 'success')
                 
                 // 모달 닫고 목록 새로고침
                 closeEditMemberModal()
                 loadMembers()
             } catch (error) {
                 console.error('회원 정보 수정 오류:', error)
-                alert(`회원 정보 수정 실패:\n\n${error.response?.data?.error || error.message}`)
+                showToast(error.response?.data?.error || '회원 정보 수정 중 오류가 발생했습니다.', 'error')
             }
         }
         
