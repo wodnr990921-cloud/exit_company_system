@@ -265,7 +265,7 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
         params.push(fieldMap[field].new)
       })
 
-      updates.push('updated_at = CURRENT_TIMESTAMP')
+      // updated_at 컬럼이 없으므로 제거
       params.push(id)
 
       const setClause = updates.join(', ')
