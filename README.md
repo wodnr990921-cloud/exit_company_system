@@ -1,6 +1,13 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.4
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.5
 
-## ✅ 최근 업데이트 (v56.4 - 2026-02-19)
+## ✅ 최근 업데이트 (v56.5 - 2026-02-19)
+
+### 🐛 버그 수정 (v56.5)
+- **🖼️ 이미지 표시 위치 수정**: 
+  - 우측 "원문" 위에 표시되던 이미지 제거
+  - **좌측 전용 이미지 뷰어**만 사용 (40% 영역, "연결된 우편물이 없습니다" 표시되던 자리)
+  - 이미지 뷰어에서만 줌/팬/회전 등 모든 기능 사용 가능
+  - 우측은 티켓 정보/원문/요약만 표시
 
 ### ✨ 새로운 기능 (v56.4)
 - **🖼️ 고급 이미지 뷰어 통합**: 티켓 상세 모달 좌측에 전문 이미지 뷰어 추가
@@ -13,28 +20,13 @@
   - **이미지 카운터**: 현재 이미지 번호/전체 개수 표시
   - **이미지 초기화**: 한 번의 클릭으로 줌/회전/위치 초기화
 
-### 🐛 버그 수정 (v56.3)
-- **🖼️ 티켓 상세 모달 이미지 표시 문제 해결**: 
-  - `showTicketDetail` 함수가 `metadata.image_keys` 대신 **`ticket.image_keys`** 컬럼에서 이미지를 읽도록 수정
-  - 이미지 엔드포인트를 `/api/mailroom/image/` → **`/api/tickets/:id/images/`**로 변경
-  - 이미지 로드 실패 시 콘솔에 오류 로그 출력
-  - 모든 티켓 생성 경로(직접 생성, 담당자 배정)에서 이미지가 정상 표시됨
-
-### ✨ 새로운 기능 (v56.2)
-- **경기 관리 일괄 작업**: 체크박스 선택 후 일괄 상태 변경, 일괄 삭제, 선택 상태 변경, 선택 삭제 기능 추가
-
-### 🔍 디버깅 개선
-- 담당자 배정 시 이미지 복사 과정을 콘솔에 상세 로깅 (`currentInspectionId`, `mailItem`, `imageKeys`, API 결과)
-- 이미지 뷰어 초기화, 썸네일 렌더링, 이미지 표시 과정을 콘솔에 로깅
-- 이미지 로드 실패 시 상세 오류 정보 출력
-
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://264d8d60.exit-company-system-5je.pages.dev/
+- **Latest Preview**: https://76deb4fb.exit-company-system-5je.pages.dev/
 - **Build Size**: 152.70 kB (동일)
-- **Build Time**: 880 ms
-- **Deploy Time**: 14.1 sec
-- **Last Updated**: 2026-02-19 07:30 UTC
+- **Build Time**: 936 ms
+- **Deploy Time**: 10.3 sec
+- **Last Updated**: 2026-02-19 07:40 UTC
 
 ## 🎯 주요 기능 (완료)
 
