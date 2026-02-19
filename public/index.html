@@ -2445,7 +2445,7 @@
                     </div>
                     
                     <!-- 액션 버튼 -->
-                    <div class="flex gap-2 mb-4">
+                    <div class="flex flex-wrap gap-2 mb-4">
                         <button onclick="showAddMatchModal()" class="btn btn-primary">
                             <i class="fas fa-plus mr-2"></i>경기 추가
                         </button>
@@ -2455,6 +2455,21 @@
                         <button onclick="downloadMatchTemplate()" class="btn btn-secondary">
                             <i class="fas fa-download mr-2"></i>엑셀 양식 다운로드
                         </button>
+                        
+                        <!-- 일괄 작업 버튼들 -->
+                        <div class="border-l pl-2 ml-2 flex gap-2">
+                            <button onclick="bulkChangeMatchStatus()" class="btn btn-warning" title="선택한 경기의 상태 일괄 변경">
+                                <i class="fas fa-exchange-alt mr-2"></i>선택 상태변경
+                            </button>
+                            <button onclick="bulkDeleteMatches()" class="btn btn-danger" title="선택한 경기 삭제">
+                                <i class="fas fa-trash mr-2"></i>선택 삭제
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 선택 정보 -->
+                    <div id="match-selection-info" class="hidden mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                        <span id="match-selection-count" class="font-medium">0개</span> 선택됨
                     </div>
                     
                     <!-- 리그 필터 -->
@@ -2489,6 +2504,10 @@
                             <table class="w-full text-sm">
                                 <thead class="bg-gray-50">
                                     <tr>
+                                        <th class="px-2 py-2 text-center w-10">
+                                            <input type="checkbox" id="match-select-all" onchange="toggleAllMatches(this.checked)" 
+                                                   class="w-4 h-4 cursor-pointer" title="전체 선택/해제">
+                                        </th>
                                         <th class="px-2 py-2 text-left">경기명</th>
                                         <th class="px-2 py-2 text-left">리그</th>
                                         <th class="px-2 py-2 text-left">홈 vs 원정</th>
@@ -2501,7 +2520,7 @@
                                 </thead>
                                 <tbody id="match-list-table" class="divide-y">
                                     <tr>
-                                        <td colspan="8" class="px-2 py-4 text-center text-gray-500">경기를 불러오는 중...</td>
+                                        <td colspan="9" class="px-2 py-4 text-center text-gray-500">경기를 불러오는 중...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -7306,7 +7325,7 @@ console.log('권한 관리 함수 로드 완료')
                 if (!tbody) return
                 
                 if (matches.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="px-2 py-4 text-center text-gray-500">등록된 경기가 없습니다</td></tr>'
+                    tbody.innerHTML = '<tr><td colspan="9" class="px-2 py-4 text-center text-gray-500">등록된 경기가 없습니다</td></tr>'
                     return
                 }
                 
@@ -7363,6 +7382,10 @@ console.log('권한 관리 함수 로드 완료')
                     
                     return `
                         <tr class="hover:bg-gray-50">
+                            <td class="px-2 py-2 text-center">
+                                <input type="checkbox" class="match-checkbox w-4 h-4 cursor-pointer" 
+                                       data-match-id="${m.id}" onchange="updateMatchSelection()">
+                            </td>
                             <td class="px-2 py-2 font-medium">${m.match_name}</td>
                             <td class="px-2 py-2 text-sm">
                                 <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
@@ -7393,7 +7416,7 @@ console.log('권한 관리 함수 로드 완료')
                 console.error('경기 관리 목록 로드 오류:', error)
                 const tbody = document.getElementById('match-list-table')
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="px-2 py-4 text-center text-red-500">경기 목록 로드 실패</td></tr>'
+                    tbody.innerHTML = '<tr><td colspan="9" class="px-2 py-4 text-center text-red-500">경기 목록 로드 실패</td></tr>'
                 }
             }
         }
@@ -7618,6 +7641,144 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('경기 삭제 오류:', error)
                 alert('경기 삭제 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        // 경기 체크박스 관련 함수들
+        function toggleAllMatches(checked) {
+            const checkboxes = document.querySelectorAll('.match-checkbox')
+            checkboxes.forEach(cb => cb.checked = checked)
+            updateMatchSelection()
+        }
+        
+        function updateMatchSelection() {
+            const checkboxes = document.querySelectorAll('.match-checkbox:checked')
+            const count = checkboxes.length
+            const selectionInfo = document.getElementById('match-selection-info')
+            const selectionCount = document.getElementById('match-selection-count')
+            
+            if (count > 0) {
+                selectionInfo.classList.remove('hidden')
+                selectionCount.textContent = `${count}개`
+            } else {
+                selectionInfo.classList.add('hidden')
+            }
+            
+            // 전체 선택 체크박스 상태 업데이트
+            const allCheckboxes = document.querySelectorAll('.match-checkbox')
+            const selectAllCheckbox = document.getElementById('match-select-all')
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allCheckboxes.length > 0 && allCheckboxes.length === count
+                selectAllCheckbox.indeterminate = count > 0 && count < allCheckboxes.length
+            }
+        }
+        
+        function getSelectedMatchIds() {
+            const checkboxes = document.querySelectorAll('.match-checkbox:checked')
+            return Array.from(checkboxes).map(cb => cb.dataset.matchId)
+        }
+        
+        // 선택한 경기 상태 일괄 변경
+        async function bulkChangeMatchStatus() {
+            if (!isAdmin()) {
+                showToast('경기 상태 변경은 관리자만 가능합니다.', 'error')
+                return
+            }
+            
+            const selectedIds = getSelectedMatchIds()
+            if (selectedIds.length === 0) {
+                showToast('변경할 경기를 선택해주세요.', 'warning')
+                return
+            }
+            
+            // 상태 선택 모달 생성
+            const status = await new Promise((resolve) => {
+                const modal = document.createElement('div')
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4'
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg p-6 max-w-md w-full">
+                        <h3 class="text-lg font-bold mb-4">경기 상태 변경</h3>
+                        <p class="text-sm text-gray-600 mb-4">${selectedIds.length}개의 경기 상태를 변경합니다.</p>
+                        <div class="space-y-2 mb-6">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="status" value="open" class="w-4 h-4">
+                                <span>진행중 (배팅 가능)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="status" value="closed" class="w-4 h-4">
+                                <span>마감 (배팅 불가)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="status" value="completed" class="w-4 h-4">
+                                <span>완료 (경기 종료)</span>
+                            </label>
+                        </div>
+                        <div class="flex gap-2 justify-end">
+                            <button onclick="this.closest('.fixed').remove()" class="btn btn-secondary">취소</button>
+                            <button id="confirm-status-change" class="btn btn-primary">변경</button>
+                        </div>
+                    </div>
+                `
+                document.body.appendChild(modal)
+                
+                modal.querySelector('#confirm-status-change').onclick = () => {
+                    const selected = modal.querySelector('input[name="status"]:checked')
+                    if (!selected) {
+                        showToast('상태를 선택해주세요.', 'warning')
+                        return
+                    }
+                    modal.remove()
+                    resolve(selected.value)
+                }
+            })
+            
+            if (!status) return
+            
+            try {
+                // 각 경기의 상태 변경
+                await Promise.all(selectedIds.map(id => 
+                    axios.patch(`${API_BASE}/betting/matches/${id}`, { status })
+                ))
+                
+                showToast(`${selectedIds.length}개 경기의 상태가 변경되었습니다.`, 'success')
+                await loadMatchManagement()
+            } catch (error) {
+                console.error('경기 상태 변경 오류:', error)
+                showToast('경기 상태 변경 실패: ' + (error.response?.data?.error || error.message), 'error')
+            }
+        }
+        
+        // 선택한 경기 일괄 삭제
+        async function bulkDeleteMatches() {
+            if (!isAdmin()) {
+                showToast('경기 삭제는 관리자만 가능합니다.', 'error')
+                return
+            }
+            
+            const selectedIds = getSelectedMatchIds()
+            if (selectedIds.length === 0) {
+                showToast('삭제할 경기를 선택해주세요.', 'warning')
+                return
+            }
+            
+            const confirmed = await customConfirm(
+                '경기 일괄 삭제',
+                `${selectedIds.length}개의 경기를 삭제하시겠습니까?\n\n⚠️ 경고: 이 작업은 되돌릴 수 없습니다.\n삭제된 경기와 관련된 배팅 내역도 함께 삭제됩니다.`
+            )
+            
+            if (!confirmed) return
+            
+            try {
+                // 각 경기 삭제
+                await Promise.all(selectedIds.map(id => 
+                    axios.delete(`${API_BASE}/betting/matches/${id}`)
+                ))
+                
+                showToast(`${selectedIds.length}개 경기가 삭제되었습니다.`, 'success')
+                await loadMatchManagement()
+            } catch (error) {
+                console.error('경기 삭제 오류:', error)
+                showToast('경기 삭제 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
 
