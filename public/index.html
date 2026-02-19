@@ -8724,7 +8724,11 @@ console.log('권한 관리 함수 로드 완료')
                 showToast('답변이 저장되었습니다. "답변 일괄 출력"으로 인쇄할 수 있습니다.', 'success')
             } catch (error) {
                 console.error('답변 저장 오류:', error)
-                alert('답변 저장 실패: ' + (error.response?.data?.error || error.message))
+                console.error('Error response:', error.response)
+                console.error('Error data:', error.response?.data)
+                const errorMsg = error.response?.data?.error || error.message
+                const details = error.response?.data?.details
+                alert('답변 저장 실패: ' + errorMsg + (details ? '\n상세: ' + details : ''))
             }
         }
 

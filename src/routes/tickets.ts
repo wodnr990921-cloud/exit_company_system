@@ -414,21 +414,33 @@ tickets.post('/:id/comments', async (c) => {
 
     // comment_type이 'response'인 경우 responses 테이블에도 저장
     if (finalCommentType === 'response') {
-      // 티켓 정보 조회 (member_id 필요)
+      // 티켓 정보 조회 (member_id와 회원 정보 필요)
       const ticket = await c.env.DB.prepare(
-        'SELECT member_id FROM tickets WHERE id = ?'
+        `SELECT t.member_id, m.name, m.member_number, m.institution, m.po_box_address
+         FROM tickets t
+         LEFT JOIN members m ON t.member_id = m.id
+         WHERE t.id = ?`
       ).bind(ticket_id).first()
 
-      if (ticket) {
+      if (ticket && (ticket as any).member_id) {
+        const member = ticket as any
         await c.env.DB.prepare(
-          `INSERT INTO responses (ticket_id, member_id, response_content, print_status, created_by)
-           VALUES (?, ?, ?, ?, ?)`
+          `INSERT INTO responses (
+            ticket_id, member_id, response_type, content,
+            recipient_name, recipient_number, recipient_institution, 
+            po_box_address, print_status, printed_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           ticket_id,
-          (ticket as any).member_id || null,
+          member.member_id,
+          'ticket_response',
           content,
+          member.name || '회원',
+          member.member_number || '',
+          member.institution || '',
+          member.po_box_address || '',
           'pending',
-          created_by
+          null
         ).run()
       }
     }
