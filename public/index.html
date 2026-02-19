@@ -8304,6 +8304,7 @@ console.log('권한 관리 함수 로드 완료')
         // 티켓 이미지 뷰어 관련 변수
         let currentMailImages = [] // 현재 티켓의 이미지 목록
         let currentImageIndex = 0 // 현재 보고 있는 이미지 인덱스
+        let currentTicketIdForImages = null // 현재 티켓 ID (이미지 URL 생성용)
         let imageRotation = 0 // 현재 회전 각도
         let imageScale = 1.0 // 현재 줌 배율
         
@@ -8318,13 +8319,20 @@ console.log('권한 관리 함수 로드 완료')
         let isFullscreen = false
 
         // 이미지 뷰어 초기화
-        function initMailImageViewer(images) {
+        function initMailImageViewer(images, ticketId) {
             currentMailImages = images || []
+            currentTicketIdForImages = ticketId
             currentImageIndex = 0
             imageRotation = 0
             imageScale = 1.0
             panOffsetX = 0
             panOffsetY = 0
+
+            console.log('🖼️ initMailImageViewer 호출됨:', {
+                imageCount: currentMailImages.length,
+                ticketId: currentTicketIdForImages,
+                images: currentMailImages
+            })
 
             const container = document.getElementById('mail-image-container')
             const noImages = document.getElementById('no-mail-images')
@@ -8332,11 +8340,13 @@ console.log('권한 관리 함수 로드 완료')
             if (!currentMailImages || currentMailImages.length === 0) {
                 container.classList.add('hidden')
                 noImages.classList.remove('hidden')
+                console.log('⚠️ 이미지 없음 - 컨테이너 숨김')
                 return
             }
 
             container.classList.remove('hidden')
             noImages.classList.add('hidden')
+            console.log('✅ 이미지 뷰어 컨테이너 표시')
 
             // 이벤트 리스너 등록
             setupImageViewerEvents()
@@ -8352,15 +8362,21 @@ console.log('권한 관리 함수 로드 완료')
             const thumbnailsContainer = document.getElementById('mail-thumbnails')
             thumbnailsContainer.innerHTML = ''
 
+            console.log('🖼️ 썸네일 렌더링 시작:', currentMailImages.length, '개')
+
             currentMailImages.forEach((imageKey, index) => {
                 const thumbnail = document.createElement('div')
                 thumbnail.className = `w-16 h-16 border-2 rounded cursor-pointer overflow-hidden ${index === currentImageIndex ? 'border-blue-500' : 'border-gray-300'}`
                 thumbnail.onclick = () => showMailImageAtIndex(index)
 
                 const img = document.createElement('img')
-                img.src = `${API_BASE}/mailroom/image/${imageKey}`
+                const imageUrl = `/api/tickets/${currentTicketIdForImages}/images/${encodeURIComponent(imageKey)}`
+                img.src = imageUrl
                 img.className = 'w-full h-full object-cover'
                 img.alt = `썸네일 ${index + 1}`
+                img.onerror = () => console.error('썸네일 로드 실패:', imageUrl)
+
+                console.log(`  썸네일 ${index + 1}:`, imageUrl)
 
                 thumbnail.appendChild(img)
                 thumbnailsContainer.appendChild(thumbnail)
@@ -8378,10 +8394,15 @@ console.log('권한 관리 함수 로드 완료')
             panOffsetY = 0
 
             const imageKey = currentMailImages[index]
+            const imageUrl = `/api/tickets/${currentTicketIdForImages}/images/${encodeURIComponent(imageKey)}`
             const imgElement = document.getElementById('current-mail-image')
-            imgElement.src = `${API_BASE}/mailroom/image/${imageKey}`
+            
+            console.log(`🖼️ 이미지 ${index + 1}/${currentMailImages.length} 표시:`, imageUrl)
+            
+            imgElement.src = imageUrl
             imgElement.style.transform = 'rotate(0deg) scale(1)'
             imgElement.style.cursor = 'default'
+            imgElement.onerror = () => console.error('이미지 로드 실패:', imageUrl)
 
             // 카운터 업데이트
             document.getElementById('image-counter').textContent = `${index + 1}/${currentMailImages.length}`
@@ -8749,6 +8770,17 @@ console.log('권한 관리 함수 로드 완료')
                 
                 // 우편물 이미지 표시 (좌측)
                 console.log('🖼️ 이미지 컨테이너 렌더링 시작, 이미지 개수:', mailroomImages.length)
+                
+                // 좌측 이미지 뷰어 초기화
+                if (mailroomImages.length > 0) {
+                    console.log('✅ 이미지 뷰어 초기화:', mailroomImages)
+                    initMailImageViewer(mailroomImages, ticket.id)
+                } else {
+                    console.log('⚠️ 이미지가 없어서 뷰어 숨김')
+                    initMailImageViewer([], ticket.id)
+                }
+                
+                // 우측 티켓 정보 탭의 이미지 컨테이너 (레거시)
                 const mailroomImagesContainer = document.getElementById('mailroom-images-container')
                 if (mailroomImagesContainer) {
                     if (mailroomImages.length > 0) {
@@ -8765,10 +8797,10 @@ console.log('권한 관리 함수 로드 완료')
                             `
                         }).join('')
                         mailroomImagesContainer.classList.remove('hidden')
-                        console.log('✅ 이미지 컨테이너 표시됨')
+                        console.log('✅ 우측 이미지 컨테이너 표시됨')
                     } else {
                         mailroomImagesContainer.classList.add('hidden')
-                        console.log('⚠️ 이미지가 없어서 컨테이너 숨김')
+                        console.log('⚠️ 우측 이미지가 없어서 컨테이너 숨김')
                     }
                 }
                 
