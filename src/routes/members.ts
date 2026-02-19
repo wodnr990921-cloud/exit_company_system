@@ -200,13 +200,13 @@ members.put('/:id', requireRole(ROLES.STAFF), async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const user = c.get('user')
+    const user = c.get('staff') // 'user' -> 'staff' 수정
 
-    console.log('[Member Update] User:', user)
+    console.log('[Member Update] Staff:', user)
     console.log('[Member Update] Body:', body)
 
     if (!user || !user.id) {
-      console.error('[Member Update] User not found or user.id missing:', user)
+      console.error('[Member Update] Staff not found or staff.id missing:', user)
       return c.json({ error: '사용자 인증 정보를 찾을 수 없습니다.' }, 401)
     }
 
