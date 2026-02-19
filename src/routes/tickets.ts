@@ -410,6 +410,29 @@ tickets.post('/:id/comments', async (c) => {
        VALUES (?, ?, ?, ?)`
     ).bind(ticket_id, created_by, content, finalCommentType).run()
 
+    const commentId = result.meta.last_row_id
+
+    // comment_type이 'response'인 경우 responses 테이블에도 저장
+    if (finalCommentType === 'response') {
+      // 티켓 정보 조회 (member_id 필요)
+      const ticket = await c.env.DB.prepare(
+        'SELECT member_id FROM tickets WHERE id = ?'
+      ).bind(ticket_id).first()
+
+      if (ticket) {
+        await c.env.DB.prepare(
+          `INSERT INTO responses (ticket_id, member_id, response_content, print_status, created_by)
+           VALUES (?, ?, ?, ?, ?)`
+        ).bind(
+          ticket_id,
+          (ticket as any).member_id || null,
+          content,
+          'pending',
+          created_by
+        ).run()
+      }
+    }
+
     // 티켓 업데이트 시간 갱신
     await c.env.DB.prepare(
       'UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = ?'
@@ -417,7 +440,7 @@ tickets.post('/:id/comments', async (c) => {
 
     return c.json({ 
       success: true, 
-      comment_id: result.meta.last_row_id 
+      comment_id: commentId
     })
   } catch (error) {
     console.error('댓글 추가 오류:', error)
