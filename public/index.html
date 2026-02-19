@@ -11945,6 +11945,28 @@ console.log('권한 관리 함수 로드 완료')
                 const ticketNumber = ticketRes.data.ticket_number  // ticket.ticket_number → ticket_number
                 const ticketId = ticketRes.data.ticket_id          // ticket.id → ticket_id
                 
+                console.log('=== 담당자 배정 시 이미지 복사 ===')
+                console.log('imageKeys:', imageKeys)
+                console.log('ticketId:', ticketId)
+                
+                // 3.5. 우편물 이미지를 티켓에 복사
+                if (imageKeys && imageKeys.length > 0) {
+                    try {
+                        console.log(`${imageKeys.length}개의 이미지 키를 티켓 ${ticketId}에 복사 중...`)
+                        const copyResult = await axios.post(`${API_BASE}/tickets/${ticketId}/copy-images`, {
+                            image_keys: imageKeys
+                        })
+                        console.log('이미지 복사 결과:', copyResult.data)
+                        console.log(`✅ ${imageKeys.length}개의 우편물 이미지가 티켓에 복사되었습니다.`)
+                    } catch (imgError) {
+                        console.error('❌ 우편물 이미지 복사 오류:', imgError)
+                        console.error('오류 상세:', imgError.response?.data)
+                        // 이미지 복사 실패해도 계속 진행
+                    }
+                } else {
+                    console.warn('⚠️ 복사할 이미지 키가 없습니다.')
+                }
+                
                 // 4. 우편물에 티켓 연결
                 await axios.patch(`${API_BASE}/mailroom/${currentInspectionId}/status`, {
                     status: 'assigned',
