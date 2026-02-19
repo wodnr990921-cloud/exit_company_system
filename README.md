@@ -1,8 +1,9 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v55.0
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v55.1
 
-## ✅ 최근 업데이트 (v55.0 - 2026-02-19)
+## ✅ 최근 업데이트 (v55.1 - 2026-02-19)
 
 ### 🐛 버그 수정
+- **삭제 권한 문제 해결**: `ROLE_HIERARCHY`에 `delete` 권한 추가 (admin 레벨 3)
 - **티켓 생성 500 오류 해결**: `metadata` 컬럼이 DB 스키마에 없어 발생한 SQLITE_ERROR 수정
 - **오류 메시지 개선**: 서버 오류 발생 시 `details`와 `stack trace`를 콘솔과 Toast로 표시
 - **에러 핸들링 강화**: `error.response.data.details` 상세 정보를 UI에 표시
@@ -14,11 +15,11 @@
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://ab917641.exit-company-system-5je.pages.dev/
-- **Build Size**: 150.87 kB (↓ 0.02 kB)
-- **Build Time**: 866 ms
-- **Deploy Time**: 8.7 sec
-- **Last Updated**: 2026-02-19 04:35 UTC
+- **Latest Preview**: https://f5ebb8c8.exit-company-system-5je.pages.dev/
+- **Build Size**: 150.87 kB
+- **Build Time**: 854 ms
+- **Deploy Time**: 10.2 sec
+- **Last Updated**: 2026-02-19 04:45 UTC
 
 ## 🎯 주요 기능 (완료)
 
@@ -144,7 +145,7 @@ npm run db:migrate:prod
 
 ## 🐛 알려진 이슈
 
-없음 (v55.0 기준)
+없음 (v55.1 기준)
 
 ## 📝 다음 단계 권장사항
 
@@ -162,5 +163,5 @@ npm run db:migrate:prod
 ---
 
 **Last Updated**: 2026-02-19  
-**Version**: v55.0  
+**Version**: v55.1  
 **Status**: ✅ Production Ready
