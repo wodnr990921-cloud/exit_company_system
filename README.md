@@ -1,12 +1,14 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.0
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.1
 
-## ✅ 최근 업데이트 (v56.0 - 2026-02-19)
+## ✅ 최근 업데이트 (v56.1 - 2026-02-19)
+
+### ✨ 새로운 기능
+- **임시 티켓 필터링**: OCR 처리 전 생성되는 임시 티켓(TEMP-*)이 티켓 관리 목록에 표시되지 않음
+- **깔끔한 티켓 목록**: 정식 티켓만 표시되어 관리가 용이함
 
 ### 🐛 버그 수정
 - **담당자 배정 시 이미지 복사 누락 수정**: 우편물 검수에서 담당자 배정 시 이미지가 티켓에 자동으로 복사되도록 수정
 - **이미지 복사 로직 완성**: 두 가지 티켓 생성 경로 모두에서 이미지 복사 구현
-  - `createTicketFromInspection()`: 검수 상세에서 직접 티켓 생성
-  - `assignStaffAndConfirmTicket()`: 담당자 배정 시 티켓 생성 ✅ **NEW**
 - **테이블 이름 오류 수정**: `mail_items` → `mailroom_items` 정정 (티켓 삭제 시)
 - **티켓 삭제 Foreign Key 오류 해결**: 모든 관련 테이블(orders, bet_folders, bets, ticket_responses, point_transactions, mailroom_items) CASCADE 삭제 구현
 - **우편물 이미지 누락 문제 해결**: 우편물에서 티켓 생성 시 이미지가 자동으로 복사되도록 개선
@@ -25,11 +27,11 @@
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://cc3e6689.exit-company-system-5je.pages.dev/
-- **Build Size**: 152.62 kB
-- **Build Time**: 949 ms
-- **Deploy Time**: 10.7 sec
-- **Last Updated**: 2026-02-19 05:35 UTC
+- **Latest Preview**: https://b82dc1aa.exit-company-system-5je.pages.dev/
+- **Build Size**: 152.70 kB (↑ 0.08 kB)
+- **Build Time**: 942 ms
+- **Deploy Time**: 10.9 sec
+- **Last Updated**: 2026-02-19 05:45 UTC
 
 ## 🎯 주요 기능 (완료)
 
@@ -155,7 +157,7 @@ npm run db:migrate:prod
 
 ## 🐛 알려진 이슈
 
-없음 (v56.0 기준)
+없음 (v56.1 기준)
 
 ## 📝 다음 단계 권장사항
 
@@ -173,5 +175,5 @@ npm run db:migrate:prod
 ---
 
 **Last Updated**: 2026-02-19  
-**Version**: v56.0  
+**Version**: v56.1  
 **Status**: ✅ Production Ready
