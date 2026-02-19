@@ -9546,21 +9546,29 @@ console.log('권한 관리 함수 로드 완료')
 
             // 디버깅: 입력값 확인
             console.log('티켓 생성 입력값:', { ticketType, title, description })
+            console.log('currentStaff:', currentStaff)
+            console.log('currentStaff.id:', currentStaff?.id)
+            
+            // currentStaff 확인
+            if (!currentStaff || !currentStaff.id) {
+                showToast('로그인 정보가 없습니다. 다시 로그인해주세요.', 'error')
+                return
+            }
 
             // 필수 항목 검증
             if (!ticketType) {
-                alert('티켓 유형을 선택해주세요.')
+                showToast('티켓 유형을 선택해주세요.', 'warning')
                 return
             }
             
             if (!title || title.trim() === '') {
-                alert('제목을 입력해주세요.')
+                showToast('제목을 입력해주세요.', 'warning')
                 return
             }
 
             // 회원 필수 유형 검증
             if (['ORDER', 'POINT_ADJUSTMENT', 'MEMBER', 'BETTING'].includes(ticketType) && !memberId) {
-                alert('이 유형은 회원 선택이 필수입니다.')
+                showToast('이 유형은 회원 선택이 필수입니다.', 'warning')
                 return
             }
 
@@ -12025,7 +12033,12 @@ console.log('권한 관리 함수 로드 완료')
                 await loadProcessedMail()
             } catch (error) {
                 console.error('티켓 생성 오류:', error)
-                showToast('티켓 생성 실패: ' + (error.response?.data?.error || error.message), 'error')
+                console.error('Error response:', error.response)
+                console.error('Error response data:', error.response?.data)
+                console.error('Error response status:', error.response?.status)
+                const errorMsg = error.response?.data?.error || error.message
+                const errorDetails = error.response?.data?.details
+                showToast('티켓 생성 실패: ' + errorMsg + (errorDetails ? '\n상세: ' + errorDetails : ''), 'error')
             }
         }
         
