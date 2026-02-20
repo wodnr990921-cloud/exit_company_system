@@ -873,11 +873,12 @@ betting.get('/settlement-stats', async (c) => {
       SELECT 
         folder_type,
         total_bet_amount,
-        total_win_amount,
-        frozen_amount,
-        result
+        potential_win,
+        settlement_amount,
+        result_status,
+        status
       FROM bet_folders
-      WHERE settlement_status IN ('settled', 'approved')
+      WHERE status IN ('settled', 'approved', 'won', 'lost', 'completed')
     `).all()
     
     let totalBetAmount = 0      // 총 배팅금
@@ -888,17 +889,17 @@ betting.get('/settlement-stats', async (c) => {
     for (const folder of folders) {
       const f = folder as any
       const betAmount = Number(f.total_bet_amount || 0)
-      const totalWin = Number(f.total_win_amount || 0)
-      const frozenAmount = Number(f.frozen_amount || 0)
+      const potentialWin = Number(f.potential_win || 0)
+      const settlementAmount = Number(f.settlement_amount || 0)
       
       totalBetAmount += betAmount
       
-      if (f.result === 'win') {
-        // 당첨: 수수료 = 당첨금 - 실지급액
-        const fee = totalWin - frozenAmount
+      if (f.result_status === 'win' || f.status === 'won') {
+        // 당첨: 수수료 = 예상당첨금 - 실지급액
+        const fee = potentialWin - settlementAmount
         totalFee += fee
-        totalWinPayout += frozenAmount
-      } else if (f.result === 'lose') {
+        totalWinPayout += settlementAmount
+      } else if (f.result_status === 'lose' || f.status === 'lost') {
         // 낙첨: 배팅금 전액이 수익
         totalLoss += betAmount
       }
@@ -941,12 +942,13 @@ betting.get('/statistics', async (c) => {
       `SELECT 
         folder_type,
         total_bet_amount,
-        total_win_amount,
-        frozen_amount,
-        result
+        potential_win,
+        settlement_amount,
+        result_status,
+        status
        FROM bet_folders
        WHERE DATE(created_at) BETWEEN ? AND ?
-       AND settlement_status IN ('settled', 'approved', 'completed')`
+       AND status IN ('settled', 'approved', 'won', 'lost', 'completed')`
     ).bind(start_date, end_date).all()
     
     let totalBetCount = folders.length
@@ -958,16 +960,16 @@ betting.get('/statistics', async (c) => {
     for (const folder of folders) {
       const f = folder as any
       const betAmount = Number(f.total_bet_amount || 0)
-      const totalWin = Number(f.total_win_amount || 0)
-      const frozenAmount = Number(f.frozen_amount || 0)
+      const potentialWin = Number(f.potential_win || 0)
+      const settlementAmount = Number(f.settlement_amount || 0)
       
       totalBetAmount += betAmount
       
-      if (f.result === 'win') {
-        const fee = totalWin - frozenAmount
+      if (f.result_status === 'win' || f.status === 'won') {
+        const fee = potentialWin - settlementAmount
         totalFee += fee
-        totalWinPayout += frozenAmount
-      } else if (f.result === 'lose') {
+        totalWinPayout += settlementAmount
+      } else if (f.result_status === 'lose' || f.status === 'lost') {
         totalLoss += betAmount
       }
     }
