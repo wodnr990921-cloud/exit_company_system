@@ -1429,4 +1429,110 @@ betting.get('/folders/:id', async (c) => {
   }
 })
 
+// ==========================================
+// 관리자 설정 (리그 수집 설정)
+// ==========================================
+
+// 설정 조회
+betting.get('/admin/config', async (c) => {
+  try {
+    // settings 테이블이 없으면 생성
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS betting_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run()
+    
+    // 기본 설정 조회
+    const config = await c.env.DB.prepare(
+      `SELECT key, value FROM betting_settings WHERE key = 'league_config'`
+    ).first()
+    
+    // 기본값
+    const defaultConfig = {
+      enabled_leagues: [
+        // 해외 축구
+        { id: 'EPL', name: '프리미어리그', enabled: true, collect_odds: true },
+        { id: 'LA_LIGA', name: '라리가', enabled: true, collect_odds: true },
+        { id: 'SERIE_A', name: '세리에A', enabled: true, collect_odds: true },
+        { id: 'BUNDESLIGA', name: '분데스리가', enabled: true, collect_odds: true },
+        { id: 'LIGUE_1', name: '리그앙', enabled: true, collect_odds: true },
+        // 국내 축구
+        { id: 'K_LEAGUE', name: 'K리그', enabled: true, collect_odds: true },
+        // 야구
+        { id: 'MLB', name: 'MLB', enabled: true, collect_odds: true },
+        { id: 'KBO', name: 'KBO', enabled: true, collect_odds: true },
+        // 농구
+        { id: 'NBA', name: 'NBA', enabled: true, collect_odds: true },
+        { id: 'KBL', name: 'KBL', enabled: true, collect_odds: true },
+        { id: 'WKBL', name: 'WKBL', enabled: true, collect_odds: true },
+        // 배구
+        { id: 'KOVO', name: 'KOVO', enabled: true, collect_odds: true },
+      ]
+    }
+    
+    if (config) {
+      return c.json(JSON.parse((config as any).value))
+    }
+    
+    return c.json(defaultConfig)
+  } catch (error) {
+    console.error('설정 조회 오류:', error)
+    return c.json({ error: '설정 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 설정 저장
+betting.post('/admin/config', async (c) => {
+  try {
+    const config = await c.req.json()
+    
+    // settings 테이블이 없으면 생성
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS betting_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run()
+    
+    // UPSERT
+    await c.env.DB.prepare(`
+      INSERT INTO betting_settings (key, value, updated_at)
+      VALUES ('league_config', ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET 
+        value = excluded.value,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(JSON.stringify(config)).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('설정 저장 오류:', error)
+    return c.json({ error: '설정 저장 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// Worker 수동 트리거
+betting.post('/admin/trigger-collect', async (c) => {
+  try {
+    const { mode } = await c.req.json() // 'daily' or 'weekly'
+    const workerUrl = c.req.header('X-Worker-URL') || ''
+    
+    if (!workerUrl) {
+      return c.json({ error: 'Worker URL이 설정되지 않았습니다.' }, 400)
+    }
+    
+    const endpoint = mode === 'weekly' ? '/trigger/weekly' : '/trigger'
+    const response = await fetch(`${workerUrl}${endpoint}`)
+    const result = await response.json()
+    
+    return c.json(result)
+  } catch (error) {
+    console.error('수집 트리거 오류:', error)
+    return c.json({ error: '수집 트리거 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 export default betting
