@@ -10648,7 +10648,7 @@ console.log('권한 관리 함수 로드 완료')
             selectedBook = null
         }
 
-        // 경기 목록 로드
+        // 경기 목록 로드 (배당 없어도 선택 가능)
         async function loadMatchesForBetting() {
             try {
                 const response = await axios.get(`${API_BASE}/betting/matches?status=open`)
@@ -10663,106 +10663,101 @@ console.log('권한 관리 함수 로드 완료')
                 container.innerHTML = matches.map(m => {
                     let optionsHtml = ''
                     
-                    // 승무패 옵션
-                    if (m.home_odds && m.draw_odds && m.away_odds) {
-                        optionsHtml += `
-                            <div class="text-xs text-gray-600 font-medium mb-1">승무패</div>
-                            <div class="grid grid-cols-3 gap-1 text-sm mb-2">
-                                <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
-                                    <input type="checkbox" 
-                                        data-match-id="${m.id}" 
-                                        data-outcome="home_win" 
-                                        data-odds="${m.home_odds}"
-                                        data-teams="${m.home_team} vs ${m.away_team}"
-                                        onchange="toggleMatchSelection(this)"
-                                        class="match-checkbox mr-1">
-                                    <span>홈승 (${m.home_odds})</span>
-                                </label>
-                                <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
-                                    <input type="checkbox" 
-                                        data-match-id="${m.id}" 
-                                        data-outcome="draw" 
-                                        data-odds="${m.draw_odds}"
-                                        data-teams="${m.home_team} vs ${m.away_team}"
-                                        onchange="toggleMatchSelection(this)"
-                                        class="match-checkbox mr-1">
-                                    <span>무승부 (${m.draw_odds})</span>
-                                </label>
-                                <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
-                                    <input type="checkbox" 
-                                        data-match-id="${m.id}" 
-                                        data-outcome="away_win" 
-                                        data-odds="${m.away_odds}"
-                                        data-teams="${m.home_team} vs ${m.away_team}"
-                                        onchange="toggleMatchSelection(this)"
-                                        class="match-checkbox mr-1">
-                                    <span>원정승 (${m.away_odds})</span>
-                                </label>
-                            </div>
-                        `
-                    }
+                    // 승무패 옵션 (항상 표시, 배당 없으면 입력 가능하게)
+                    optionsHtml += `
+                        <div class="text-xs text-gray-600 font-medium mb-1">승무패</div>
+                        <div class="grid grid-cols-3 gap-1 text-sm mb-2">
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="${m.id}" 
+                                    data-outcome="home_win" 
+                                    data-odds="${m.home_odds || 0}"
+                                    data-teams="${m.home_team} vs ${m.away_team}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>홈승 ${m.home_odds ? `(${m.home_odds})` : '(배당 없음)'}</span>
+                            </label>
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="${m.id}" 
+                                    data-outcome="draw" 
+                                    data-odds="${m.draw_odds || 0}"
+                                    data-teams="${m.home_team} vs ${m.away_team}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>무승부 ${m.draw_odds ? `(${m.draw_odds})` : '(배당 없음)'}</span>
+                            </label>
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="${m.id}" 
+                                    data-outcome="away_win" 
+                                    data-odds="${m.away_odds || 0}"
+                                    data-teams="${m.home_team} vs ${m.away_team}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>원정승 ${m.away_odds ? `(${m.away_odds})` : '(배당 없음)'}</span>
+                            </label>
+                        </div>
+                    `
                     
-                    // 언오버 옵션
-                    if (m.over_line && m.over_odds && m.under_odds) {
-                        optionsHtml += `
-                            <div class="text-xs text-gray-600 font-medium mb-1">언오버 (기준: ${m.over_line})</div>
-                            <div class="grid grid-cols-2 gap-1 text-sm mb-2">
-                                <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
-                                    <input type="checkbox" 
-                                        data-match-id="${m.id}" 
-                                        data-outcome="over" 
-                                        data-odds="${m.over_odds}"
-                                        data-teams="${m.home_team} vs ${m.away_team}"
-                                        data-line="${m.over_line}"
-                                        onchange="toggleMatchSelection(this)"
-                                        class="match-checkbox mr-1">
-                                    <span>오버 ${m.over_line} (${m.over_odds})</span>
-                                </label>
-                                <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
-                                    <input type="checkbox" 
-                                        data-match-id="${m.id}" 
-                                        data-outcome="under" 
-                                        data-odds="${m.under_odds}"
-                                        data-teams="${m.home_team} vs ${m.away_team}"
-                                        data-line="${m.over_line}"
-                                        onchange="toggleMatchSelection(this)"
-                                        class="match-checkbox mr-1">
-                                    <span>언더 ${m.over_line} (${m.under_odds})</span>
-                                </label>
-                            </div>
-                        `
-                    }
+                    // 언오버 옵션 (항상 표시)
+                    optionsHtml += `
+                        <div class="text-xs text-gray-600 font-medium mb-1">언오버 ${m.over_line ? `(기준: ${m.over_line})` : '(기준선 없음)'}</div>
+                        <div class="grid grid-cols-2 gap-1 text-sm mb-2">
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="${m.id}" 
+                                    data-outcome="over" 
+                                    data-odds="${m.over_odds || 0}"
+                                    data-teams="${m.home_team} vs ${m.away_team}"
+                                    data-line="${m.over_line || 0}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>오버 ${m.over_line || '?'} ${m.over_odds ? `(${m.over_odds})` : '(배당 없음)'}</span>
+                            </label>
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="${m.id}" 
+                                    data-outcome="under" 
+                                    data-odds="${m.under_odds || 0}"
+                                    data-teams="${m.home_team} vs ${m.away_team}"
+                                    data-line="${m.over_line || 0}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>언더 ${m.over_line || '?'} ${m.under_odds ? `(${m.under_odds})` : '(배당 없음)'}</span>
+                            </label>
+                        </div>
+                    `
                     
-                    // 핸디캡 옵션
-                    if (m.handicap_line !== null && m.handicap_home_odds && m.handicap_away_odds) {
-                        optionsHtml += `
-                            <div class="text-xs text-gray-600 font-medium mb-1">핸디캡 (${m.handicap_line > 0 ? '+' : ''}${m.handicap_line})</div>
-                            <div class="grid grid-cols-2 gap-1 text-sm">
-                                <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
-                                    <input type="checkbox" 
-                                        data-match-id="${m.id}" 
-                                        data-outcome="handicap_home" 
-                                        data-odds="${m.handicap_home_odds}"
-                                        data-teams="${m.home_team} vs ${m.away_team}"
-                                        data-line="${m.handicap_line}"
-                                        onchange="toggleMatchSelection(this)"
-                                        class="match-checkbox mr-1">
-                                    <span>홈 ${m.handicap_line > 0 ? '+' : ''}${m.handicap_line} (${m.handicap_home_odds})</span>
-                                </label>
-                                <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
-                                    <input type="checkbox" 
-                                        data-match-id="${m.id}" 
-                                        data-outcome="handicap_away" 
-                                        data-odds="${m.handicap_away_odds}"
-                                        data-teams="${m.home_team} vs ${m.away_team}"
-                                        data-line="${m.handicap_line}"
-                                        onchange="toggleMatchSelection(this)"
-                                        class="match-checkbox mr-1">
-                                    <span>원정 ${m.handicap_line < 0 ? '+' : ''}${-m.handicap_line} (${m.handicap_away_odds})</span>
-                                </label>
-                            </div>
-                        `
-                    }
+                    // 핸디캡 옵션 (항상 표시)
+                    const handicap = m.handicap_line || 0
+                    optionsHtml += `
+                        <div class="text-xs text-gray-600 font-medium mb-1">핸디캡 ${handicap !== 0 ? `(${handicap > 0 ? '+' : ''}${handicap})` : '(기준선 없음)'}</div>
+                        <div class="grid grid-cols-2 gap-1 text-sm">
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="${m.id}" 
+                                    data-outcome="handicap_home" 
+                                    data-odds="${m.handicap_home_odds || 0}"
+                                    data-teams="${m.home_team} vs ${m.away_team}"
+                                    data-line="${handicap}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>홈 ${handicap > 0 ? '+' : ''}${handicap} ${m.handicap_home_odds ? `(${m.handicap_home_odds})` : '(배당 없음)'}</span>
+                            </label>
+                            <label class="border rounded p-1 cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" 
+                                    data-match-id="${m.id}" 
+                                    data-outcome="handicap_away" 
+                                    data-odds="${m.handicap_away_odds || 0}"
+                                    data-teams="${m.home_team} vs ${m.away_team}"
+                                    data-line="${handicap}"
+                                    onchange="toggleMatchSelection(this)"
+                                    class="match-checkbox mr-1">
+                                <span>원정 ${handicap < 0 ? '+' : ''}${-handicap} ${m.handicap_away_odds ? `(${m.handicap_away_odds})` : '(배당 없음)'}</span>
+                            </label>
+                        </div>
+                    `
                     
                     return `
                         <div class="border rounded p-2 hover:bg-gray-50">
@@ -10779,7 +10774,8 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
 
-        // 경기 선택 토글
+
+                // 경기 선택 토글
         function toggleMatchSelection(checkbox) {
             const folderType = document.getElementById('new-folder-type').value
             const matchId = checkbox.dataset.matchId
