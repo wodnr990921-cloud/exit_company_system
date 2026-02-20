@@ -9,6 +9,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Quill WYSIWYG Editor -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
         
@@ -1657,7 +1660,7 @@
 
         <!-- 답변 양식 설정 모달 -->
         <div id="response-settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold"><i class="fas fa-cog mr-2"></i>답변 양식 설정</h3>
@@ -1667,59 +1670,37 @@
                     </div>
 
                     <div class="space-y-4">
-                        <!-- 상단 공지사항 -->
+                        <!-- WYSIWYG 에디터 -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-bullhorn mr-1"></i>상단 공지사항
+                                <i class="fas fa-file-alt mr-1"></i>답변 양식 템플릿
                             </label>
-                            <textarea id="setting-header-notice" class="w-full px-3 py-2 border rounded h-24" placeholder="답변서 상단에 표시될 공지사항을 입력하세요"></textarea>
+                            <div id="answer-template-editor" class="bg-white border rounded" style="height: 400px;"></div>
+                            <div class="mt-2 text-xs text-gray-500">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                변수 사용: {{client_name}}, {{betting_result}}, {{total_balance}}, {{date}}
+                            </div>
                         </div>
 
-                        <!-- 인사말 -->
+                        <!-- 이미지 업로드 -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-smile mr-1"></i>인사말
+                                <i class="fas fa-image mr-1"></i>로고/배경 이미지 업로드
                             </label>
-                            <textarea id="setting-greeting" class="w-full px-3 py-2 border rounded h-24" placeholder="답변서 시작 부분의 인사말을 입력하세요"></textarea>
-                        </div>
-
-                        <!-- 맺음말 -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-hand-peace mr-1"></i>맺음말
-                            </label>
-                            <textarea id="setting-footer" class="w-full px-3 py-2 border rounded h-24" placeholder="답변서 마지막 부분의 맺음말을 입력하세요"></textarea>
-                        </div>
-
-                        <!-- 날짜 표시 옵션 -->
-                        <div class="flex items-center gap-4">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" id="setting-show-received-date" class="form-checkbox">
-                                <span class="text-sm font-medium text-gray-700">
-                                    <i class="fas fa-calendar mr-1"></i>편지 받은 날짜 표시
-                                </span>
-                            </label>
-                        </div>
-
-                        <!-- 날짜 형식 -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-calendar-alt mr-1"></i>날짜 형식
-                            </label>
-                            <select id="setting-date-format" class="w-full px-3 py-2 border rounded">
-                                <option value="YYYY년 MM월 DD일">YYYY년 MM월 DD일 (예: 2024년 02월 17일)</option>
-                                <option value="YYYY-MM-DD">YYYY-MM-DD (예: 2024-02-17)</option>
-                                <option value="MM/DD/YYYY">MM/DD/YYYY (예: 02/17/2024)</option>
-                            </select>
+                            <input type="file" id="template-image-upload" accept="image/*" class="w-full px-3 py-2 border rounded" onchange="uploadTemplateImage(this)">
+                            <div class="mt-2 text-xs text-gray-500">
+                                업로드된 이미지는 R2 스토리지에 저장됩니다
+                            </div>
                         </div>
 
                         <!-- 미리보기 -->
                         <div class="border rounded p-4 bg-gray-50">
-                            <div class="text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-eye mr-1"></i>미리보기
+                            <div class="text-sm font-medium text-gray-700 mb-2 flex justify-between items-center">
+                                <span><i class="fas fa-eye mr-1"></i>미리보기</span>
+                                <button onclick="updatePreview()" class="text-xs btn btn-secondary">새로고침</button>
                             </div>
-                            <div id="response-preview" class="text-sm space-y-2 bg-white p-3 rounded border">
-                                <div class="text-center font-bold text-blue-700">미리보기</div>
+                            <div id="response-preview" class="text-sm bg-white p-4 rounded border min-h-[200px]">
+                                <div class="text-center text-gray-500">에디터 내용이 여기에 표시됩니다</div>
                             </div>
                         </div>
                     </div>
@@ -4673,17 +4654,33 @@ console.log('권한 관리 함수 로드 완료')
 
         async function loadPendingApprovals() {
             try {
-                const [pointsRes, settlementsRes] = await Promise.all([
+                const [pointsRes, settlementsRes, ticketItemsRes] = await Promise.all([
                     axios.get(`${API_BASE}/points/pending`),
-                    axios.get(`${API_BASE}/betting/settlements/pending`)
+                    axios.get(`${API_BASE}/betting/settlements/pending`),
+                    axios.get(`${API_BASE}/ticket-items/pending-approvals`)
                 ])
 
                 const points = pointsRes.data.transactions || []
                 const settlements = settlementsRes.data.settlements || []
+                const ticketItems = ticketItemsRes.data.items || []
 
                 const html = `
                     <div class="space-y-2">
-                        ${points.length > 0 ? '<h4 class="font-bold text-sm mb-2">포인트 동결 승인</h4>' : ''}
+                        ${ticketItems.length > 0 ? '<h4 class="font-bold text-sm mb-2">티켓 항목 결재</h4>' : ''}
+                        ${ticketItems.map(item => `
+                            <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                                <p class="font-bold">${item.member_name} - 티켓 #${item.ticket_id}</p>
+                                <p class="text-sm">${item.item_type === 'point_request' ? '포인트 요청' : item.item_type === 'betting' ? '배팅 신청' : '도서 주문'}</p>
+                                ${item.item_type === 'point_request' ? `<p class="text-sm text-gray-600">금액: ${JSON.parse(item.item_data || '{}').amount?.toLocaleString() || 0}원</p>` : ''}
+                                <p class="text-xs text-gray-500 mt-1">요청자: ${item.processor_name || '알 수 없음'} | ${new Date(item.requested_at).toLocaleString()}</p>
+                                <div class="flex space-x-2 mt-2">
+                                    <button onclick="approveTicketItem(${item.id}, ${item.ticket_id})" class="btn btn-success btn-sm">승인</button>
+                                    <button onclick="rejectTicketItem(${item.id})" class="btn btn-danger btn-sm">거부</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    
+                        ${points.length > 0 ? '<h4 class="font-bold text-sm mb-2 mt-4">포인트 동결 승인</h4>' : ''}
                         ${points.map(p => `
                             <div class="bg-yellow-50 p-3 rounded border border-yellow-200">
                                 <p class="font-bold">${p.member_name} - ${p.point_type === 'regular' ? '일반' : '배팅'} 포인트</p>
@@ -4707,7 +4704,7 @@ console.log('권한 관리 함수 로드 완료')
                             </div>
                         `).join('')}
                         
-                        ${points.length === 0 && settlements.length === 0 ? '<p class="text-gray-500 text-sm">승인 대기 중인 항목이 없습니다.</p>' : ''}
+                        ${points.length === 0 && settlements.length === 0 && ticketItems.length === 0 ? '<p class="text-gray-500 text-sm">승인 대기 중인 항목이 없습니다.</p>' : ''}
                     </div>
                 `
 
@@ -4742,6 +4739,43 @@ console.log('권한 관리 함수 로드 완료')
                 if (currentView === 'betting') await loadBetting()
             } catch (error) {
                 alert('승인 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 티켓 아이템 승인
+        async function approveTicketItem(itemId, ticketId) {
+            try {
+                await axios.post(`${API_BASE}/ticket-items/${itemId}/approve`, {
+                    approved_by: currentStaff.email
+                })
+                alert('결재가 승인되었습니다.')
+                await loadPendingApprovals()
+                // 티켓 상세보기가 열려있으면 새로고침
+                if (currentView === 'tickets') {
+                    await loadTickets()
+                }
+            } catch (error) {
+                alert('승인 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+
+        // 티켓 아이템 거부
+        async function rejectTicketItem(itemId) {
+            const reason = prompt('거부 사유를 입력하세요:')
+            if (!reason) return
+            
+            try {
+                await axios.post(`${API_BASE}/ticket-items/${itemId}/reject`, {
+                    approved_by: currentStaff.email,
+                    rejection_reason: reason
+                })
+                alert('결재가 거부되었습니다.')
+                await loadPendingApprovals()
+                if (currentView === 'tickets') {
+                    await loadTickets()
+                }
+            } catch (error) {
+                alert('거부 실패: ' + (error.response?.data?.error || error.message))
             }
         }
 
@@ -12109,34 +12143,118 @@ console.log('권한 관리 함수 로드 완료')
         }
         
         // 답변 양식 설정 모달 닫기
+        // Quill 에디터 인스턴스
+        let answerTemplateEditor = null
+
+        // 답변 양식 설정 모달 열기
+        function openResponseSettings() {
+            document.getElementById('response-settings-modal').classList.remove('hidden')
+            
+            // Quill 에디터 초기화 (처음만)
+            if (!answerTemplateEditor) {
+                answerTemplateEditor = new Quill('#answer-template-editor', {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'color': [] }, { 'background': [] }],
+                            [{ 'align': [] }],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['link', 'image'],
+                            ['clean']
+                        ]
+                    }
+                })
+            }
+            
+            // 저장된 템플릿 로드
+            loadAnswerTemplate()
+        }
+
         function closeResponseSettings() {
             document.getElementById('response-settings-modal').classList.add('hidden')
+        }
+        
+        // 답변 템플릿 로드
+        async function loadAnswerTemplate() {
+            try {
+                const response = await axios.get(`${API_BASE}/responses/template`)
+                const template = response.data.template || {}
+                
+                if (template.html_content) {
+                    answerTemplateEditor.root.innerHTML = template.html_content
+                }
+            } catch (error) {
+                console.log('템플릿 로드 실패:', error)
+            }
         }
         
         // 답변 양식 설정 저장
         async function saveResponseSettings() {
             try {
-                const settings = {
-                    header_notice: document.getElementById('setting-header-notice').value,
-                    greeting: document.getElementById('setting-greeting').value,
-                    footer: document.getElementById('setting-footer').value,
-                    show_received_date: document.getElementById('setting-show-received-date').checked ? 'true' : 'false',
-                    date_format: document.getElementById('setting-date-format').value
-                }
+                const htmlContent = answerTemplateEditor.root.innerHTML
                 
-                await axios.put(`${API_BASE}/responses/settings`, {
-                    settings,
-                    updated_by: currentStaff.id
+                await axios.put(`${API_BASE}/responses/template`, {
+                    html_content: htmlContent,
+                    updated_by: currentStaff.email
                 })
                 
-                responseSettings = settings
-                showToast('답변 양식 설정이 저장되었습니다', 'success')
+                showToast('답변 양식이 저장되었습니다', 'success')
                 closeResponseSettings()
                 
             } catch (error) {
-                console.error('양식 설정 저장 오류:', error)
-                showToast('양식 설정 저장 실패', 'error')
+                console.error('양식 저장 오류:', error)
+                showToast('양식 저장 실패', 'error')
             }
+        }
+
+        // 이미지 업로드 (R2)
+        async function uploadTemplateImage(input) {
+            if (!input.files || !input.files[0]) return
+            
+            const file = input.files[0]
+            const formData = new FormData()
+            formData.append('image', file)
+            
+            try {
+                showToast('이미지 업로드 중...', 'info')
+                const response = await axios.post(`${API_BASE}/responses/upload-image`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                })
+                
+                const imageUrl = response.data.url
+                
+                // Quill 에디터에 이미지 삽입
+                const range = answerTemplateEditor.getSelection()
+                answerTemplateEditor.insertEmbed(range ? range.index : 0, 'image', imageUrl)
+                
+                showToast('이미지가 업로드되었습니다', 'success')
+                input.value = '' // 초기화
+            } catch (error) {
+                console.error('이미지 업로드 오류:', error)
+                showToast('이미지 업로드 실패', 'error')
+            }
+        }
+
+        // 미리보기 업데이트
+        function updatePreview() {
+            const htmlContent = answerTemplateEditor.root.innerHTML
+            
+            // 변수 치환 예시
+            const sampleData = {
+                client_name: '홍길동',
+                betting_result: '당첨',
+                total_balance: '1,500,000',
+                date: new Date().toLocaleDateString('ko-KR')
+            }
+            
+            let preview = htmlContent
+            for (const [key, value] of Object.entries(sampleData)) {
+                preview = preview.replace(new RegExp(`{{${key}}}`, 'g'), value)
+            }
+            
+            document.getElementById('response-preview').innerHTML = preview
         }
     </script>
 </body>
