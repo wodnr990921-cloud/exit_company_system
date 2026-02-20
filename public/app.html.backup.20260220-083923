@@ -1051,20 +1051,6 @@
                         </div>
                     </div>
                     
-                    <!-- 경기 정산 목록 -->
-                    <div class="card mb-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold"><i class="fas fa-trophy mr-2 text-blue-600"></i>경기 정산 목록</h3>
-                            <button onclick="loadMatchSettlementList()" class="btn btn-sm btn-primary">
-                                <i class="fas fa-sync mr-2"></i>새로고침
-                            </button>
-                        </div>
-                        
-                        <div id="match-settlement-list" class="space-y-2">
-                            <p class="text-gray-500 text-center py-4">완료된 경기가 없습니다.</p>
-                        </div>
-                    </div>
-                    
                     <!-- 최근 승인/거부 내역 -->
                     <div class="card">
                         <h3 class="text-lg font-bold mb-4"><i class="fas fa-history mr-2"></i>최근 처리 내역</h3>
