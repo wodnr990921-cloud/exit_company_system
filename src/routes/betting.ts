@@ -1,10 +1,14 @@
 import { Hono } from 'hono'
+import { verifyToken } from './auth'
 
 type Bindings = {
   DB: D1Database
 }
 
 const betting = new Hono<{ Bindings: Bindings }>()
+
+// 일괄 등록 API는 인증 필요
+betting.use('/matches/bulk', verifyToken)
 
 // ==========================================
 // 경기 관리
