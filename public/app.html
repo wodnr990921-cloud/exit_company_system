@@ -4665,18 +4665,25 @@ console.log('권한 관리 함수 로드 완료')
                 const html = `
                     <div class="space-y-2">
                         ${ticketItems.length > 0 ? '<h4 class="font-bold text-sm mb-2">티켓 항목 결재</h4>' : ''}
-                        ${ticketItems.map(item => `
+                        ${ticketItems.map(item => {
+                            let itemData = {}
+                            try {
+                                itemData = typeof item.item_data === 'string' ? JSON.parse(item.item_data) : (item.item_data || {})
+                            } catch(e) {
+                                console.warn('item_data 파싱 실패:', e)
+                            }
+                            return `
                             <div class="bg-blue-50 p-3 rounded border border-blue-200">
                                 <p class="font-bold">${item.member_name} - 티켓 #${item.ticket_id}</p>
                                 <p class="text-sm">${item.item_type === 'point_request' ? '포인트 요청' : item.item_type === 'betting' ? '배팅 신청' : '도서 주문'}</p>
-                                ${item.item_type === 'point_request' ? `<p class="text-sm text-gray-600">금액: ${JSON.parse(item.item_data || '{}').amount?.toLocaleString() || 0}원</p>` : ''}
+                                ${item.item_type === 'point_request' ? `<p class="text-sm text-gray-600">금액: ${(itemData.amount || 0).toLocaleString()}원</p>` : ''}
                                 <p class="text-xs text-gray-500 mt-1">요청자: ${item.processor_name || '알 수 없음'} | ${new Date(item.requested_at).toLocaleString()}</p>
                                 <div class="flex space-x-2 mt-2">
                                     <button onclick="approveTicketItem(${item.id}, ${item.ticket_id})" class="btn btn-success btn-sm">승인</button>
                                     <button onclick="rejectTicketItem(${item.id})" class="btn btn-danger btn-sm">거부</button>
                                 </div>
                             </div>
-                        `).join('')}
+                        `}).join('')}
                     
                         ${points.length > 0 ? '<h4 class="font-bold text-sm mb-2 mt-4">포인트 동결 승인</h4>' : ''}
                         ${points.map(p => `
@@ -5359,106 +5366,81 @@ console.log('권한 관리 함수 로드 완료')
                     })
                 }
 
-                const html = matches.length > 0 ? matches.map(m => {
-                    const matchDate = new Date(m.match_date)
-                    // KOVO남, KOVO여를 KOVO로 통합
-                    const normalizedLeague = m.league?.replace(/KOVO[남여]/, 'KOVO')
-                    const leagueLabels = {
-                        'EPL': '프리미어리그', 'LA_LIGA': '라리가', 'SERIE_A': '세리에A',
-                        'BUNDESLIGA': '분데스리가', 'LIGUE_1': '리그앙', 'K_LEAGUE': 'K리그',
-                        'MLB': 'MLB', 'KBO': 'KBO', 'NBA': 'NBA', 'KBL': 'KBL', 'WKBL': 'WKBL', 'KOVO': 'KOVO'
-                    }
-                    
-                    // 배당 섹션 HTML 생성 (배당이 있을 때만)
-                    let oddsHtml = ''
-                    
-                    // 승무패 배당
-                    const hasWinDrawLoss = m.home_odds && m.draw_odds && m.away_odds
-                    if (hasWinDrawLoss) {
-                        oddsHtml += `
-                        <div class="bg-blue-50 p-3 rounded mb-2">
-                            <p class="text-xs font-bold text-blue-800 mb-2"><i class="fas fa-trophy mr-1"></i>승무패 배당</p>
-                            <div class="grid grid-cols-3 gap-2 text-center">
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">홈승</p>
-                                    <p class="text-lg font-bold text-blue-600">${m.home_odds}</p>
-                                </div>
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">무승부</p>
-                                    <p class="text-lg font-bold text-gray-600">${m.draw_odds}</p>
-                                </div>
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">원정승</p>
-                                    <p class="text-lg font-bold text-red-600">${m.away_odds}</p>
-                                </div>
-                            </div>
-                        </div>
-                        `
-                    }
-                    
-                    // 언오바 배당
-                    const hasOverUnder = m.over_line && m.over_odds && m.under_odds
-                    if (hasOverUnder) {
-                        oddsHtml += `
-                        <div class="bg-green-50 p-3 rounded mb-2">
-                            <p class="text-xs font-bold text-green-800 mb-2"><i class="fas fa-chart-line mr-1"></i>언오바 배당 (기준: ${m.over_line})</p>
-                            <div class="grid grid-cols-2 gap-2 text-center">
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">오버 ${m.over_line}</p>
-                                    <p class="text-lg font-bold text-green-600">${m.over_odds}</p>
-                                </div>
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">언더 ${m.over_line}</p>
-                                    <p class="text-lg font-bold text-green-600">${m.under_odds}</p>
-                                </div>
-                            </div>
-                        </div>
-                        `
-                    }
-                    
-                    // 핸디캡 배당
-                    const hasHandicap = m.handicap_line !== null && m.handicap_line !== undefined && m.handicap_home_odds && m.handicap_away_odds
-                    if (hasHandicap) {
-                        oddsHtml += `
-                        <div class="bg-purple-50 p-3 rounded mb-2">
-                            <p class="text-xs font-bold text-purple-800 mb-2"><i class="fas fa-balance-scale mr-1"></i>핸디캡 배당 (기준: ${m.handicap_line > 0 ? '+' : ''}${m.handicap_line})</p>
-                            <div class="grid grid-cols-2 gap-2 text-center">
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">홈팀 ${m.handicap_line > 0 ? '+' : ''}${m.handicap_line}</p>
-                                    <p class="text-lg font-bold text-purple-600">${m.handicap_home_odds}</p>
-                                </div>
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">원정팀 ${m.handicap_line < 0 ? '+' : ''}${-m.handicap_line}</p>
-                                    <p class="text-lg font-bold text-purple-600">${m.handicap_away_odds}</p>
-                                </div>
-                            </div>
-                        </div>
-                        `
-                    }
-                    
-                    // 배당이 없을 경우 안내 메시지
-                    if (!oddsHtml) {
-                        oddsHtml = '<p class="text-sm text-gray-500 italic">배당 정보 없음</p>'
-                    }
-                    
-                    return `
-                        <div class="border rounded-lg p-4 bg-white hover:shadow-md transition">
-                            <div class="flex justify-between items-start mb-3">
-                                <div class="flex-1">
-                                    <span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full mb-2">
-                                        ${leagueLabels[normalizedLeague] || normalizedLeague}
-                                    </span>
-                                    <p class="text-sm text-gray-600">
-                                        ${matchDate.toLocaleDateString()} ${matchDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                    <h4 class="text-lg font-bold mt-1">${m.match_name || `${m.home_team} vs ${m.away_team}`}</h4>
-                                    <p class="text-sm text-gray-700">${m.home_team} vs ${m.away_team}</p>
-                                </div>
-                            </div>
-                            ${oddsHtml}
-                        </div>
-                    `
-                }).join('') : '<p class="text-gray-500 text-center py-8">진행 중인 경기가 없습니다</p>'
+                const html = matches.length > 0 ? `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-medium">리그</th>
+                                    <th class="px-3 py-2 text-left font-medium">경기일시</th>
+                                    <th class="px-3 py-2 text-left font-medium">경기</th>
+                                    <th class="px-3 py-2 text-center font-medium">승무패</th>
+                                    <th class="px-3 py-2 text-center font-medium">언오바</th>
+                                    <th class="px-3 py-2 text-center font-medium">핸디캡</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${matches.map(m => {
+                                    const matchDate = new Date(m.match_date)
+                                    const normalizedLeague = m.league?.replace(/KOVO[남여]/, 'KOVO')
+                                    const leagueLabels = {
+                                        'EPL': 'EPL', 'LA_LIGA': '라리가', 'SERIE_A': '세리에A',
+                                        'BUNDESLIGA': '분데스', 'LIGUE_1': '리그앙', 'K_LEAGUE': 'K리그',
+                                        'MLB': 'MLB', 'KBO': 'KBO', 'NBA': 'NBA', 'KBL': 'KBL', 'WKBL': 'WKBL', 'KOVO': 'KOVO'
+                                    }
+                                    
+                                    const hasWinDrawLoss = m.home_odds && m.draw_odds && m.away_odds
+                                    const hasOverUnder = m.over_line && m.over_odds && m.under_odds
+                                    const hasHandicap = m.handicap_line !== null && m.handicap_line !== undefined && m.handicap_home_odds && m.handicap_away_odds
+                                    
+                                    return `
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-3 py-2">
+                                                <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
+                                                    ${leagueLabels[normalizedLeague] || normalizedLeague}
+                                                </span>
+                                            </td>
+                                            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600">
+                                                ${matchDate.toLocaleDateString('ko-KR', {month: '2-digit', day: '2-digit'})} ${matchDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                <div class="font-semibold">${m.match_name || `${m.home_team} vs ${m.away_team}`}</div>
+                                                <div class="text-xs text-gray-500">${m.home_team} vs ${m.away_team}</div>
+                                            </td>
+                                            <td class="px-3 py-2 text-center text-xs">
+                                                ${hasWinDrawLoss ? `
+                                                    <div class="flex gap-1 justify-center">
+                                                        <span class="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">${m.home_odds}</span>
+                                                        <span class="px-1.5 py-0.5 bg-gray-50 text-gray-700 rounded font-medium">${m.draw_odds}</span>
+                                                        <span class="px-1.5 py-0.5 bg-red-50 text-red-700 rounded font-medium">${m.away_odds}</span>
+                                                    </div>
+                                                ` : '<span class="text-gray-400">-</span>'}
+                                            </td>
+                                            <td class="px-3 py-2 text-center text-xs">
+                                                ${hasOverUnder ? `
+                                                    <div>${m.over_line}</div>
+                                                    <div class="flex gap-1 justify-center mt-0.5">
+                                                        <span class="px-1.5 py-0.5 bg-green-50 text-green-700 rounded font-medium">O ${m.over_odds}</span>
+                                                        <span class="px-1.5 py-0.5 bg-green-50 text-green-700 rounded font-medium">U ${m.under_odds}</span>
+                                                    </div>
+                                                ` : '<span class="text-gray-400">-</span>'}
+                                            </td>
+                                            <td class="px-3 py-2 text-center text-xs">
+                                                ${hasHandicap ? `
+                                                    <div>${m.handicap_line > 0 ? '+' : ''}${m.handicap_line}</div>
+                                                    <div class="flex gap-1 justify-center mt-0.5">
+                                                        <span class="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-medium">${m.handicap_home_odds}</span>
+                                                        <span class="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-medium">${m.handicap_away_odds}</span>
+                                                    </div>
+                                                ` : '<span class="text-gray-400">-</span>'}
+                                            </td>
+                                        </tr>
+                                    `
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : '<p class="text-gray-500 text-center py-8">진행 중인 경기가 없습니다</p>'
                 
                 document.getElementById('match-schedule-list').innerHTML = html
             } catch (error) {
@@ -5488,7 +5470,7 @@ console.log('권한 관리 함수 로드 완료')
                     </div>
                 `).join('') : '<p class="text-gray-500 text-sm text-center py-4">완료된 경기가 없습니다.</p>'
 
-                document.getElementById('match-settlement-list').innerHTML = html
+                document.getElementById('match-settlement-list')?.innerHTML = html || ''
             } catch (error) {
                 console.error('경기 정산 목록 로드 오류:', error)
             }
