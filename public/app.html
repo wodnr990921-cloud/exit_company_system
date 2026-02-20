@@ -7840,11 +7840,7 @@ console.log('권한 관리 함수 로드 완료')
         }
 
         // 티켓 이미지 로드 (좌측 이미지 뷰어)
-        let currentMailImages = []
-        let currentImageIndex = 0
-        let currentImageRotation = 0
-        let currentImageZoom = 1
-
+        // 변수는 위에서 이미 선언됨 (7367-7380 라인)
         async function loadTicketImages(ticketId) {
             try {
                 // ticket_items에서 mailroom 타입 아이템 가져오기
@@ -7874,8 +7870,10 @@ console.log('권한 관리 함수 로드 완료')
                 
                 currentMailImages = imageKeys.map(key => `${API_BASE}/mailroom/image/${key}`)
                 currentImageIndex = 0
-                currentImageRotation = 0
-                currentImageZoom = 1
+                imageRotation = 0
+                imageScale = 1
+                panOffsetX = 0
+                panOffsetY = 0
                 
                 if (currentMailImages.length > 0) {
                     // 이미지 컨테이너 표시
@@ -7913,7 +7911,7 @@ console.log('권한 관리 함수 로드 완료')
             
             const img = document.getElementById('current-mail-image')
             img.src = currentMailImages[currentImageIndex]
-            img.style.transform = `rotate(${currentImageRotation}deg) scale(${currentImageZoom})`
+            img.style.transform = `rotate(${imageRotation}deg) scale(${imageScale})`
             
             // 카운터 업데이트
             document.getElementById('image-counter').textContent = `${currentImageIndex + 1}/${currentMailImages.length}`
@@ -7937,8 +7935,8 @@ console.log('권한 관리 함수 로드 완료')
         function prevMailImage() {
             if (currentImageIndex > 0) {
                 currentImageIndex--
-                currentImageRotation = 0
-                currentImageZoom = 1
+                imageRotation = 0
+                imageScale = 1
                 displayCurrentMailImage()
             }
         }
@@ -7946,36 +7944,36 @@ console.log('권한 관리 함수 로드 완료')
         function nextMailImage() {
             if (currentImageIndex < currentMailImages.length - 1) {
                 currentImageIndex++
-                currentImageRotation = 0
-                currentImageZoom = 1
+                imageRotation = 0
+                imageScale = 1
                 displayCurrentMailImage()
             }
         }
 
         function selectMailImage(index) {
             currentImageIndex = index
-            currentImageRotation = 0
-            currentImageZoom = 1
+            imageRotation = 0
+            imageScale = 1
             displayCurrentMailImage()
         }
 
         function rotateMailImage(degrees) {
-            currentImageRotation += degrees
+            imageRotation += degrees
             displayCurrentMailImage()
         }
 
         function zoomMailImage(direction) {
             if (direction === 'in') {
-                currentImageZoom = Math.min(currentImageZoom * 1.2, 5)
+                imageScale = Math.min(imageScale * 1.2, 5)
             } else {
-                currentImageZoom = Math.max(currentImageZoom / 1.2, 0.5)
+                imageScale = Math.max(imageScale / 1.2, 0.5)
             }
             displayCurrentMailImage()
         }
 
         function resetMailImage() {
-            currentImageRotation = 0
-            currentImageZoom = 1
+            imageRotation = 0
+            imageScale = 1
             displayCurrentMailImage()
         }
 
