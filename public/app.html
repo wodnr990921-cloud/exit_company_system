@@ -5216,6 +5216,78 @@ console.log('권한 관리 함수 로드 완료')
                         'MLB': 'MLB', 'KBO': 'KBO', 'NBA': 'NBA', 'KBL': 'KBL', 'WKBL': 'WKBL', 'KOVO': 'KOVO'
                     }
                     
+                    // 배당 섹션 HTML 생성 (배당이 있을 때만)
+                    let oddsHtml = ''
+                    
+                    // 승무패 배당
+                    const hasWinDrawLoss = m.home_odds && m.draw_odds && m.away_odds
+                    if (hasWinDrawLoss) {
+                        oddsHtml += `
+                        <div class="bg-blue-50 p-3 rounded mb-2">
+                            <p class="text-xs font-bold text-blue-800 mb-2"><i class="fas fa-trophy mr-1"></i>승무패 배당</p>
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">홈승</p>
+                                    <p class="text-lg font-bold text-blue-600">${m.home_odds}</p>
+                                </div>
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">무승부</p>
+                                    <p class="text-lg font-bold text-gray-600">${m.draw_odds}</p>
+                                </div>
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">원정승</p>
+                                    <p class="text-lg font-bold text-red-600">${m.away_odds}</p>
+                                </div>
+                            </div>
+                        </div>
+                        `
+                    }
+                    
+                    // 언오바 배당
+                    const hasOverUnder = m.over_line && m.over_odds && m.under_odds
+                    if (hasOverUnder) {
+                        oddsHtml += `
+                        <div class="bg-green-50 p-3 rounded mb-2">
+                            <p class="text-xs font-bold text-green-800 mb-2"><i class="fas fa-chart-line mr-1"></i>언오바 배당 (기준: ${m.over_line})</p>
+                            <div class="grid grid-cols-2 gap-2 text-center">
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">오버 ${m.over_line}</p>
+                                    <p class="text-lg font-bold text-green-600">${m.over_odds}</p>
+                                </div>
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">언더 ${m.over_line}</p>
+                                    <p class="text-lg font-bold text-green-600">${m.under_odds}</p>
+                                </div>
+                            </div>
+                        </div>
+                        `
+                    }
+                    
+                    // 핸디캡 배당
+                    const hasHandicap = m.handicap_line !== null && m.handicap_line !== undefined && m.handicap_home_odds && m.handicap_away_odds
+                    if (hasHandicap) {
+                        oddsHtml += `
+                        <div class="bg-purple-50 p-3 rounded mb-2">
+                            <p class="text-xs font-bold text-purple-800 mb-2"><i class="fas fa-balance-scale mr-1"></i>핸디캡 배당 (기준: ${m.handicap_line > 0 ? '+' : ''}${m.handicap_line})</p>
+                            <div class="grid grid-cols-2 gap-2 text-center">
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">홈팀 ${m.handicap_line > 0 ? '+' : ''}${m.handicap_line}</p>
+                                    <p class="text-lg font-bold text-purple-600">${m.handicap_home_odds}</p>
+                                </div>
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">원정팀 ${m.handicap_line < 0 ? '+' : ''}${-m.handicap_line}</p>
+                                    <p class="text-lg font-bold text-purple-600">${m.handicap_away_odds}</p>
+                                </div>
+                            </div>
+                        </div>
+                        `
+                    }
+                    
+                    // 배당이 하나도 없으면 알림 표시
+                    if (!oddsHtml) {
+                        oddsHtml = '<p class="text-xs text-gray-500 italic"><i class="fas fa-info-circle mr-1"></i>배당 정보가 아직 업데이트되지 않았습니다.</p>'
+                    }
+                    
                     return `
                     <div class="bg-white border rounded-lg p-4 hover:shadow-md transition">
                         <div class="flex justify-between items-start mb-3">
@@ -5229,54 +5301,7 @@ console.log('권한 관리 함수 로드 완료')
                             </div>
                         </div>
                         
-                        <!-- 승무패 배당 (항상 표시) -->
-                        <div class="bg-blue-50 p-3 rounded mb-2">
-                            <p class="text-xs font-bold text-blue-800 mb-2"><i class="fas fa-trophy mr-1"></i>승무패 배당</p>
-                            <div class="grid grid-cols-3 gap-2 text-center">
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">홈승</p>
-                                    <p class="text-lg font-bold text-blue-600">${m.home_odds || '-'}</p>
-                                </div>
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">무승부</p>
-                                    <p class="text-lg font-bold text-gray-600">${m.draw_odds || '-'}</p>
-                                </div>
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">원정승</p>
-                                    <p class="text-lg font-bold text-red-600">${m.away_odds || '-'}</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 언오바 배당 (항상 표시) -->
-                        <div class="bg-green-50 p-3 rounded mb-2">
-                            <p class="text-xs font-bold text-green-800 mb-2"><i class="fas fa-chart-line mr-1"></i>언오바 배당 (기준: ${m.over_line || '-'})</p>
-                            <div class="grid grid-cols-2 gap-2 text-center">
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">오버</p>
-                                    <p class="text-lg font-bold text-green-600">${m.over_odds || '-'}</p>
-                                </div>
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">언더</p>
-                                    <p class="text-lg font-bold text-green-600">${m.under_odds || '-'}</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 핸디캡 배당 (항상 표시) -->
-                        <div class="bg-purple-50 p-3 rounded">
-                            <p class="text-xs font-bold text-purple-800 mb-2"><i class="fas fa-balance-scale mr-1"></i>핸디캡 배당 (기준: ${m.handicap_line || '-'})</p>
-                            <div class="grid grid-cols-2 gap-2 text-center">
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">홈팀</p>
-                                    <p class="text-lg font-bold text-purple-600">${m.handicap_home_odds || '-'}</p>
-                                </div>
-                                <div class="bg-white p-2 rounded">
-                                    <p class="text-xs text-gray-600">원정팀</p>
-                                    <p class="text-lg font-bold text-purple-600">${m.handicap_away_odds || '-'}</p>
-                                </div>
-                            </div>
-                        </div>
+                        ${oddsHtml}
                     </div>
                 `}).join('') : '<p class="text-gray-500 text-sm text-center py-4">진행 중인 경기가 없습니다.</p>'
 

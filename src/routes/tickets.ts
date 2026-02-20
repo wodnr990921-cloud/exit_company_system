@@ -128,29 +128,38 @@ tickets.get('/:id', async (c) => {
     ).bind(id).all()
 
     // ticket_items를 통해 관련 mail_items의 이미지 수집
-    const { results: ticketItems } = await c.env.DB.prepare(
-      `SELECT ti.*, mi.image_keys, mi.mail_number
-       FROM ticket_items ti
-       LEFT JOIN mail_items mi ON ti.mail_item_id = mi.id
-       WHERE ti.ticket_id = ?`
-    ).bind(id).all()
-
-    // 모든 mail_items의 이미지를 병합
+    let ticketItems: any[] = []
     let allImageKeys: string[] = []
-    if (ticketItems && ticketItems.length > 0) {
-      for (const item of ticketItems) {
-        const itemData = item as any
-        if (itemData.image_keys) {
-          try {
-            const keys = JSON.parse(itemData.image_keys)
-            if (Array.isArray(keys)) {
-              allImageKeys = allImageKeys.concat(keys)
+    
+    try {
+      const itemsResult = await c.env.DB.prepare(
+        `SELECT ti.*, mi.image_keys, mi.mail_number
+         FROM ticket_items ti
+         LEFT JOIN mail_items mi ON ti.mail_item_id = mi.id
+         WHERE ti.ticket_id = ?`
+      ).bind(id).all()
+      
+      ticketItems = itemsResult.results || []
+      
+      // 모든 mail_items의 이미지를 병합
+      if (ticketItems && ticketItems.length > 0) {
+        for (const item of ticketItems) {
+          const itemData = item as any
+          if (itemData.image_keys) {
+            try {
+              const keys = JSON.parse(itemData.image_keys)
+              if (Array.isArray(keys)) {
+                allImageKeys = allImageKeys.concat(keys)
+              }
+            } catch (e) {
+              console.error('이미지 키 파싱 오류:', e, itemData.image_keys)
             }
-          } catch (e) {
-            console.error('이미지 키 파싱 오류:', e)
           }
         }
       }
+    } catch (itemError) {
+      console.error('ticket_items 조회 오류:', itemError)
+      // 오류가 있어도 계속 진행 (이미지 없이 티켓 정보는 보여줌)
     }
 
     // ticket에 이미지 정보 추가
