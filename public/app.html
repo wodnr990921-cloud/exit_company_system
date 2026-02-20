@@ -5466,8 +5466,8 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
 
-
-                async function loadMatchSettlementList() {
+        // 경기 정산 목록 로드
+        async function loadMatchSettlementList() {
             try {
                 const response = await axios.get(`${API_BASE}/betting/matches?status=completed`)
                 const matches = response.data.matches || []
