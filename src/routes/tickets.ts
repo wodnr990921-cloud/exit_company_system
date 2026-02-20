@@ -410,14 +410,19 @@ tickets.patch('/:id', async (c) => {
       const ticket = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first()
       
       if (ticket) {
-        await createNotification(c.env.DB, {
-          staff_id: Number(updates.assigned_to),
-          type: 'ticket_assigned',
-          title: '새 티켓이 배정되었습니다',
-          message: `티켓 ${(ticket as any).ticket_number}: ${(ticket as any).title}`,
-          link: `/tickets/${id}`,
-          priority: (ticket as any).priority === 'urgent' ? 'urgent' : (ticket as any).priority === 'high' ? 'high' : 'normal'
-        })
+        try {
+          await createNotification(c.env.DB, {
+            staff_id: Number(updates.assigned_to),
+            type: 'ticket_assigned',
+            title: '새 티켓이 배정되었습니다',
+            message: `티켓 ${(ticket as any).ticket_number}: ${(ticket as any).title}`,
+            link: `/tickets/${id}`,
+            priority: (ticket as any).priority === 'urgent' ? 'urgent' : (ticket as any).priority === 'high' ? 'high' : 'normal'
+          })
+        } catch (notifError) {
+          console.error('알림 생성 실패 (무시):', notifError)
+          // 알림 실패해도 티켓 업데이트는 성공으로 처리
+        }
       }
     }
 
@@ -428,15 +433,19 @@ tickets.patch('/:id', async (c) => {
         const ticket = await c.env.DB.prepare('SELECT * FROM tickets WHERE id = ?').bind(id).first()
         
         if (ticket) {
-          await c.env.DB.prepare(
-            `INSERT INTO notifications (staff_id, type, title, message, link)
-             VALUES (?, 'ticket_urgent', ?, ?, ?)`
-          ).bind(
-            (oldTicket as any).assigned_to,
-            '⚠️ 긴급 티켓으로 변경됨',
-            `티켓 #${(ticket as any).ticket_number}이(가) 긴급으로 변경되었습니다`,
-            `/tickets/${id}`
-          ).run()
+          try {
+            await c.env.DB.prepare(
+              `INSERT INTO notifications (staff_id, type, title, message, link, priority, is_read, created_at)
+               VALUES (?, 'ticket_urgent', ?, ?, ?, 'urgent', 0, CURRENT_TIMESTAMP)`
+            ).bind(
+              (oldTicket as any).assigned_to,
+              '⚠️ 긴급 티켓으로 변경됨',
+              `티켓 #${(ticket as any).ticket_number}이(가) 긴급으로 변경되었습니다`,
+              `/tickets/${id}`
+            ).run()
+          } catch (notifError) {
+            console.error('긴급 알림 생성 실패 (무시):', notifError)
+          }
         }
       }
     }

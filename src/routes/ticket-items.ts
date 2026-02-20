@@ -318,7 +318,11 @@ ticketItems.post('/:itemId/request-approval', async (c) => {
     })
   } catch (error) {
     console.error('결재 요청 오류:', error)
-    return c.json({ error: '결재 요청 중 오류가 발생했습니다.' }, 500)
+    console.error('Error details:', JSON.stringify(error, null, 2))
+    return c.json({ 
+      error: '결재 요청 중 오류가 발생했습니다.', 
+      details: error instanceof Error ? error.message : String(error)
+    }, 500)
   }
 })
 
