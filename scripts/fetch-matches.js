@@ -138,8 +138,12 @@ function extractOdds(oddsData) {
 function transformFixture(fixture, oddsData, league) {
   const odds = extractOdds(oddsData)
   
+  // 팀 이름을 약자로 변환 (앞 3글자 또는 약자 사용)
+  const homeCode = fixture.teams.home.code || fixture.teams.home.name.substring(0, 3).toUpperCase()
+  const awayCode = fixture.teams.away.code || fixture.teams.away.name.substring(0, 3).toUpperCase()
+  
   return {
-    match_name: `${fixture.teams.home.name} vs ${fixture.teams.away.name}`,
+    match_name: `${homeCode} vs ${awayCode}`, // 약자로 표시 (예: MCI vs LIV)
     home_team: fixture.teams.home.name,
     away_team: fixture.teams.away.name,
     league: LEAGUE_MAPPING[league] || 'ETC',
@@ -198,7 +202,15 @@ async function main() {
   const mode = process.env.MODE || 'daily' // daily | weekly
   const days = mode === 'weekly' ? 7 : 1
   const { from, to } = getDateRange(days)
-  const season = new Date().getFullYear()
+  
+  // 시즌 계산: 축구는 8월~5월 시즌이므로
+  // 현재가 6-7월이면 이전 연도, 8-12월이면 현재 연도 사용
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1 // 1-12
+  
+  // 2026년 2월이면 2025/2026 시즌 = 2025
+  const season = (currentMonth >= 8) ? currentYear : currentYear - 1
   
   console.log(`📅 모드: ${mode}`)
   console.log(`📅 기간: ${from} ~ ${to}`)
