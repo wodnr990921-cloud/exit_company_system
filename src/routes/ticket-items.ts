@@ -247,8 +247,15 @@ ticketItems.post('/:itemId/request-approval', async (c) => {
   try {
     const itemId = c.req.param('itemId')
     const body = await c.req.json().catch(() => ({}))
-    const requested_by = body.requested_by || 'admin@prison-books.kr'
+    const requested_by_email = body.requested_by || 'admin@prison-books.kr'
     const { env } = c
+    
+    // staff email로부터 staff ID 조회
+    const staff = await env.DB.prepare(
+      `SELECT id FROM staff WHERE email = ?`
+    ).bind(requested_by_email).first()
+    
+    const requested_by = staff?.id || 2 // 기본값은 admin (id=2)
 
     // 아이템 정보 조회
     const item = await env.DB.prepare(`
@@ -271,13 +278,13 @@ ticketItems.post('/:itemId/request-approval', async (c) => {
     // 아이템 타입에 따라 결재 데이터 생성
     switch (item.item_type) {
       case 'point_request':
-        // 회원의 현재 포인트 잔액 조회
-        const memberPoint = await env.DB.prepare(
-          `SELECT balance FROM member_points 
-           WHERE member_id = ? AND point_type = ?`
-        ).bind(item.member_id, itemData.point_type).first()
+        // 회원의 현재 포인트 잔액 조회 (members 테이블에서 직접 조회)
+        const pointField = itemData.point_type === 'regular' ? 'points' : 'betting_points'
+        const member = await env.DB.prepare(
+          `SELECT ${pointField} as balance FROM members WHERE id = ?`
+        ).bind(item.member_id).first()
 
-        const currentBalance = memberPoint?.balance || 0
+        const currentBalance = member?.balance || 0
         const newBalance = itemData.transaction_type === 'add' 
           ? currentBalance + itemData.amount 
           : currentBalance - itemData.amount
