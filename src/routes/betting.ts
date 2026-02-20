@@ -1719,17 +1719,15 @@ betting.post('/settlements/:id/approve', async (c) => {
       
       const winMessage = `🎉 축하합니다! 당첨되었습니다!
 
-📋 배팅 번호: ${folderData.folder_number}
 📅 적중 경기:
 ${matchDetails}
 
 💰 정산 내역:
 - 배팅금: ${betAmount.toLocaleString()}원
-- 원 배당: ${totalOdds.toFixed(2)}배
-- 적용 배당: ${appliedOdds.toFixed(2)}배${isSingle ? ' (단폴더 패널티 적용)' : ''}
-- 총 당첨금: ${grossWin.toLocaleString()}원
-- 수수료: ${fee.toLocaleString()}원${isSingle ? ' (기본 2만원 + 마진)' : ' (순수익 마진)'}
-- 실 수령액: ${finalWin.toLocaleString()}원
+- 적용 배당: ${appliedOdds.toFixed(2)}배
+- 당첨금: ${grossWin.toLocaleString()}원
+- 수수료: ${fee.toLocaleString()}원
+- 총 당첨금: ${finalWin.toLocaleString()}원
 
 ✅ 배팅 포인트가 지급되었습니다.`
       
