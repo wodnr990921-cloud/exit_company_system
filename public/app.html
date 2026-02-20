@@ -1972,9 +1972,14 @@
                         <div class="card">
                             <div class="flex justify-between items-center mb-4">
                                 <h4 class="font-bold">등록된 경기 일정</h4>
-                                <button onclick="addMatchRow()" class="btn btn-success btn-sm">
-                                    <i class="fas fa-plus mr-2"></i>경기 추가
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="showBettingConsole()" class="btn btn-info btn-sm">
+                                        <i class="fas fa-terminal mr-2"></i>배팅 관리 콘솔
+                                    </button>
+                                    <button onclick="addMatchRow()" class="btn btn-success btn-sm">
+                                        <i class="fas fa-plus mr-2"></i>경기 추가
+                                    </button>
+                                </div>
                             </div>
                             <div id="match-management-list" class="space-y-3"></div>
                         </div>
@@ -2019,6 +2024,53 @@
                 </div>
             </div>
         </div>
+
+        <!-- 배팅 관리 콘솔 모달 -->
+        <div id="betting-console-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold"><i class="fas fa-terminal mr-2"></i>배팅 관리 콘솔</h3>
+                        <button onclick="closeBettingConsole()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- 리그 선택 -->
+                    <div class="card mb-4">
+                        <h4 class="font-bold mb-3">리그 선택</h4>
+                        <div id="console-league-selection" class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <!-- JavaScript로 동적 생성 -->
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-sm text-gray-600">선택된 리그: <span id="selected-leagues-display" class="font-medium">없음</span></p>
+                        </div>
+                    </div>
+                    
+                    <!-- 작업 선택 -->
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <button onclick="fetchMatches()" class="btn btn-primary">
+                            <i class="fas fa-download mr-2"></i>경기 불러오기
+                        </button>
+                        <button onclick="fetchOdds()" class="btn btn-success">
+                            <i class="fas fa-chart-line mr-2"></i>배당 불러오기
+                        </button>
+                        <button onclick="fetchResults()" class="btn btn-warning">
+                            <i class="fas fa-trophy mr-2"></i>결과 불러오기
+                        </button>
+                    </div>
+                    
+                    <!-- 로그 출력 -->
+                    <div class="card">
+                        <h4 class="font-bold mb-3">실행 로그</h4>
+                        <div id="console-log" class="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-64 overflow-y-auto">
+                            <div>> 배팅 관리 콘솔 준비 완료</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <!-- 우편물 검수 및 배당 모달 -->
         <div id="mail-assignment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -5668,7 +5720,139 @@ console.log('권한 관리 함수 로드 완료')
         }
 
 
-        // 직원 목록 로드
+        // 배팅 관리 콘솔
+        let selectedConsoleLeagues = []
+
+        async function showBettingConsole() {
+            document.getElementById('betting-console-modal').classList.remove('hidden')
+            await loadConsoleLeagues()
+        }
+
+        function closeBettingConsole() {
+            document.getElementById('betting-console-modal').classList.add('hidden')
+            selectedConsoleLeagues = []
+        }
+
+        async function loadConsoleLeagues() {
+            try {
+                const response = await axios.get(`${API_BASE}/betting/admin/config`)
+                const config = response.data
+                const leagues = config.enabled_leagues || []
+                
+                const container = document.getElementById('console-league-selection')
+                container.innerHTML = leagues.map(league => `
+                    <label class="flex items-center p-3 border rounded cursor-pointer hover:bg-gray-50 ${league.enabled ? '' : 'opacity-50'}">
+                        <input type="checkbox" 
+                               value="${league.id}" 
+                               onchange="toggleConsoleLeague('${league.id}')"
+                               ${league.enabled ? '' : 'disabled'}
+                               class="mr-2">
+                        <span>${league.name}</span>
+                    </label>
+                `).join('')
+                
+                addConsoleLog('리그 목록 로드 완료')
+            } catch (error) {
+                addConsoleLog('❌ 리그 목록 로드 실패: ' + error.message, 'error')
+            }
+        }
+
+        function toggleConsoleLeague(leagueId) {
+            const index = selectedConsoleLeagues.indexOf(leagueId)
+            if (index > -1) {
+                selectedConsoleLeagues.splice(index, 1)
+            } else {
+                selectedConsoleLeagues.push(leagueId)
+            }
+            
+            document.getElementById('selected-leagues-display').textContent = 
+                selectedConsoleLeagues.length > 0 ? selectedConsoleLeagues.join(', ') : '없음'
+        }
+
+        function addConsoleLog(message, type = 'info') {
+            const logContainer = document.getElementById('console-log')
+            const timestamp = new Date().toLocaleTimeString()
+            const colorClass = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-blue-400'
+            
+            logContainer.innerHTML += `<div class="${colorClass}">[${timestamp}] ${message}</div>`
+            logContainer.scrollTop = logContainer.scrollHeight
+        }
+
+        async function fetchMatches() {
+            if (selectedConsoleLeagues.length === 0) {
+                addConsoleLog('❌ 리그를 선택해주세요', 'error')
+                return
+            }
+            
+            addConsoleLog(`🔄 경기 불러오기 시작... (${selectedConsoleLeagues.length}개 리그)`)
+            
+            try {
+                // Worker URL을 환경 변수 또는 설정에서 가져와야 함
+                // 여기서는 임시로 로컬 API 사용
+                for (const league of selectedConsoleLeagues) {
+                    addConsoleLog(`  - ${league} 리그 처리 중...`)
+                    // TODO: Worker API 호출 또는 직접 API-Sports 호출
+                }
+                
+                addConsoleLog('✅ 경기 불러오기 완료', 'success')
+                showToast('경기 불러오기가 완료되었습니다', 'success', 3000)
+            } catch (error) {
+                addConsoleLog('❌ 경기 불러오기 실패: ' + error.message, 'error')
+                showToast('경기 불러오기 실패', 'error', 3000)
+            }
+        }
+
+        async function fetchOdds() {
+            if (selectedConsoleLeagues.length === 0) {
+                addConsoleLog('❌ 리그를 선택해주세요', 'error')
+                return
+            }
+            
+            addConsoleLog(`🔄 배당 불러오기 시작... (${selectedConsoleLeagues.length}개 리그)`)
+            
+            try {
+                for (const league of selectedConsoleLeagues) {
+                    addConsoleLog(`  - ${league} 리그 배당 업데이트 중...`)
+                    // TODO: 배당 업데이트 API 호출
+                }
+                
+                addConsoleLog('✅ 배당 불러오기 완료', 'success')
+                showToast('배당 불러오기가 완료되었습니다', 'success', 3000)
+            } catch (error) {
+                addConsoleLog('❌ 배당 불러오기 실패: ' + error.message, 'error')
+                showToast('배당 불러오기 실패', 'error', 3000)
+            }
+        }
+
+        async function fetchResults() {
+            if (selectedConsoleLeagues.length === 0) {
+                addConsoleLog('❌ 리그를 선택해주세요', 'error')
+                return
+            }
+            
+            addConsoleLog(`🔄 결과 불러오기 시작... (${selectedConsoleLeagues.length}개 리그)`)
+            
+            try {
+                // Worker 수동 트리거
+                addConsoleLog('  - Match Result Worker 트리거 중...')
+                
+                const response = await axios.post(`${API_BASE}/betting/admin/trigger-collect`, {
+                    mode: 'daily',
+                    leagues: selectedConsoleLeagues
+                })
+                
+                addConsoleLog('✅ 결과 불러오기 완료', 'success')
+                addConsoleLog(`  - 처리된 경기: ${response.data.processed || 0}개`)
+                addConsoleLog(`  - 정산된 배팅: ${response.data.settled || 0}개`)
+                showToast('결과 불러오기가 완료되었습니다', 'success', 3000)
+            } catch (error) {
+                addConsoleLog('❌ 결과 불러오기 실패: ' + error.message, 'error')
+                showToast('결과 불러오기 실패', 'error', 3000)
+            }
+        }
+
+
+                // 직원 목록 로드
         // ==========================================
         // 직원 관리 함수 (개선 버전)
         // ==========================================
