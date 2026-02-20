@@ -868,23 +868,53 @@ betting.post('/settlements/:id/reject', async (c) => {
 // 경기 정산 통계 조회
 betting.get('/settlement-stats', async (c) => {
   try {
-    // 완료된 경기의 정산 통계
-    const { results: statsResults } = await c.env.DB.prepare(
-      `SELECT 
-        SUM(bf.total_bet_amount) as total_bet,
-        SUM(CASE WHEN bf.status = 'won' THEN bf.potential_win ELSE 0 END) as total_win
-       FROM bet_folders bf
-       JOIN bets b ON bf.id = b.folder_id
-       JOIN matches m ON b.match_id = m.id
-       WHERE m.status = 'completed'`
-    ).all()
-
-    const stats = statsResults?.[0] as any || {}
-
+    // 정산 완료된 폴더 통계
+    const { results: folders } = await c.env.DB.prepare(`
+      SELECT 
+        folder_type,
+        total_bet_amount,
+        total_win_amount,
+        frozen_amount,
+        result
+      FROM bet_folders
+      WHERE settlement_status IN ('settled', 'approved')
+    `).all()
+    
+    let totalBetAmount = 0      // 총 배팅금
+    let totalWinPayout = 0      // 실제 지급된 당첨금 (수수료 차감 후)
+    let totalFee = 0            // 총 수수료
+    let totalLoss = 0           // 손님 루징 (낙첨)
+    
+    for (const folder of folders) {
+      const f = folder as any
+      const betAmount = Number(f.total_bet_amount || 0)
+      const totalWin = Number(f.total_win_amount || 0)
+      const frozenAmount = Number(f.frozen_amount || 0)
+      
+      totalBetAmount += betAmount
+      
+      if (f.result === 'win') {
+        // 당첨: 수수료 = 당첨금 - 실지급액
+        const fee = totalWin - frozenAmount
+        totalFee += fee
+        totalWinPayout += frozenAmount
+      } else if (f.result === 'lose') {
+        // 낙첨: 배팅금 전액이 수익
+        totalLoss += betAmount
+      }
+    }
+    
+    // 순수익 = 수수료 + 루징 - 실지급액
+    const netProfit = totalFee + totalLoss - totalWinPayout
+    
     return c.json({
-      total_bet: Number(stats.total_bet || 0),
-      total_win: Number(stats.total_win || 0),
-      net_profit: Number(stats.total_bet || 0) - Number(stats.total_win || 0)
+      total_bet: totalBetAmount,              // 총 배팅금
+      total_fee: totalFee,                    // 총 수수료 (수익)
+      total_loss: totalLoss,                  // 총 루징 (수익)
+      total_win_payout: totalWinPayout,       // 실지급액 (손실)
+      net_profit: netProfit,                  // 순수익
+      revenue: totalFee + totalLoss,          // 총 수익 (수수료 + 루징)
+      expense: totalWinPayout                 // 총 지출 (당첨금)
     })
   } catch (error) {
     console.error('정산 통계 조회 오류:', error)
@@ -906,19 +936,45 @@ betting.get('/statistics', async (c) => {
       return c.json({ error: '시작일과 종료일을 입력해주세요.' }, 400)
     }
 
-    // 전체 통계
-    const totalStats = await c.env.DB.prepare(
+    // 전체 통계 (새로운 정산 로직 적용)
+    const { results: folders } = await c.env.DB.prepare(
       `SELECT 
-        COUNT(*) as total_bet_count,
-        SUM(total_bet_amount) as total_bet_amount,
-        SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END) as total_win_amount
+        folder_type,
+        total_bet_amount,
+        total_win_amount,
+        frozen_amount,
+        result
        FROM bet_folders
-       WHERE DATE(created_at) BETWEEN ? AND ?`
-    ).bind(start_date, end_date).first()
-
-    const total_bet_amount = (totalStats as any)?.total_bet_amount || 0
-    const total_win_amount = (totalStats as any)?.total_win_amount || 0
-    const net_profit = total_bet_amount - total_win_amount
+       WHERE DATE(created_at) BETWEEN ? AND ?
+       AND settlement_status IN ('settled', 'approved', 'completed')`
+    ).bind(start_date, end_date).all()
+    
+    let totalBetCount = folders.length
+    let totalBetAmount = 0
+    let totalFee = 0
+    let totalLoss = 0
+    let totalWinPayout = 0
+    
+    for (const folder of folders) {
+      const f = folder as any
+      const betAmount = Number(f.total_bet_amount || 0)
+      const totalWin = Number(f.total_win_amount || 0)
+      const frozenAmount = Number(f.frozen_amount || 0)
+      
+      totalBetAmount += betAmount
+      
+      if (f.result === 'win') {
+        const fee = totalWin - frozenAmount
+        totalFee += fee
+        totalWinPayout += frozenAmount
+      } else if (f.result === 'lose') {
+        totalLoss += betAmount
+      }
+    }
+    
+    const revenue = totalFee + totalLoss        // 수익 (수수료 + 루징)
+    const expense = totalWinPayout              // 지출 (당첨금)
+    const net_profit = revenue - expense        // 순수익
 
     // 회원별 통계 (상위 10명)
     const { results: memberStats } = await c.env.DB.prepare(
@@ -964,10 +1020,14 @@ betting.get('/statistics', async (c) => {
     ).bind(start_date, end_date).all()
 
     return c.json({
-      total_bet_count: (totalStats as any)?.total_bet_count || 0,
-      total_bet_amount,
-      total_win_amount,
-      net_profit,
+      total_bet_count: totalBetCount,
+      total_bet_amount: totalBetAmount,
+      revenue: revenue,                    // 총 수익 (수수료 + 루징)
+      expense: expense,                    // 총 지출 (당첨금)
+      net_profit: net_profit,              // 순수익
+      total_fee: totalFee,                 // 수수료 수익
+      total_loss: totalLoss,               // 루징 수익
+      total_win_payout: totalWinPayout,    // 당첨금 지출
       member_stats: memberStats || [],
       match_stats: matchStats || [],
       daily_trend: dailyTrend || []
@@ -999,24 +1059,55 @@ betting.get('/daily-close', async (c) => {
        WHERE DATE(created_at) = ?`
     ).bind(date).all()
 
-    // 배팅 통계
-    const { results: bettingStats } = await c.env.DB.prepare(
+    // 배팅 통계 (새로운 정산 로직 적용)
+    const { results: folders } = await c.env.DB.prepare(
       `SELECT 
-        COUNT(*) as total_bet_count,
-        SUM(total_bet_amount) as total_bet_amount,
-        SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END) as total_win_amount,
-        SUM(CASE WHEN status = 'won' THEN 1 ELSE 0 END) as won_count,
-        SUM(CASE WHEN status = 'lost' THEN 1 ELSE 0 END) as lost_count,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count
+        folder_type,
+        total_bet_amount,
+        total_win_amount,
+        frozen_amount,
+        result,
+        status
        FROM bet_folders
        WHERE DATE(created_at) = ?`
     ).bind(date).all()
-
-    const bettingData = bettingStats?.[0] as any || {}
-    const total_bet_amount = Number(bettingData.total_bet_amount || 0)
-    const total_win_amount = Number(bettingData.total_win_amount || 0)
-    const net_profit = total_bet_amount - total_win_amount
-    const profit_margin = total_bet_amount > 0 ? ((net_profit / total_bet_amount) * 100).toFixed(2) : '0.00'
+    
+    let totalBetCount = folders.length
+    let totalBetAmount = 0
+    let totalFee = 0
+    let totalLoss = 0
+    let totalWinPayout = 0
+    let wonCount = 0
+    let lostCount = 0
+    let pendingCount = 0
+    
+    for (const folder of folders) {
+      const f = folder as any
+      const betAmount = Number(f.total_bet_amount || 0)
+      const totalWin = Number(f.total_win_amount || 0)
+      const frozenAmount = Number(f.frozen_amount || 0)
+      
+      totalBetAmount += betAmount
+      
+      // 상태 카운트
+      if (f.status === 'won' || f.result === 'win') wonCount++
+      else if (f.status === 'lost' || f.result === 'lose') lostCount++
+      else if (f.status === 'pending') pendingCount++
+      
+      // 수익 계산
+      if (f.result === 'win') {
+        const fee = totalWin - frozenAmount
+        totalFee += fee
+        totalWinPayout += frozenAmount
+      } else if (f.result === 'lose') {
+        totalLoss += betAmount
+      }
+    }
+    
+    const revenue = totalFee + totalLoss
+    const expense = totalWinPayout
+    const net_profit = revenue - expense
+    const profit_margin = totalBetAmount > 0 ? ((net_profit / totalBetAmount) * 100).toFixed(2) : '0.00'
 
     // 포인트 통계
     const { results: pointStats } = await c.env.DB.prepare(
@@ -1070,11 +1161,18 @@ betting.get('/daily-close', async (c) => {
       date,
       ticket_stats: ticketStats?.[0] || {},
       betting_stats: {
-        ...bettingData,
-        total_bet_amount,
-        total_win_amount,
-        net_profit,
-        profit_margin
+        total_bet_count: totalBetCount,
+        total_bet_amount: totalBetAmount,
+        revenue: revenue,                  // 총 수익 (수수료 + 루징)
+        expense: expense,                  // 총 지출 (당첨금)
+        net_profit: net_profit,            // 순수익
+        profit_margin: profit_margin,
+        total_fee: totalFee,               // 수수료 수익
+        total_loss: totalLoss,             // 루징 수익
+        total_win_payout: totalWinPayout,  // 당첨금 지출
+        won_count: wonCount,
+        lost_count: lostCount,
+        pending_count: pendingCount
       },
       point_stats: pointStats?.[0] || {},
       attendance_stats: attendanceStats?.[0] || {},
@@ -1626,12 +1724,17 @@ betting.post('/settlements/:id/approve', async (c) => {
       WHERE id = ?
     `).bind(approved_by, folderId).run()
     
-    // 2. 회원에게 포인트 지급
+    // 2. 회원에게 포인트 지급 및 잔액 조회
     await c.env.DB.prepare(`
       UPDATE members 
       SET betting_points = betting_points + ?
       WHERE id = ?
     `).bind(folderData.frozen_amount, folderData.member_id).run()
+    
+    // 포인트 지급 후 잔액 조회
+    const member = await c.env.DB.prepare(`
+      SELECT points, betting_points FROM members WHERE id = ?
+    `).bind(folderData.member_id).first() as any
     
     // 3. 당첨 알림 생성 (티켓이 있는 경우)
     if (folderData.ticket_id) {
@@ -1717,6 +1820,9 @@ betting.post('/settlements/:id/approve', async (c) => {
         return `${idx + 1}. ${matchDateStr} ${bet.match_name || `${bet.home_team} vs ${bet.away_team}`} (${betTypeText}, 배당 ${bet.odds})`
       }).join('\n')
       
+      // 총 포인트 계산
+      const totalPoints = Number(member.points || 0) + Number(member.betting_points || 0) + Number(finalWin)
+      
       const winMessage = `🎉 축하합니다! 당첨되었습니다!
 
 📅 적중 경기:
@@ -1728,6 +1834,11 @@ ${matchDetails}
 - 당첨금: ${grossWin.toLocaleString()}원
 - 수수료: ${fee.toLocaleString()}원
 - 총 당첨금: ${finalWin.toLocaleString()}원
+
+💳 포인트 잔액:
+- 일반 포인트: ${Number(member.points || 0).toLocaleString()}원
+- 배팅 포인트: ${Number(member.betting_points || 0).toLocaleString()}원
+- 총 잔액: ${totalPoints.toLocaleString()}원
 
 ✅ 배팅 포인트가 지급되었습니다.`
       
