@@ -1820,8 +1820,8 @@ betting.post('/settlements/:id/approve', async (c) => {
         return `${idx + 1}. ${matchDateStr} ${bet.match_name || `${bet.home_team} vs ${bet.away_team}`} (${betTypeText}, 배당 ${bet.odds})`
       }).join('\n')
       
-      // 총 포인트 계산
-      const totalPoints = Number(member.points || 0) + Number(member.betting_points || 0) + Number(finalWin)
+      // 총 포인트 계산 (일반 포인트 + 배팅 포인트)
+      const totalPoints = Number(member.points || 0) + Number(member.betting_points || 0)
       
       const winMessage = `🎉 축하합니다! 당첨되었습니다!
 
@@ -1835,10 +1835,7 @@ ${matchDetails}
 - 수수료: ${fee.toLocaleString()}원
 - 총 당첨금: ${finalWin.toLocaleString()}원
 
-💳 포인트 잔액:
-- 일반 포인트: ${Number(member.points || 0).toLocaleString()}원
-- 배팅 포인트: ${Number(member.betting_points || 0).toLocaleString()}원
-- 총 잔액: ${totalPoints.toLocaleString()}원
+💳 현재 잔여 포인트: ${totalPoints.toLocaleString()}원
 
 ✅ 배팅 포인트가 지급되었습니다.`
       
