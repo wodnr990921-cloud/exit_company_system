@@ -1,4 +1,15 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v57.0
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v57.1
+
+## ✅ 최근 업데이트 (v57.1 - 2026-02-20)
+
+### 🐛 버그 수정 (v57.1)
+- **📅 시즌 계산 수정**:
+  - 2026년 2월 → 2024/2025 시즌 = 2024로 올바르게 계산
+  - 자동 시즌 계산 로직: 8월 이후 = 현재 연도, 그 외 = 이전 연도
+- **🏆 경기명 약자 표시**:
+  - 팀 이름 대신 약자 사용 (예: `WES vs FUL` 대신 `West Ham vs Fulham`)
+  - API에서 제공하는 `team.code` 사용
+  - code가 없으면 팀 이름 앞 3글자 사용
 
 ## ✅ 최근 업데이트 (v57.0 - 2026-02-20)
 
@@ -35,11 +46,11 @@
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://dfcce31e.exit-company-system-5je.pages.dev/
-- **Build Size**: 161.26 kB (+8.46 kB - JWT 인증 추가)
-- **Build Time**: 1.06 sec
-- **Deploy Time**: 11.2 sec
-- **Last Updated**: 2026-02-20 06:30 UTC
+- **Latest Preview**: https://5b2b9525.exit-company-system-5je.pages.dev/
+- **Build Size**: 161.43 kB (동일)
+- **Build Time**: 907 ms
+- **Deploy Time**: 13.5 sec
+- **Last Updated**: 2026-02-20 07:15 UTC
 - **GitHub Actions**: ✅ 자동 경기 일정 등록 활성화
 
 ## 🎯 주요 기능 (완료)
