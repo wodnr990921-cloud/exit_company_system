@@ -28,9 +28,9 @@ const app = new Hono<{ Bindings: Bindings }>()
 // CORS 설정 - 기본 설정 사용
 app.use('/api/*', cors())
 
-// 메인 페이지를 app.html로 리다이렉트
+// 메인 페이지를 app으로 리다이렉트 (Cloudflare Pages는 .html 자동 제거)
 app.get('/', async (c) => {
-  return c.redirect('/app.html')
+  return c.redirect('/app')
 })
 
 // API 라우트 등록
