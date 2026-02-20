@@ -7095,30 +7095,37 @@ console.log('권한 관리 함수 로드 완료')
                 // 경기 데이터는 로드되었지만 요청사항 탭의 배팅 추가 모달에서 사용됨
                 // showAddRequestModal('betting')에서 loadMatchesForBetting()를 호출하여 경기 목록 표시
 
-                // 이미지 로드 (우선순위: all_image_keys > mailroom_id > 빈 배열)
-                if (ticket.all_image_keys && ticket.all_image_keys.length > 0) {
-                    // ticket_items를 통해 수집된 모든 이미지 사용
-                    console.log('티켓 이미지 로드:', ticket.all_image_keys.length, '개')
-                    initMailImageViewer(ticket.all_image_keys)
-                } else if (ticket.mailroom_id) {
-                    // 기존 방식: mailroom_id로 이미지 로드
+                // 이미지 표시 (우편실과 동일한 방식)
+                const imageContainer = document.getElementById('mail-image-viewer')
+                
+                if (ticket.image_keys) {
                     try {
-                        const mailRes = await axios.get(`${API_BASE}/mailroom/${ticket.mailroom_id}`)
-                        const mailItem = mailRes.data.mailroom_item
+                        // image_keys 파싱 (문자열일 경우)
+                        const imageKeys = typeof ticket.image_keys === 'string' 
+                            ? JSON.parse(ticket.image_keys) 
+                            : ticket.image_keys
                         
-                        if (mailItem && mailItem.image_keys) {
-                            initMailImageViewer(mailItem.image_keys)
+                        if (imageKeys && imageKeys.length > 0) {
+                            // 우편실과 동일한 방식으로 이미지 표시
+                            imageContainer.innerHTML = imageKeys.map(key => `
+                                <img src="${API_BASE}/mailroom/image/${key}" 
+                                     class="w-full border rounded cursor-pointer hover:opacity-75" 
+                                     onclick="viewFullImage('${API_BASE}/mailroom/image/${key}')"
+                                     onerror="console.error('이미지 로드 실패:', '${key}')"
+                                     title="클릭하여 확대">
+                            `).join('')
+                            console.log('✅ 이미지 표시 완료:', imageKeys.length, '개')
                         } else {
-                            initMailImageViewer([])
+                            imageContainer.innerHTML = '<p class="text-gray-500 text-sm">이미지가 없습니다</p>'
                         }
                     } catch (error) {
-                        console.error('우편물 이미지 로드 오류:', error)
-                        initMailImageViewer([])
+                        console.error('이미지 파싱 오류:', error)
+                        imageContainer.innerHTML = '<p class="text-red-500 text-sm">이미지 로드 오류</p>'
                     }
                 } else {
-                    // 이미지 없음
-                    initMailImageViewer([])
+                    imageContainer.innerHTML = '<p class="text-gray-500 text-sm">이미지가 없습니다</p>'
                 }
+
 
                 document.getElementById('ticket-detail-modal').classList.remove('hidden')
                 showTicketTab('info') // 기본 탭: 티켓 정보
