@@ -5193,10 +5193,103 @@ console.log('권한 관리 함수 로드 완료')
 
                 document.getElementById('betting-folders-list').innerHTML = bettingHtml
 
+                // 경기 일정 로드 추가
+                await loadUpcomingMatches()
+
                 // 경기 정산 목록 로드
                 await loadMatchSettlementList()
             } catch (error) {
                 console.error('배팅 관리 로드 오류:', error)
+            }
+        }
+
+        // 경기 일정 로드 (신규 추가)
+        async function loadUpcomingMatches() {
+            try {
+                const response = await axios.get(`${API_BASE}/betting/matches?status=open`)
+                const matches = response.data.matches || []
+
+                const html = matches.length > 0 ? matches.map(m => {
+                    const matchDate = new Date(m.match_date)
+                    const leagueLabels = {
+                        'EPL': '프리미어리그', 'LA_LIGA': '라리가', 'SERIE_A': '세리에A',
+                        'BUNDESLIGA': '분데스리가', 'LIGUE_1': '리그앙', 'K_LEAGUE': 'K리그',
+                        'MLB': 'MLB', 'KBO': 'KBO', 'NBA': 'NBA', 'KBL': 'KBL', 'WKBL': 'WKBL', 'KOVO': 'KOVO'
+                    }
+                    
+                    return `
+                    <div class="bg-white border rounded-lg p-4 hover:shadow-md transition">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">${leagueLabels[m.league] || m.league}</span>
+                                    <span class="text-sm text-gray-500">${matchDate.toLocaleDateString()} ${matchDate.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</span>
+                                </div>
+                                <p class="font-bold text-lg mb-1">${m.match_name}</p>
+                                <p class="text-sm text-gray-600">${m.home_team} vs ${m.away_team}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 승무패 배당 -->
+                        ${m.home_odds || m.draw_odds || m.away_odds ? `
+                        <div class="bg-blue-50 p-3 rounded mb-2">
+                            <p class="text-xs font-bold text-blue-800 mb-2"><i class="fas fa-trophy mr-1"></i>승무패 배당</p>
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">홈승</p>
+                                    <p class="text-lg font-bold text-blue-600">${m.home_odds || '-'}</p>
+                                </div>
+                                ${m.draw_odds ? `<div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">무승부</p>
+                                    <p class="text-lg font-bold text-gray-600">${m.draw_odds}</p>
+                                </div>` : '<div></div>'}
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">원정승</p>
+                                    <p class="text-lg font-bold text-red-600">${m.away_odds || '-'}</p>
+                                </div>
+                            </div>
+                        </div>` : ''}
+                        
+                        <!-- 언오바 배당 -->
+                        ${m.over_line || m.over_odds || m.under_odds ? `
+                        <div class="bg-green-50 p-3 rounded mb-2">
+                            <p class="text-xs font-bold text-green-800 mb-2"><i class="fas fa-chart-line mr-1"></i>언오바 배당 (기준: ${m.over_line || '-'})</p>
+                            <div class="grid grid-cols-2 gap-2 text-center">
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">오버</p>
+                                    <p class="text-lg font-bold text-green-600">${m.over_odds || '-'}</p>
+                                </div>
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">언더</p>
+                                    <p class="text-lg font-bold text-green-600">${m.under_odds || '-'}</p>
+                                </div>
+                            </div>
+                        </div>` : ''}
+                        
+                        <!-- 핸디캡 배당 -->
+                        ${m.handicap_line || m.handicap_home_odds || m.handicap_away_odds ? `
+                        <div class="bg-purple-50 p-3 rounded">
+                            <p class="text-xs font-bold text-purple-800 mb-2"><i class="fas fa-balance-scale mr-1"></i>핸디캡 배당 (기준: ${m.handicap_line || '-'})</p>
+                            <div class="grid grid-cols-2 gap-2 text-center">
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">홈팀</p>
+                                    <p class="text-lg font-bold text-purple-600">${m.handicap_home_odds || '-'}</p>
+                                </div>
+                                <div class="bg-white p-2 rounded">
+                                    <p class="text-xs text-gray-600">원정팀</p>
+                                    <p class="text-lg font-bold text-purple-600">${m.handicap_away_odds || '-'}</p>
+                                </div>
+                            </div>
+                        </div>` : ''}
+                        
+                        ${!(m.home_odds || m.draw_odds || m.away_odds || m.over_odds || m.under_odds || m.handicap_home_odds || m.handicap_away_odds) ? 
+                        '<p class="text-sm text-gray-500 text-center py-2">배당 정보 없음</p>' : ''}
+                    </div>
+                `}).join('') : '<p class="text-gray-500 text-sm text-center py-4">진행 중인 경기가 없습니다.</p>'
+
+                document.getElementById('match-schedule-list').innerHTML = html
+            } catch (error) {
+                console.error('경기 일정 로드 오류:', error)
             }
         }
 
@@ -6057,6 +6150,28 @@ console.log('권한 관리 함수 로드 완료')
                                     <label class="text-xs text-gray-600">언더 배당</label>
                                     <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
                                            value="${m.under_odds || ''}" data-field="under_odds" placeholder="1.95">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 핸디캡 배당 -->
+                        <div class="bg-purple-50 p-3 rounded mb-3">
+                            <p class="text-xs font-bold text-purple-800 mb-2"><i class="fas fa-balance-scale mr-1"></i>핸디캡 배당</p>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-xs text-gray-600">핸디캡 기준</label>
+                                    <input type="number" step="0.5" class="w-full px-2 py-1 border rounded text-sm" 
+                                           value="${m.handicap_line || ''}" data-field="handicap_line" placeholder="-1.5">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">홈팀 배당</label>
+                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
+                                           value="${m.handicap_home_odds || ''}" data-field="handicap_home_odds" placeholder="1.90">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">원정팀 배당</label>
+                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
+                                           value="${m.handicap_away_odds || ''}" data-field="handicap_away_odds" placeholder="1.90">
                                 </div>
                             </div>
                         </div>

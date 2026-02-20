@@ -246,7 +246,8 @@ ticketItems.post('/:itemId/process', async (c) => {
 ticketItems.post('/:itemId/request-approval', async (c) => {
   try {
     const itemId = c.req.param('itemId')
-    const { requested_by } = await c.req.json()
+    const body = await c.req.json().catch(() => ({}))
+    const requested_by = body.requested_by || 'admin@prison-books.kr'
     const { env } = c
 
     // 아이템 정보 조회
@@ -316,12 +317,14 @@ ticketItems.post('/:itemId/request-approval', async (c) => {
       success: true,
       message: '결재 요청이 완료되었습니다.'
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('결재 요청 오류:', error)
-    console.error('Error details:', JSON.stringify(error, null, 2))
+    console.error('Error stack:', error?.stack)
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
     return c.json({ 
       error: '결재 요청 중 오류가 발생했습니다.', 
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : String(error),
+      stack: error?.stack
     }, 500)
   }
 })
