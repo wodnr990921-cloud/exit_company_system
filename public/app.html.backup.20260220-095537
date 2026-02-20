@@ -504,8 +504,14 @@
                 <button id="betting-nav-mobile" onclick="showView('betting'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
                     <i class="fas fa-trophy mr-3 w-5"></i>배팅 관리
                 </button>
-                <button id="admin-nav-mobile" onclick="showView('admin'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
-                    <i class="fas fa-user-shield mr-3 w-5"></i>관리자
+                <button id="staff-nav-mobile" onclick="showView('staff'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
+                    <i class="fas fa-user-tie mr-3 w-5"></i>직원 관리
+                </button>
+                <button id="closing-nav-mobile" onclick="showView('closing'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
+                    <i class="fas fa-calculator mr-3 w-5"></i>일일 마감
+                </button>
+                <button id="modifications-nav-mobile" onclick="showView('modifications'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
+                    <i class="fas fa-check-circle mr-3 w-5"></i>수정 승인
                 </button>
             </nav>
         </div>
@@ -532,8 +538,14 @@
                     <button id="betting-nav" onclick="showView('betting')" class="nav-item px-4 py-3 rounded-t-lg hidden">
                         <i class="fas fa-trophy mr-2"></i>배팅 관리
                     </button>
-                    <button id="admin-nav" onclick="showView('admin')" class="nav-item px-4 py-3 rounded-t-lg hidden">
-                        <i class="fas fa-user-shield mr-2"></i>관리자
+                    <button id="staff-nav" onclick="showView('staff')" class="nav-item px-4 py-3 rounded-t-lg hidden">
+                        <i class="fas fa-user-tie mr-2"></i>직원 관리
+                    </button>
+                    <button id="closing-nav" onclick="showView('closing')" class="nav-item px-4 py-3 rounded-t-lg hidden">
+                        <i class="fas fa-calculator mr-2"></i>일일 마감
+                    </button>
+                    <button id="modifications-nav" onclick="showView('modifications')" class="nav-item px-4 py-3 rounded-t-lg hidden">
+                        <i class="fas fa-check-circle mr-2"></i>수정 승인
                     </button>
                 </div>
             </div>
@@ -1067,75 +1079,39 @@
             </div>
 
             <!-- 직원 관리 뷰 (관리자 전용) -->
-            <!-- 관리자 페이지 (통합) -->
-            <div id="admin-view" class="view-content hidden">
+            <div id="staff-view" class="view-content hidden">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold"><i class="fas fa-user-shield mr-2"></i>관리자 페이지</h2>
+                    <h2 class="text-2xl font-bold"><i class="fas fa-user-tie mr-2"></i>직원 관리</h2>
+                    <button onclick="showNewStaffModal()" class="btn btn-primary">
+                        <i class="fas fa-user-plus mr-2"></i>직원 등록
+                    </button>
                 </div>
 
-                <!-- 탭 메뉴 -->
+                <!-- 역할별 필터 -->
                 <div class="card mb-6">
-                    <div class="flex gap-2 border-b">
-                        <button onclick="showAdminTab('approvals')" id="admin-tab-approvals" class="px-4 py-3 border-b-2 border-blue-500 text-blue-600 font-medium">
-                            <i class="fas fa-bell mr-2"></i>결재 (<span id="admin-approval-count">0</span>)
+                    <div class="flex gap-2">
+                        <button onclick="filterStaffByRole('all')" class="btn btn-secondary" id="filter-all">
+                            전체
                         </button>
-                        <button onclick="showAdminTab('staff')" id="admin-tab-staff" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
-                            <i class="fas fa-user-tie mr-2"></i>직원 관리
+                        <button onclick="filterStaffByRole('admin')" class="btn btn-secondary" id="filter-admin">
+                            <i class="fas fa-crown mr-1 text-yellow-500"></i>관리자
                         </button>
-                        <button onclick="showAdminTab('closing')" id="admin-tab-closing" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
-                            <i class="fas fa-calculator mr-2"></i>일일 마감
+                        <button onclick="filterStaffByRole('staff')" class="btn btn-secondary" id="filter-staff">
+                            <i class="fas fa-user mr-1 text-blue-500"></i>직원
                         </button>
-                        <button onclick="showAdminTab('modifications')" id="admin-tab-modifications" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
-                            <i class="fas fa-check-circle mr-2"></i>수정 승인
-                        </button>
-                        <button onclick="showAdminTab('activity-log')" id="admin-tab-activity-log" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
-                            <i class="fas fa-history mr-2"></i>활동 로그
+                        <button onclick="filterStaffByRole('viewer')" class="btn btn-secondary" id="filter-viewer">
+                            <i class="fas fa-eye mr-1 text-gray-500"></i>뷰어
                         </button>
                     </div>
                 </div>
 
-                <!-- 결재 탭 -->
-                <div id="admin-approvals-tab" class="admin-tab-content">
-                    <div class="card">
-                        <h3 class="text-lg font-bold mb-4"><i class="fas fa-clock mr-2"></i>승인 대기 중</h3>
-                        <div id="admin-pending-approvals" class="space-y-4"></div>
-                    </div>
-                </div>
+                <!-- 직원 목록 -->
+                <div id="staff-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
 
-                <!-- 직원 관리 탭 -->
-                <div id="admin-staff-tab" class="admin-tab-content hidden">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold"><i class="fas fa-user-tie mr-2"></i>직원 관리</h3>
-                        <button onclick="showNewStaffModal()" class="btn btn-primary">
-                            <i class="fas fa-user-plus mr-2"></i>직원 등록
-                        </button>
-                    </div>
-
-                    <!-- 역할별 필터 -->
-                    <div class="card mb-4">
-                        <div class="flex gap-2">
-                            <button onclick="filterStaffByRole('all')" class="btn btn-secondary" id="filter-all">
-                                전체
-                            </button>
-                            <button onclick="filterStaffByRole('admin')" class="btn btn-secondary" id="filter-admin">
-                                <i class="fas fa-crown mr-1 text-yellow-500"></i>관리자
-                            </button>
-                            <button onclick="filterStaffByRole('staff')" class="btn btn-secondary" id="filter-staff">
-                                <i class="fas fa-user mr-1 text-blue-500"></i>직원
-                            </button>
-                            <button onclick="filterStaffByRole('viewer')" class="btn btn-secondary" id="filter-viewer">
-                                <i class="fas fa-eye mr-1 text-gray-500"></i>뷰어
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 직원 목록 -->
-                    <div id="staff-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                </div>
-
-                <!-- 일일 마감 탭 -->
-                <div id="admin-closing-tab" class="admin-tab-content hidden">
-                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-calculator mr-2"></i>일일 마감</h3>
+            <!-- 일일 마감 뷰 (관리자 전용) -->
+            <div id="closing-view" class="view-content hidden">
+                <h2 class="text-2xl font-bold mb-6"><i class="fas fa-calculator mr-2"></i>일일 마감</h2>
 
                 <!-- 날짜 선택 -->
                 <div class="card mb-6">
@@ -1265,64 +1241,11 @@
                     </div>
                 </div>
 
-                <!-- 수정 승인 탭 -->
-                <div id="admin-modifications-tab" class="admin-tab-content hidden">
-                    <div class="card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold"><i class="fas fa-check-circle mr-2"></i>수정 승인 대기 (<span id="admin-pending-mods-count">0</span>)</h3>
-                            <button onclick="loadPendingModifications()" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-sync mr-2"></i>새로고침
-                            </button>
-                        </div>
-                        <div id="pending-modifications-list">
-                            <p class="text-gray-500 text-center py-8">로딩중...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 활동 로그 탭 -->
-                <div id="admin-activity-log-tab" class="admin-tab-content hidden">
-                    <div class="card mb-4">
-                        <div class="flex items-center gap-4 mb-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">시작일</label>
-                                <input type="date" id="activity-log-start-date" class="px-3 py-2 border rounded">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">종료일</label>
-                                <input type="date" id="activity-log-end-date" class="px-3 py-2 border rounded">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">직원</label>
-                                <select id="activity-log-staff-filter" class="px-3 py-2 border rounded">
-                                    <option value="">전체</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">액션</label>
-                                <select id="activity-log-action-filter" class="px-3 py-2 border rounded">
-                                    <option value="">전체</option>
-                                    <option value="login">로그인</option>
-                                    <option value="create">생성</option>
-                                    <option value="update">수정</option>
-                                    <option value="delete">삭제</option>
-                                    <option value="approve">승인</option>
-                                    <option value="reject">거부</option>
-                                </select>
-                            </div>
-                            <div class="self-end">
-                                <button onclick="loadActivityLogs()" class="btn btn-primary">
-                                    <i class="fas fa-search mr-2"></i>조회
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h3 class="text-lg font-bold mb-4"><i class="fas fa-history mr-2"></i>활동 로그</h3>
-                        <div id="activity-log-list" class="space-y-2 max-h-[600px] overflow-y-auto">
-                            <p class="text-gray-500 text-center py-8">기간을 선택하여 로그를 조회하세요</p>
-                        </div>
+                <!-- 마감 이력 -->
+                <div class="card mt-6">
+                    <h3 class="font-bold mb-4"><i class="fas fa-history mr-2"></i>최근 마감 이력</h3>
+                    <div id="closing-history-list" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-center py-4">마감 이력이 없습니다.</p>
                     </div>
                 </div>
             </div>
@@ -1568,7 +1491,7 @@
                             <button onclick="loadResponses()" class="btn btn-primary flex-1">
                                 <i class="fas fa-search mr-2"></i>조회
                             </button>
-                            <button onclick="openResponseSettings()" class="btn btn-secondary">
+                            <button onclick="showResponseSettings()" class="btn btn-secondary">
                                 <i class="fas fa-cog mr-2"></i>양식 설정
                             </button>
                         </div>
@@ -3758,11 +3681,17 @@ function initializePermissions() {
   
   // Admin 전용 메뉴 (데스크톱)
   setElementPermission('betting-nav', ROLES.ADMIN)
-  setElementPermission('admin-nav', ROLES.ADMIN)
+  setElementPermission('staff-nav', ROLES.ADMIN)
+  setElementPermission('closing-nav', ROLES.ADMIN)
+  setElementPermission('modifications-nav', ROLES.ADMIN)
   
   // Admin 전용 메뉴 (모바일)
   setElementPermission('betting-nav-mobile', ROLES.ADMIN)
-  setElementPermission('admin-nav-mobile', ROLES.ADMIN)
+  setElementPermission('staff-nav-mobile', ROLES.ADMIN)
+  setElementPermission('closing-nav-mobile', ROLES.ADMIN)
+  setElementPermission('modifications-nav-mobile', ROLES.ADMIN)
+  setElementPermission('staff-nav-mobile', ROLES.ADMIN)
+  setElementPermission('closing-nav-mobile', ROLES.ADMIN)
   
   // Staff 이상 권한 필요한 버튼
   setButtonPermission('create-ticket-btn', ROLES.STAFF)
@@ -3983,154 +3912,9 @@ console.log('권한 관리 함수 로드 완료')
             else if (view === 'books') loadBooks()
             else if (view === 'mailroom') loadMailroom()
             else if (view === 'betting') loadBetting()
-            else if (view === 'admin') {
-                loadAdmin()
-                showAdminTab('approvals')
-            }
             else if (view === 'staff') loadStaff()
             else if (view === 'closing') loadClosing()
             else if (view === 'modifications') loadPendingModifications()
-        }
-
-        // 관리자 페이지 탭 전환
-        function showAdminTab(tabName) {
-            // 모든 탭 버튼 비활성화
-            document.querySelectorAll('[id^="admin-tab-"]').forEach(btn => {
-                btn.classList.remove('border-blue-500', 'text-blue-600')
-                btn.classList.add('border-transparent')
-            })
-            
-            // 선택된 탭 버튼 활성화
-            const activeBtn = document.getElementById(`admin-tab-${tabName}`)
-            if (activeBtn) {
-                activeBtn.classList.add('border-blue-500', 'text-blue-600')
-                activeBtn.classList.remove('border-transparent')
-            }
-            
-            // 모든 탭 컨텐츠 숨기기
-            document.querySelectorAll('.admin-tab-content').forEach(tab => {
-                tab.classList.add('hidden')
-            })
-            
-            // 선택된 탭 컨텐츠 표시
-            const activeTab = document.getElementById(`admin-${tabName}-tab`)
-            if (activeTab) {
-                activeTab.classList.remove('hidden')
-            }
-            
-            // 탭별 데이터 로드
-            if (tabName === 'approvals') {
-                loadPendingApprovals()
-            } else if (tabName === 'staff') {
-                loadStaff()
-            } else if (tabName === 'closing') {
-                loadClosing()
-            } else if (tabName === 'modifications') {
-                loadPendingModifications()
-            } else if (tabName === 'activity-log') {
-                initActivityLogDates()
-            }
-        }
-
-        // 관리자 페이지 로드
-        async function loadAdmin() {
-            try {
-                // 승인 대기 수 업데이트
-                await loadPendingApprovals()
-            } catch (error) {
-                console.error('관리자 페이지 로드 오류:', error)
-            }
-        }
-
-        // 활동 로그 날짜 초기화
-        function initActivityLogDates() {
-            const endDate = new Date()
-            const startDate = new Date()
-            startDate.setDate(endDate.getDate() - 7) // 최근 7일
-            
-            document.getElementById('activity-log-start-date').value = startDate.toISOString().split('T')[0]
-            document.getElementById('activity-log-end-date').value = endDate.toISOString().split('T')[0]
-        }
-
-        // 활동 로그 로드
-        async function loadActivityLogs() {
-            try {
-                const startDate = document.getElementById('activity-log-start-date').value
-                const endDate = document.getElementById('activity-log-end-date').value
-                const staffFilter = document.getElementById('activity-log-staff-filter').value
-                const actionFilter = document.getElementById('activity-log-action-filter').value
-                
-                if (!startDate || !endDate) {
-                    alert('시작일과 종료일을 선택해주세요')
-                    return
-                }
-                
-                let url = `${API_BASE}/activity-logs?start_date=${startDate}&end_date=${endDate}`
-                if (staffFilter) url += `&staff_id=${staffFilter}`
-                if (actionFilter) url += `&action=${actionFilter}`
-                
-                const response = await axios.get(url)
-                const logs = response.data.logs || []
-                
-                const html = logs.length > 0 ? logs.map(log => `
-                    <div class="border-l-4 ${getActionColor(log.action)} bg-gray-50 p-3 rounded">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <i class="fas ${getActionIcon(log.action)} ${getActionTextColor(log.action)}"></i>
-                                    <span class="font-medium">${log.staff_name}</span>
-                                    <span class="text-xs text-gray-500">${log.staff_email}</span>
-                                </div>
-                                <p class="text-sm text-gray-700">${log.action_description || log.action}</p>
-                                ${log.details ? `<p class="text-xs text-gray-500 mt-1">${JSON.stringify(log.details)}</p>` : ''}
-                            </div>
-                            <span class="text-xs text-gray-500 whitespace-nowrap">${new Date(log.created_at).toLocaleString()}</span>
-                        </div>
-                    </div>
-                `).join('') : '<p class="text-gray-500 text-center py-8">활동 로그가 없습니다</p>'
-                
-                document.getElementById('activity-log-list').innerHTML = html
-            } catch (error) {
-                console.error('활동 로그 로드 오류:', error)
-                document.getElementById('activity-log-list').innerHTML = '<p class="text-red-500 text-center py-8">로그를 불러오는데 실패했습니다</p>'
-            }
-        }
-
-        // 액션 컬러 헬퍼 함수
-        function getActionColor(action) {
-            const colors = {
-                'login': 'border-blue-500',
-                'create': 'border-green-500',
-                'update': 'border-yellow-500',
-                'delete': 'border-red-500',
-                'approve': 'border-purple-500',
-                'reject': 'border-orange-500'
-            }
-            return colors[action] || 'border-gray-500'
-        }
-
-        function getActionIcon(action) {
-            const icons = {
-                'login': 'fa-sign-in-alt',
-                'create': 'fa-plus-circle',
-                'update': 'fa-edit',
-                'delete': 'fa-trash',
-                'approve': 'fa-check-circle',
-                'reject': 'fa-times-circle'
-            }
-            return icons[action] || 'fa-info-circle'
-        }
-
-        function getActionTextColor(action) {
-            const colors = {
-                'login': 'text-blue-500',
-                'create': 'text-green-500',
-                'update': 'text-yellow-500',
-                'delete': 'text-red-500',
-                'approve': 'text-purple-500',
-                'reject': 'text-orange-500'
-            }
-            return colors[action] || 'text-gray-500'
         }
 
         // 대시보드 로드
@@ -4947,20 +4731,6 @@ console.log('권한 관리 함수 로드 완료')
                 `
 
                 document.getElementById('pending-approvals').innerHTML = html
-                
-                // 관리자 페이지에도 표시
-                const adminPendingEl = document.getElementById('admin-pending-approvals')
-                if (adminPendingEl) {
-                    adminPendingEl.innerHTML = html
-                }
-                
-                // 카운트 업데이트
-                const totalCount = points.length + settlements.length + ticketItems.length
-                document.getElementById('pending-count').textContent = totalCount
-                const adminCountEl = document.getElementById('admin-approval-count')
-                if (adminCountEl) {
-                    adminCountEl.textContent = totalCount
-                }
             } catch (error) {
                 console.error('승인 대기 목록 로드 오류:', error)
             }
@@ -5618,7 +5388,6 @@ console.log('권한 관리 함수 로드 완료')
                         <table class="w-full text-sm">
                             <thead class="bg-gray-100">
                                 <tr>
-                                    <th class="px-3 py-2 text-left font-medium">상태</th>
                                     <th class="px-3 py-2 text-left font-medium">리그</th>
                                     <th class="px-3 py-2 text-left font-medium">경기일시</th>
                                     <th class="px-3 py-2 text-left font-medium">경기</th>
@@ -5641,22 +5410,8 @@ console.log('권한 관리 함수 로드 완료')
                                     const hasOverUnder = m.over_line && m.over_odds && m.under_odds
                                     const hasHandicap = m.handicap_line !== null && m.handicap_line !== undefined && m.handicap_home_odds && m.handicap_away_odds
                                     
-                                    // 상태 표시
-                                    const statusLabels = {
-                                        'open': { text: '진행중', class: 'bg-green-100 text-green-800' },
-                                        'closed': { text: '마감', class: 'bg-yellow-100 text-yellow-800' },
-                                        'completed': { text: '완료', class: 'bg-gray-100 text-gray-800' },
-                                        'cancelled': { text: '취소', class: 'bg-red-100 text-red-800' }
-                                    }
-                                    const statusInfo = statusLabels[m.status] || { text: m.status, class: 'bg-gray-100 text-gray-600' }
-                                    
                                     return `
                                         <tr class="hover:bg-gray-50">
-                                            <td class="px-3 py-2">
-                                                <span class="inline-block px-2 py-1 text-xs font-semibold rounded ${statusInfo.class}">
-                                                    ${statusInfo.text}
-                                                </span>
-                                            </td>
                                             <td class="px-3 py-2">
                                                 <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
                                                     ${leagueLabels[normalizedLeague] || normalizedLeague}
@@ -12380,6 +12135,11 @@ console.log('권한 관리 함수 로드 완료')
                 console.error('답변 출력 오류:', error)
                 showToast('답변 출력 실패', 'error')
             }
+        }
+        
+        // 답변 양식 설정 모달 열기
+        function showResponseSettings() {
+            document.getElementById('response-settings-modal').classList.remove('hidden')
         }
         
         // Quill 에디터 인스턴스
