@@ -51,6 +51,10 @@ ticketItems.get('/approval-history', async (c) => {
     const { env } = c
     const status = c.req.query('status') || 'all'
     const type = c.req.query('type') || 'all'
+    const keyword = c.req.query('keyword') || ''
+    const staffId = c.req.query('staff_id') || ''
+    const dateFrom = c.req.query('date_from') || ''
+    const dateTo = c.req.query('date_to') || ''
     
     let query = `
       SELECT 
@@ -59,6 +63,7 @@ ticketItems.get('/approval-history', async (c) => {
         t.title as ticket_title,
         t.assigned_to,
         m.name as member_name,
+        m.member_number,
         s1.name as requested_by_name,
         s2.name as approved_by_name,
         s3.name as assigned_to_name
@@ -68,18 +73,40 @@ ticketItems.get('/approval-history', async (c) => {
       LEFT JOIN staff s1 ON ti.requested_by = s1.id
       LEFT JOIN staff s2 ON ti.approved_by = s2.id
       LEFT JOIN staff s3 ON t.assigned_to = s3.id
-      WHERE ti.status IN ('completed', 'rejected')
+      WHERE 1=1
     `
     
-    if (status !== 'all') {
+    // 상태 필터 - all이면 completed와 rejected 모두, 그렇지 않으면 해당 상태만
+    if (status === 'all') {
+      query += ` AND ti.status IN ('completed', 'rejected', 'approval_pending')`
+    } else {
       query += ` AND ti.status = '${status}'`
     }
     
+    // 유형 필터
     if (type !== 'all') {
       query += ` AND ti.item_type = '${type}'`
     }
     
-    query += ` ORDER BY ti.approved_at DESC LIMIT 100`
+    // 담당자 필터
+    if (staffId) {
+      query += ` AND t.assigned_to = ${staffId}`
+    }
+    
+    // 날짜 필터
+    if (dateFrom) {
+      query += ` AND DATE(ti.requested_at) >= '${dateFrom}'`
+    }
+    if (dateTo) {
+      query += ` AND DATE(ti.requested_at) <= '${dateTo}'`
+    }
+    
+    // 키워드 검색 (회원명, 티켓번호, 회원번호)
+    if (keyword) {
+      query += ` AND (m.name LIKE '%${keyword}%' OR t.ticket_number LIKE '%${keyword}%' OR m.member_number LIKE '%${keyword}%')`
+    }
+    
+    query += ` ORDER BY ti.requested_at DESC LIMIT 500`
     
     const { results: items } = await env.DB.prepare(query).all()
 

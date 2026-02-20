@@ -706,6 +706,13 @@
                 <div class="card mb-6">
                     <div class="flex flex-col sm:flex-row gap-4">
                         <div class="flex-1">
+                            <label class="block text-sm font-medium mb-2">검색</label>
+                            <input type="text" id="ticket-search" 
+                                   placeholder="티켓 번호 또는 검색어..." 
+                                   class="w-full px-4 py-2 border rounded-lg"
+                                   oninput="loadTickets()">
+                        </div>
+                        <div class="flex-1">
                             <label class="block text-sm font-medium mb-2">상태</label>
                             <select id="ticket-status-filter" onchange="loadTickets()" class="w-full px-4 py-2 border rounded-lg">
                                 <option value="all">전체 상태</option>
@@ -1074,9 +1081,6 @@
                         <button onclick="showAdminTab('approvals')" id="admin-tab-approvals" class="px-4 py-3 border-b-2 border-blue-500 text-blue-600 font-medium">
                             <i class="fas fa-bell mr-2"></i>결재 (<span id="admin-approval-count">0</span>)
                         </button>
-                        <button onclick="showAdminTab('history')" id="admin-tab-history" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
-                            <i class="fas fa-file-alt mr-2"></i>결재 내역
-                        </button>
                         <button onclick="showAdminTab('staff')" id="admin-tab-staff" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
                             <i class="fas fa-user-tie mr-2"></i>직원 관리
                         </button>
@@ -1092,37 +1096,78 @@
                     </div>
                 </div>
 
-                <!-- 결재 탭 -->
+                <!-- 결재 탭 (승인 대기 + 결재 내역 통합) -->
                 <div id="admin-approvals-tab" class="admin-tab-content">
-                    <div class="card">
+                    <!-- 오늘의 결재 통계 -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+                            <p class="text-sm text-gray-600 mb-1">전체</p>
+                            <p class="text-2xl font-bold text-blue-600" id="today-total-count">0</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
+                            <p class="text-sm text-gray-600 mb-1">대기중</p>
+                            <p class="text-2xl font-bold text-yellow-600" id="today-pending-count">0</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+                            <p class="text-sm text-gray-600 mb-1">승인됨</p>
+                            <p class="text-2xl font-bold text-green-600" id="today-approved-count">0</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+                            <p class="text-sm text-gray-600 mb-1">거부됨</p>
+                            <p class="text-2xl font-bold text-red-600" id="today-rejected-count">0</p>
+                        </div>
+                    </div>
+
+                    <!-- 승인 대기 섹션 -->
+                    <div class="card mb-6">
                         <h3 class="text-lg font-bold mb-4"><i class="fas fa-clock mr-2"></i>승인 대기 중</h3>
                         <div id="admin-pending-approvals" class="space-y-4"></div>
                     </div>
-                </div>
 
-                <!-- 결재 내역 탭 -->
-                <div id="admin-history-tab" class="admin-tab-content hidden">
+                    <!-- 결재 내역 섹션 -->
                     <div class="card">
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                             <h3 class="text-lg font-bold"><i class="fas fa-file-alt mr-2"></i>결재 내역</h3>
-                            <div class="flex gap-2">
-                                <select id="history-status-filter" onchange="loadApprovalHistory()" class="px-3 py-1 border rounded text-sm">
+                            <div class="flex flex-wrap gap-2">
+                                <input type="date" id="history-date-from" class="px-3 py-1 border rounded text-sm" placeholder="시작일">
+                                <input type="date" id="history-date-to" class="px-3 py-1 border rounded text-sm" placeholder="종료일">
+                                <input type="text" id="history-keyword" placeholder="검색어" class="px-3 py-1 border rounded text-sm w-32">
+                                <select id="history-staff-filter" class="px-3 py-1 border rounded text-sm">
+                                    <option value="all">전체 담당자</option>
+                                </select>
+                                <select id="history-status-filter" class="px-3 py-1 border rounded text-sm">
                                     <option value="all">전체</option>
                                     <option value="completed">승인됨</option>
                                     <option value="rejected">거부됨</option>
                                 </select>
-                                <select id="history-type-filter" onchange="loadApprovalHistory()" class="px-3 py-1 border rounded text-sm">
+                                <select id="history-type-filter" class="px-3 py-1 border rounded text-sm">
                                     <option value="all">전체 유형</option>
                                     <option value="point_request">포인트 요청</option>
                                     <option value="betting">배팅</option>
                                     <option value="settlement">정산</option>
                                 </select>
+                                <button onclick="loadApprovalHistory()" class="btn btn-primary text-sm">
+                                    <i class="fas fa-search mr-1"></i>조회
+                                </button>
                             </div>
                         </div>
+
+                        <!-- 조회 결과 집계 -->
+                        <div class="flex gap-4 mb-4 text-sm" id="history-summary" style="display: none;">
+                            <span>전체: <strong id="history-total-count">0</strong></span>
+                            <span class="text-green-600">승인됨: <strong id="history-approved-count">0</strong></span>
+                            <span class="text-red-600">거부됨: <strong id="history-rejected-count">0</strong></span>
+                        </div>
+
                         <div id="admin-approval-history" class="space-y-3">
-                            <p class="text-gray-500 text-center py-8">결재 내역을 불러오는 중...</p>
+                            <p class="text-gray-500 text-center py-8">필터를 설정하고 조회 버튼을 클릭하세요</p>
                         </div>
                     </div>
+                </div>
+
+                <!-- 결재 내역 탭 제거 (통합됨) -->
+                <div id="admin-history-tab" class="admin-tab-content hidden" style="display: none !important;">
+                    <p class="text-gray-500">결재 탭에서 모든 내역을 확인할 수 있습니다.</p>
                 </div>
 
                 <!-- 직원 관리 탭 -->
@@ -3899,9 +3944,15 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('login-screen').classList.add('hidden')
                 document.getElementById('app-screen').classList.remove('hidden')
 
-                document.getElementById('current-user-name').textContent = currentStaff.name
-                document.getElementById('current-user-name-mobile').textContent = currentStaff.name
-                document.getElementById('mobile-menu-user-name').textContent = currentStaff.name
+                // 안전하게 요소 업데이트
+                const userNameElem = document.getElementById('current-user-name')
+                if (userNameElem) userNameElem.textContent = currentStaff.name
+                
+                const userNameMobileElem = document.getElementById('current-user-name-mobile')
+                if (userNameMobileElem) userNameMobileElem.textContent = currentStaff.name
+                
+                const mobileMenuUserNameElem = document.getElementById('mobile-menu-user-name')
+                if (mobileMenuUserNameElem) mobileMenuUserNameElem.textContent = currentStaff.name
                 
                 // 환영 메시지 표시
                 const welcomeMsg = document.getElementById('welcome-message')
@@ -3963,14 +4014,20 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('login-screen').classList.add('hidden')
                 document.getElementById('app-screen').classList.remove('hidden')
 
-                document.getElementById('current-user-name').textContent = currentStaff.name
-                document.getElementById('current-user-name-mobile').textContent = currentStaff.name
-                document.getElementById('mobile-menu-user-name').textContent = currentStaff.name
+                // 안전하게 요소 업데이트
+                const userNameElem2 = document.getElementById('current-user-name')
+                if (userNameElem2) userNameElem2.textContent = currentStaff.name
+                
+                const userNameMobileElem2 = document.getElementById('current-user-name-mobile')
+                if (userNameMobileElem2) userNameMobileElem2.textContent = currentStaff.name
+                
+                const mobileMenuUserNameElem2 = document.getElementById('mobile-menu-user-name')
+                if (mobileMenuUserNameElem2) mobileMenuUserNameElem2.textContent = currentStaff.name
                 
                 // 환영 메시지 표시
-                const welcomeMsg = document.getElementById('welcome-message')
-                if (welcomeMsg) {
-                    welcomeMsg.textContent = `${currentStaff.name}님 환영합니다!`
+                const welcomeMsg2 = document.getElementById('welcome-message')
+                if (welcomeMsg2) {
+                    welcomeMsg2.textContent = `${currentStaff.name}님 환영합니다!`
                 }
                 
                 // 권한에 따른 UI 초기화
@@ -4059,8 +4116,12 @@ console.log('권한 관리 함수 로드 완료')
             // 탭별 데이터 로드
             if (tabName === 'approvals') {
                 loadPendingApprovals()
+                loadTodayApprovalStats()
+                loadStaffListForFilter()  // 담당자 필터 로드
             } else if (tabName === 'history') {
-                loadApprovalHistory()
+                // history 탭은 제거됨, approvals 탭으로 리다이렉트
+                showAdminTab('approvals')
+                return
             } else if (tabName === 'staff') {
                 loadStaff()
             } else if (tabName === 'closing') {
@@ -5011,16 +5072,38 @@ console.log('권한 관리 함수 로드 완료')
             try {
                 const statusFilter = document.getElementById('history-status-filter')?.value || 'all'
                 const typeFilter = document.getElementById('history-type-filter')?.value || 'all'
+                const keyword = document.getElementById('history-keyword')?.value || ''
+                const staffFilter = document.getElementById('history-staff-filter')?.value || 'all'
+                const dateFrom = document.getElementById('history-date-from')?.value || ''
+                const dateTo = document.getElementById('history-date-to')?.value || ''
                 
                 // 티켓 아이템 결재 내역 가져오기
                 const response = await axios.get(`${API_BASE}/ticket-items/approval-history`, {
-                    params: { status: statusFilter, type: typeFilter }
+                    params: { 
+                        status: statusFilter, 
+                        type: typeFilter,
+                        keyword: keyword,
+                        staff_id: staffFilter !== 'all' ? staffFilter : '',
+                        date_from: dateFrom,
+                        date_to: dateTo
+                    }
                 })
                 
                 const items = response.data.items || []
                 
+                // 집계 계산
+                const totalCount = items.length
+                const approvedCount = items.filter(i => i.status === 'completed').length
+                const rejectedCount = items.filter(i => i.status === 'rejected').length
+                
+                // 집계 표시
+                document.getElementById('history-total-count').textContent = totalCount
+                document.getElementById('history-approved-count').textContent = approvedCount
+                document.getElementById('history-rejected-count').textContent = rejectedCount
+                document.getElementById('history-summary').style.display = totalCount > 0 ? 'flex' : 'none'
+                
                 if (items.length === 0) {
-                    document.getElementById('admin-approval-history').innerHTML = '<p class="text-gray-500 text-center py-8">결재 내역이 없습니다.</p>'
+                    document.getElementById('admin-approval-history').innerHTML = '<p class="text-gray-500 text-center py-8">조회 결과가 없습니다.</p>'
                     return
                 }
                 
@@ -5067,6 +5150,48 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 console.error('결재 내역 로드 오류:', error)
                 document.getElementById('admin-approval-history').innerHTML = '<p class="text-red-500 text-center py-8">결재 내역을 불러오는데 실패했습니다.</p>'
+            }
+        }
+
+        // 오늘의 결재 통계 로드
+        async function loadTodayApprovalStats() {
+            try {
+                const today = new Date().toISOString().split('T')[0]
+                const response = await axios.get(`${API_BASE}/ticket-items/approval-history`, {
+                    params: { 
+                        date_from: today,
+                        date_to: today
+                    }
+                })
+                
+                const items = response.data.items || []
+                const totalCount = items.length
+                const pendingCount = items.filter(i => i.status === 'approval_pending').length
+                const approvedCount = items.filter(i => i.status === 'completed').length
+                const rejectedCount = items.filter(i => i.status === 'rejected').length
+                
+                document.getElementById('today-total-count').textContent = totalCount
+                document.getElementById('today-pending-count').textContent = pendingCount
+                document.getElementById('today-approved-count').textContent = approvedCount
+                document.getElementById('today-rejected-count').textContent = rejectedCount
+            } catch (error) {
+                console.error('오늘의 결재 통계 로드 오류:', error)
+            }
+        }
+
+        // 담당자 목록 로드 (필터용)
+        async function loadStaffListForFilter() {
+            try {
+                const response = await axios.get(`${API_BASE}/staff`)
+                const staffList = response.data.staff || []
+                
+                const select = document.getElementById('history-staff-filter')
+                if (select) {
+                    select.innerHTML = '<option value="all">전체 담당자</option>' +
+                        staffList.map(s => `<option value="${s.id}">${s.name}</option>`).join('')
+                }
+            } catch (error) {
+                console.error('담당자 목록 로드 오류:', error)
             }
         }
 
@@ -5157,12 +5282,14 @@ console.log('권한 관리 함수 로드 완료')
         async function loadTickets(page = 1) {
             const status = document.getElementById('ticket-status-filter').value
             const type = document.getElementById('ticket-type-filter').value
+            const search = document.getElementById('ticket-search')?.value || ''
             pagination.tickets.page = page
 
             try {
                 let url = `${API_BASE}/tickets?page=${page}&limit=${pagination.tickets.limit}&`
                 if (status !== 'all') url += `status=${status}&`
                 if (type !== 'all') url += `ticket_type=${type}&`
+                if (search) url += `search=${encodeURIComponent(search)}&`
 
                 const response = await axios.get(url)
                 const tickets = response.data.tickets

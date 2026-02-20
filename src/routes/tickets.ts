@@ -13,6 +13,7 @@ tickets.get('/', async (c) => {
     const status = c.req.query('status') || 'all'
     const type = c.req.query('type') || 'all'
     const assigned_to = c.req.query('assigned_to')
+    const search = c.req.query('search') || ''
     const page = parseInt(c.req.query('page') || '1')
     const limit = parseInt(c.req.query('limit') || '20')
     const offset = (page - 1) * limit
@@ -46,8 +47,17 @@ tickets.get('/', async (c) => {
       params.push(assigned_to)
     }
 
+    // 검색 기능 추가 (티켓 번호, 제목, 회원명)
+    if (search) {
+      query += ` AND (t.ticket_number LIKE ? OR t.title LIKE ? OR m.name LIKE ?)`
+      const searchParam = `%${search}%`
+      params.push(searchParam, searchParam, searchParam)
+    }
+
     // 총 개수 조회
-    let countQuery = `SELECT COUNT(*) as total FROM tickets t WHERE 1=1 AND t.ticket_number NOT LIKE 'TEMP-%'`
+    let countQuery = `SELECT COUNT(*) as total FROM tickets t 
+                      LEFT JOIN members m ON t.member_id = m.id
+                      WHERE 1=1 AND t.ticket_number NOT LIKE 'TEMP-%'`
     const countParams: any[] = []
     
     if (status && status !== 'all') {
@@ -63,6 +73,12 @@ tickets.get('/', async (c) => {
     if (assigned_to) {
       countQuery += ` AND t.assigned_to = ?`
       countParams.push(assigned_to)
+    }
+
+    if (search) {
+      countQuery += ` AND (t.ticket_number LIKE ? OR t.title LIKE ? OR m.name LIKE ?)`
+      const searchParam = `%${search}%`
+      countParams.push(searchParam, searchParam, searchParam)
     }
     
     const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first()
