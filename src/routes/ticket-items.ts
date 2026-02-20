@@ -271,17 +271,29 @@ ticketItems.post('/:itemId/request-approval', async (c) => {
     // 아이템 타입에 따라 결재 데이터 생성
     switch (item.item_type) {
       case 'point_request':
+        // 회원의 현재 포인트 잔액 조회
+        const memberPoint = await env.DB.prepare(
+          `SELECT balance FROM member_points 
+           WHERE member_id = ? AND point_type = ?`
+        ).bind(item.member_id, itemData.point_type).first()
+
+        const currentBalance = memberPoint?.balance || 0
+        const newBalance = itemData.transaction_type === 'add' 
+          ? currentBalance + itemData.amount 
+          : currentBalance - itemData.amount
+
         // 포인트 승인 데이터 생성 (point_transactions에 pending 상태로 삽입)
         const pointResult = await env.DB.prepare(`
           INSERT INTO point_transactions (
             member_id, point_type, transaction_type, amount, 
-            description, created_by, status
-          ) VALUES (?, ?, ?, ?, ?, ?, 'pending')
+            balance_after, description, created_by, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
         `).bind(
           item.member_id,
           itemData.point_type,
           itemData.transaction_type,
           itemData.amount,
+          newBalance,
           itemData.description || `티켓 ${item.ticket_number}에서 요청`,
           requested_by
         ).run()
