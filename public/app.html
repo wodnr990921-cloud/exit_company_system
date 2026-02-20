@@ -10873,12 +10873,14 @@ console.log('권한 관리 함수 로드 완료')
                         : `우편물 검수 완료\n회원: 미지정\n담당자가 추후 회원을 연결해주세요.`
                 })
                 
-                const ticketNumber = ticketRes.data.ticket.ticket_number
+                console.log('티켓 생성 응답:', ticketRes.data) // 디버깅
+                const ticketNumber = ticketRes.data.ticket_number
+                const ticketId = ticketRes.data.ticket_id
                 
                 // 4. 우편물에 티켓 연결
                 await axios.patch(`${API_BASE}/mailroom/${currentInspectionId}/status`, {
                     status: 'assigned',
-                    ticket_id: ticketRes.data.ticket.id
+                    ticket_id: ticketId
                 })
                 
                 const message = memberId 
