@@ -44,7 +44,27 @@ function getDateRange(days) {
   return { from, to }
 }
 
-// API-SPORTS.IO에서 경기 데이터 가져오기
+// API-SPORTS.IO에서 경기 데이터 가져오기 (날짜별로 모든 경기)
+async function fetchFixturesByDate(date) {
+  const url = `https://v3.football.api-sports.io/fixtures?date=${date}`
+  
+  console.log(`📥 경기 데이터 가져오는 중: ${date}`)
+  
+  const response = await fetch(url, {
+    headers: {
+      'x-apisports-key': API_SPORT_KEY
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error(`API 호출 실패: ${response.status} ${response.statusText}`)
+  }
+  
+  const data = await response.json()
+  return data.response || []
+}
+
+// 기존 리그별 조회 함수 (백업용)
 async function fetchFixtures(leagueId, season, from, to) {
   const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=${season}&from=${from}&to=${to}`
   
@@ -213,36 +233,93 @@ async function main() {
   const season = (currentMonth >= 8) ? currentYear : currentYear - 1
   
   console.log(`📅 모드: ${mode}`)
-  console.log(`📅 기간: ${from} ~ ${to}`)
-  console.log(`📅 시즌: ${season}\n`)
+  console.log(`📅 기간: ${from} ~ ${to}\n`)
   
   const allMatches = []
-  const leagues = Object.keys(LEAGUE_MAPPING)
   
-  // 각 리그별로 데이터 가져오기
-  for (const leagueId of leagues) {
+  // 날짜 범위의 각 날짜별로 데이터 가져오기
+  const startDate = new Date(from)
+  const endDate = new Date(to)
+  
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0]
+    
     try {
-      const fixtures = await fetchFixtures(leagueId, season, from, to)
-      console.log(`✅ League ${leagueId} (${LEAGUE_MAPPING[leagueId]}): ${fixtures.length}개 경기`)
+      const fixtures = await fetchFixturesByDate(dateStr)
+      console.log(`✅ ${dateStr}: ${fixtures.length}개 경기 발견`)
       
-      // 각 경기별로 배당 정보 가져오기
+      // 관심 리그만 필터링
+      const targetLeagues = Object.values(LEAGUE_MAPPING)
+      let filteredCount = 0
+      
+      // 각 경기 처리
       for (const fixture of fixtures) {
         try {
-          const oddsData = await fetchOdds(fixture.fixture.id)
-          const match = transformFixture(fixture, oddsData, leagueId)
-          allMatches.push(match)
+          // 리그 이름으로 매핑
+          const leagueName = fixture.league.name
+          let mappedLeague = 'ETC'
           
-          // Rate limit 방지 (초당 10회 제한)
-          await new Promise(resolve => setTimeout(resolve, 120))
+          // 리그 매핑 (이름 기반)
+          if (leagueName.includes('Premier League') || leagueName.includes('EPL')) {
+            mappedLeague = 'EPL'
+          } else if (leagueName.includes('La Liga')) {
+            mappedLeague = 'LA_LIGA'
+          } else if (leagueName.includes('Serie A')) {
+            mappedLeague = 'SERIE_A'
+          } else if (leagueName.includes('Bundesliga')) {
+            mappedLeague = 'BUNDESLIGA'
+          } else if (leagueName.includes('Ligue 1')) {
+            mappedLeague = 'LIGUE_1'
+          } else if (leagueName.includes('K League')) {
+            mappedLeague = 'K_LEAGUE'
+          } else if (leagueName.includes('MLB')) {
+            mappedLeague = 'MLB'
+          } else if (leagueName.includes('KBO')) {
+            mappedLeague = 'KBO'
+          } else if (leagueName.includes('NBA')) {
+            mappedLeague = 'NBA'
+          } else if (leagueName.includes('WNBA')) {
+            mappedLeague = 'WNBA'
+          } else if (leagueName.includes('KBL')) {
+            mappedLeague = 'KBL'
+          } else if (leagueName.includes('WKBL')) {
+            mappedLeague = 'WKBL'
+          } else if (leagueName.includes('V-League') || leagueName.includes('KOVO')) {
+            if (leagueName.includes('Women')) {
+              mappedLeague = 'KOVO_W'
+            } else {
+              mappedLeague = 'KOVO_M'
+            }
+          } else if (leagueName.includes('NFL')) {
+            mappedLeague = 'NFL'
+          } else if (leagueName.includes('NHL')) {
+            mappedLeague = 'NHL'
+          }
+          
+          // 관심 리그만 수집
+          if (targetLeagues.includes(mappedLeague)) {
+            const oddsData = await fetchOdds(fixture.fixture.id)
+            const match = transformFixture(fixture, oddsData, fixture.league.id)
+            match.league = mappedLeague // 매핑된 리그로 덮어쓰기
+            allMatches.push(match)
+            filteredCount++
+            
+            // Rate limit 방지 (초당 10회 제한)
+            await new Promise(resolve => setTimeout(resolve, 120))
+          }
         } catch (error) {
           console.warn(`⚠️ 경기 ${fixture.fixture.id} 처리 실패:`, error.message)
         }
       }
       
-      // League별 Rate limit 방지
-      await new Promise(resolve => setTimeout(resolve, 500))
+      if (filteredCount > 0) {
+        console.log(`   → 관심 리그: ${filteredCount}개 수집`)
+      }
+      
+      // 날짜별 Rate limit 방지
+      await new Promise(resolve => setTimeout(resolve, 1000))
     } catch (error) {
-      console.error(`❌ League ${leagueId} 데이터 가져오기 실패:`, error.message)
+      console.error(`❌ ${dateStr} 데이터 가져오기 실패:`, error.message)
     }
   }
   
