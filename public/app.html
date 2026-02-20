@@ -5211,6 +5211,8 @@ console.log('권한 관리 함수 로드 완료')
 
                 const html = matches.length > 0 ? matches.map(m => {
                     const matchDate = new Date(m.match_date)
+                    // KOVO남, KOVO여를 KOVO로 통합
+                    const normalizedLeague = m.league?.replace(/KOVO[남여]/, 'KOVO')
                     const leagueLabels = {
                         'EPL': '프리미어리그', 'LA_LIGA': '라리가', 'SERIE_A': '세리에A',
                         'BUNDESLIGA': '분데스리가', 'LIGUE_1': '리그앙', 'K_LEAGUE': 'K리그',
@@ -5222,7 +5224,7 @@ console.log('권한 관리 함수 로드 완료')
                         <div class="flex justify-between items-start mb-3">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-2">
-                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">${leagueLabels[m.league] || m.league}</span>
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">${leagueLabels[normalizedLeague] || normalizedLeague || m.league}</span>
                                     <span class="text-sm text-gray-500">${matchDate.toLocaleDateString()} ${matchDate.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</span>
                                 </div>
                                 <p class="font-bold text-lg mb-1">${m.match_name}</p>
@@ -5230,8 +5232,7 @@ console.log('권한 관리 함수 로드 완료')
                             </div>
                         </div>
                         
-                        <!-- 승무패 배당 -->
-                        ${m.home_odds || m.draw_odds || m.away_odds ? `
+                        <!-- 승무패 배당 (항상 표시) -->
                         <div class="bg-blue-50 p-3 rounded mb-2">
                             <p class="text-xs font-bold text-blue-800 mb-2"><i class="fas fa-trophy mr-1"></i>승무패 배당</p>
                             <div class="grid grid-cols-3 gap-2 text-center">
@@ -5239,19 +5240,18 @@ console.log('권한 관리 함수 로드 완료')
                                     <p class="text-xs text-gray-600">홈승</p>
                                     <p class="text-lg font-bold text-blue-600">${m.home_odds || '-'}</p>
                                 </div>
-                                ${m.draw_odds ? `<div class="bg-white p-2 rounded">
+                                <div class="bg-white p-2 rounded">
                                     <p class="text-xs text-gray-600">무승부</p>
-                                    <p class="text-lg font-bold text-gray-600">${m.draw_odds}</p>
-                                </div>` : '<div></div>'}
+                                    <p class="text-lg font-bold text-gray-600">${m.draw_odds || '-'}</p>
+                                </div>
                                 <div class="bg-white p-2 rounded">
                                     <p class="text-xs text-gray-600">원정승</p>
                                     <p class="text-lg font-bold text-red-600">${m.away_odds || '-'}</p>
                                 </div>
                             </div>
-                        </div>` : ''}
+                        </div>
                         
-                        <!-- 언오바 배당 -->
-                        ${m.over_line || m.over_odds || m.under_odds ? `
+                        <!-- 언오바 배당 (항상 표시) -->
                         <div class="bg-green-50 p-3 rounded mb-2">
                             <p class="text-xs font-bold text-green-800 mb-2"><i class="fas fa-chart-line mr-1"></i>언오바 배당 (기준: ${m.over_line || '-'})</p>
                             <div class="grid grid-cols-2 gap-2 text-center">
@@ -5264,10 +5264,9 @@ console.log('권한 관리 함수 로드 완료')
                                     <p class="text-lg font-bold text-green-600">${m.under_odds || '-'}</p>
                                 </div>
                             </div>
-                        </div>` : ''}
+                        </div>
                         
-                        <!-- 핸디캡 배당 -->
-                        ${m.handicap_line || m.handicap_home_odds || m.handicap_away_odds ? `
+                        <!-- 핸디캡 배당 (항상 표시) -->
                         <div class="bg-purple-50 p-3 rounded">
                             <p class="text-xs font-bold text-purple-800 mb-2"><i class="fas fa-balance-scale mr-1"></i>핸디캡 배당 (기준: ${m.handicap_line || '-'})</p>
                             <div class="grid grid-cols-2 gap-2 text-center">
@@ -5280,10 +5279,7 @@ console.log('권한 관리 함수 로드 완료')
                                     <p class="text-lg font-bold text-purple-600">${m.handicap_away_odds || '-'}</p>
                                 </div>
                             </div>
-                        </div>` : ''}
-                        
-                        ${!(m.home_odds || m.draw_odds || m.away_odds || m.over_odds || m.under_odds || m.handicap_home_odds || m.handicap_away_odds) ? 
-                        '<p class="text-sm text-gray-500 text-center py-2">배당 정보 없음</p>' : ''}
+                        </div>
                     </div>
                 `}).join('') : '<p class="text-gray-500 text-sm text-center py-4">진행 중인 경기가 없습니다.</p>'
 
