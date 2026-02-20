@@ -1227,4 +1227,68 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer, customPrompt?:
   return data.choices[0]?.message?.content || ''
 }
 
+// OCR 연결 상태 테스트 엔드포인트
+mailroom.get('/test-ocr', async (c) => {
+  try {
+    const apiKey = c.env.OPENAI_API_KEY
+    
+    if (!apiKey) {
+      return c.json({
+        status: 'error',
+        message: 'OPENAI_API_KEY가 설정되지 않았습니다.',
+        recommendation: 'wrangler.toml 또는 .dev.vars 파일에 OPENAI_API_KEY를 추가하세요.'
+      }, 500)
+    }
+    
+    // OpenAI API 연결 테스트
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      }
+    })
+    
+    if (response.ok) {
+      const models = await response.json()
+      const hasGPT4o = models.data.some((m: any) => m.id === 'gpt-4o')
+      const hasGPT4Vision = models.data.some((m: any) => m.id === 'gpt-4-vision-preview')
+      
+      return c.json({
+        status: 'connected',
+        message: 'OpenAI API 연결 정상',
+        api_key_prefix: apiKey.substring(0, 10) + '...',
+        available_models: {
+          'gpt-4o': hasGPT4o ? '사용 가능 ✅ (현재 사용 중)' : '사용 불가 ❌',
+          'gpt-4-vision-preview': hasGPT4Vision ? '사용 가능 ✅' : '사용 불가 ❌'
+        },
+        current_model: 'gpt-4o',
+        recommendation: hasGPT4o 
+          ? '현재 최신 모델(gpt-4o)을 사용하고 있습니다. 한글 인식이 우수합니다.' 
+          : 'gpt-4o 모델에 접근할 수 없습니다. API 키 권한을 확인하세요.',
+        tips: [
+          'OCR 정확도 향상: 이미지를 선명하게 촬영하세요',
+          '최적 해상도: 1920x1080 이상 권장',
+          '조명: 그림자 없이 고르게 비추세요',
+          '각도: 정면에서 평행하게 촬영하세요'
+        ]
+      })
+    } else {
+      const errorText = await response.text()
+      return c.json({
+        status: 'error',
+        message: 'API 키 인증 실패',
+        error_code: response.status,
+        error_detail: errorText,
+        recommendation: 'API 키가 유효한지 확인하고, OpenAI 대시보드에서 키가 활성화되어 있는지 확인하세요.'
+      }, response.status)
+    }
+  } catch (error: any) {
+    return c.json({
+      status: 'error',
+      message: '연결 테스트 실패',
+      error: error.message,
+      recommendation: '네트워크 연결을 확인하거나 Cloudflare Workers 로그를 확인하세요.'
+    }, 500)
+  }
+})
+
 export default mailroom

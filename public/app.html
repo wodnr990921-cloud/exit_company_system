@@ -1742,6 +1742,9 @@
                             </div>
                             
                             <div class="flex gap-2 mt-4">
+                                <button onclick="saveInspectionEdit()" class="btn btn-warning">
+                                    <i class="fas fa-save mr-2"></i>임시저장
+                                </button>
                                 <button onclick="assignStaffAndConfirmTicket()" class="btn btn-success flex-1">
                                     <i class="fas fa-user-check mr-2"></i>우편물 검수 완료 및 담당자 배정
                                 </button>
@@ -8418,20 +8421,53 @@ console.log('권한 관리 함수 로드 완료')
 
                 document.getElementById('member-point-transactions').innerHTML = transactionsHtml
 
-                // 티켓 이력 (클릭 시 티켓 상세 모달 열림)
-                const ticketsHtml = tickets.length > 0 ? tickets.map(t => `
-                    <div class="flex justify-between items-center py-2 border-b hover:bg-gray-50 cursor-pointer transition" 
-                         onclick="showTicketDetail(${t.id})">
-                        <div>
-                            <p class="text-sm font-medium">${t.title}</p>
-                            <p class="text-xs text-gray-500">${t.ticket_number} - ${new Date(t.created_at).toLocaleDateString()}</p>
+                // 티켓 이력 (클릭 시 티켓 상세 모달 열림) - 우편물 이미지 포함
+                let ticketsHtml = ''
+                
+                if (tickets.length > 0) {
+                    // 각 티켓의 우편물 이미지 로드
+                    const ticketsWithImages = await Promise.all(tickets.map(async (t) => {
+                        try {
+                            const itemsRes = await axios.get(`${API_BASE}/tickets/${t.id}/items`)
+                            const mailItems = itemsRes.data.items.filter(item => item.item_type === 'mail')
+                            t.mail_images = mailItems.map(item => item.mail_item_key).filter(key => key)
+                        } catch (error) {
+                            console.error(`티켓 ${t.id} 이미지 로드 실패:`, error)
+                            t.mail_images = []
+                        }
+                        return t
+                    }))
+                    
+                    ticketsHtml = ticketsWithImages.map(t => `
+                        <div class="border-b pb-3 mb-3">
+                            <div class="flex justify-between items-center hover:bg-gray-50 cursor-pointer transition rounded p-2" 
+                                 onclick="showTicketDetail(${t.id})">
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium">${t.title}</p>
+                                    <p class="text-xs text-gray-500">${t.ticket_number} - ${new Date(t.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="status-badge status-${t.status}">${getStatusText(t.status)}</span>
+                                    <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+                                </div>
+                            </div>
+                            ${t.mail_images && t.mail_images.length > 0 ? `
+                                <div class="mt-2 flex gap-2 overflow-x-auto pl-2">
+                                    ${t.mail_images.map(key => `
+                                        <img src="${API_BASE}/mailroom/image/${key}" 
+                                             class="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition"
+                                             onclick="event.stopPropagation(); showImageModal('${API_BASE}/mailroom/image/${key}')"
+                                             alt="우편물"
+                                             title="클릭하여 크게 보기">
+                                    `).join('')}
+                                    <span class="text-xs text-gray-500 self-center">${t.mail_images.length}개</span>
+                                </div>
+                            ` : ''}
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="status-badge status-${t.status}">${getStatusText(t.status)}</span>
-                            <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
-                        </div>
-                    </div>
-                `).join('') : '<p class="text-gray-500 text-sm text-center py-4">티켓 이력이 없습니다.</p>'
+                    `).join('')
+                } else {
+                    ticketsHtml = '<p class="text-gray-500 text-sm text-center py-4">티켓 이력이 없습니다.</p>'
+                }
 
                 document.getElementById('member-tickets').innerHTML = ticketsHtml
 
@@ -8444,6 +8480,31 @@ console.log('권한 관리 함수 로드 완료')
 
         function closeMemberDetail() {
             document.getElementById('member-detail-modal').classList.add('hidden')
+        }
+
+        // 이미지 모달 표시
+        function showImageModal(imageUrl) {
+            // 기존 모달 제거
+            const existingModal = document.getElementById('temp-image-modal')
+            if (existingModal) existingModal.remove()
+            
+            // 새 모달 생성
+            const modal = document.createElement('div')
+            modal.id = 'temp-image-modal'
+            modal.className = 'fixed inset-0 bg-black bg-opacity-90 z-[200] flex items-center justify-center p-4'
+            modal.onclick = () => modal.remove()
+            modal.innerHTML = `
+                <div class="relative max-w-7xl max-h-full">
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            class="absolute top-2 right-2 bg-white text-black rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-200 z-10">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <img src="${imageUrl}" 
+                         class="max-w-full max-h-[90vh] object-contain" 
+                         onclick="event.stopPropagation()">
+                </div>
+            `
+            document.body.appendChild(modal)
         }
 
         // 포인트 조정 모달
@@ -10336,12 +10397,19 @@ console.log('권한 관리 함수 로드 완료')
         
         // 담당자 배정 및 티켓 확정
         async function assignStaffAndConfirmTicket() {
-            if (!currentInspectionId) return
+            if (!currentInspectionId) {
+                alert('검수 ID가 없습니다.')
+                return
+            }
             
-            const staffId = document.getElementById('inspection-staff').value
+            const staffSelect = document.getElementById('inspection-staff')
+            const staffId = staffSelect ? staffSelect.value : null
             
-            if (!staffId) {
+            console.log('담당자 선택 값:', staffId, '타입:', typeof staffId) // 디버깅
+            
+            if (!staffId || staffId === '' || staffId === 'null' || staffId === '0') {
                 alert('담당자를 선택해주세요.')
+                if (staffSelect) staffSelect.focus()
                 return
             }
             
@@ -10397,6 +10465,8 @@ console.log('권한 관리 함수 로드 완료')
                     notes: notes,
                     status: 'assigned'
                 })
+                
+                console.log('티켓 생성 데이터:', { member_id: memberId, staff_id: parseInt(staffId) }) // 디버깅
                 
                 // 3. 티켓 생성 및 확정 (임시 티켓 → 정식 티켓)
                 const ticketRes = await axios.post(`${API_BASE}/tickets`, {
