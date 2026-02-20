@@ -8,32 +8,31 @@ const EXIT_SYSTEM_URL = process.env.EXIT_SYSTEM_URL || 'https://exit-company-sys
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN
 
 // 리그 ID 매핑 (api-sports.io → EXIT System)
+// 국내: K-League, KBO, KBL, WKBL, KOVO (남/여)
+// 해외 축구: EPL, La Liga, Serie A, Bundesliga, Ligue 1
+// 해외 야구: MLB
 const LEAGUE_MAPPING = {
-  // 축구
+  // 축구 - 해외 주요 리그만
   '39': 'EPL',           // Premier League
   '140': 'LA_LIGA',      // La Liga
   '135': 'SERIE_A',      // Serie A
   '78': 'BUNDESLIGA',    // Bundesliga
   '61': 'LIGUE_1',       // Ligue 1
+  
+  // 축구 - 국내
   '292': 'K_LEAGUE',     // K League 1
-  
-  // 농구
-  '12': 'NBA',           // NBA
-  '17': 'WNBA',          // WNBA
-  '96': 'KBL',           // KBL (Korean Basketball League)
-  '97': 'WKBL',          // WKBL (Women's Korean Basketball League)
-  
-  // 배구
-  '143': 'KOVO_M',       // V-League Men
-  '144': 'KOVO_W',       // V-League Women
   
   // 야구
   '1': 'MLB',            // MLB
   '139': 'KBO',          // KBO
   
-  // 기타
-  '1': 'NFL',            // NFL
-  '57': 'NHL',           // NHL
+  // 농구 - 국내만
+  '96': 'KBL',           // KBL (Korean Basketball League)
+  '97': 'WKBL',          // WKBL (Women's Korean Basketball League)
+  
+  // 배구 - 국내만
+  '143': 'KOVO_M',       // V-League Men
+  '144': 'KOVO_W',       // V-League Women
 }
 
 // 날짜 범위 계산
@@ -260,6 +259,7 @@ async function main() {
           let mappedLeague = 'ETC'
           
           // 리그 매핑 (이름 기반)
+          // 해외 축구 주요 리그
           if (leagueName.includes('Premier League') || leagueName.includes('EPL')) {
             mappedLeague = 'EPL'
           } else if (leagueName.includes('La Liga')) {
@@ -270,30 +270,24 @@ async function main() {
             mappedLeague = 'BUNDESLIGA'
           } else if (leagueName.includes('Ligue 1')) {
             mappedLeague = 'LIGUE_1'
+          // 국내 리그
           } else if (leagueName.includes('K League')) {
             mappedLeague = 'K_LEAGUE'
-          } else if (leagueName.includes('MLB')) {
-            mappedLeague = 'MLB'
           } else if (leagueName.includes('KBO')) {
             mappedLeague = 'KBO'
-          } else if (leagueName.includes('NBA')) {
-            mappedLeague = 'NBA'
-          } else if (leagueName.includes('WNBA')) {
-            mappedLeague = 'WNBA'
           } else if (leagueName.includes('KBL')) {
             mappedLeague = 'KBL'
           } else if (leagueName.includes('WKBL')) {
             mappedLeague = 'WKBL'
           } else if (leagueName.includes('V-League') || leagueName.includes('KOVO')) {
-            if (leagueName.includes('Women')) {
+            if (leagueName.includes('Women') || leagueName.includes('여자')) {
               mappedLeague = 'KOVO_W'
             } else {
               mappedLeague = 'KOVO_M'
             }
-          } else if (leagueName.includes('NFL')) {
-            mappedLeague = 'NFL'
-          } else if (leagueName.includes('NHL')) {
-            mappedLeague = 'NHL'
+          // 해외 야구
+          } else if (leagueName.includes('MLB')) {
+            mappedLeague = 'MLB'
           }
           
           // 관심 리그만 수집
