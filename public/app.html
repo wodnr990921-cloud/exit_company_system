@@ -427,7 +427,7 @@
                 </div>
                 <div class="flex items-center space-x-2 md:space-x-4">
                     <!-- 환영 메시지 -->
-                    <span class="hidden lg:inline text-gray-700 text-sm">
+                    <span class="hidden md:inline text-gray-700 text-sm font-medium">
                         <span id="welcome-message"></span>
                     </span>
                     
@@ -1084,6 +1084,9 @@
                         <button onclick="showAdminTab('approvals')" id="admin-tab-approvals" class="px-4 py-3 border-b-2 border-blue-500 text-blue-600 font-medium">
                             <i class="fas fa-bell mr-2"></i>결재 (<span id="admin-approval-count">0</span>)
                         </button>
+                        <button onclick="showAdminTab('history')" id="admin-tab-history" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
+                            <i class="fas fa-file-alt mr-2"></i>결재 내역
+                        </button>
                         <button onclick="showAdminTab('staff')" id="admin-tab-staff" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
                             <i class="fas fa-user-tie mr-2"></i>직원 관리
                         </button>
@@ -1104,6 +1107,31 @@
                     <div class="card">
                         <h3 class="text-lg font-bold mb-4"><i class="fas fa-clock mr-2"></i>승인 대기 중</h3>
                         <div id="admin-pending-approvals" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- 결재 내역 탭 -->
+                <div id="admin-history-tab" class="admin-tab-content hidden">
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold"><i class="fas fa-file-alt mr-2"></i>결재 내역</h3>
+                            <div class="flex gap-2">
+                                <select id="history-status-filter" onchange="loadApprovalHistory()" class="px-3 py-1 border rounded text-sm">
+                                    <option value="all">전체</option>
+                                    <option value="completed">승인됨</option>
+                                    <option value="rejected">거부됨</option>
+                                </select>
+                                <select id="history-type-filter" onchange="loadApprovalHistory()" class="px-3 py-1 border rounded text-sm">
+                                    <option value="all">전체 유형</option>
+                                    <option value="point_request">포인트 요청</option>
+                                    <option value="betting">배팅</option>
+                                    <option value="settlement">정산</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="admin-approval-history" class="space-y-3">
+                            <p class="text-gray-500 text-center py-8">결재 내역을 불러오는 중...</p>
+                        </div>
                     </div>
                 </div>
 
@@ -4041,6 +4069,8 @@ console.log('권한 관리 함수 로드 완료')
             // 탭별 데이터 로드
             if (tabName === 'approvals') {
                 loadPendingApprovals()
+            } else if (tabName === 'history') {
+                loadApprovalHistory()
             } else if (tabName === 'staff') {
                 loadStaff()
             } else if (tabName === 'closing') {
@@ -4983,6 +5013,70 @@ console.log('권한 관리 함수 로드 완료')
                 }
             } catch (error) {
                 console.error('승인 대기 목록 로드 오류:', error)
+            }
+        }
+
+        // 결재 내역 로드
+        async function loadApprovalHistory() {
+            try {
+                const statusFilter = document.getElementById('history-status-filter')?.value || 'all'
+                const typeFilter = document.getElementById('history-type-filter')?.value || 'all'
+                
+                // 티켓 아이템 결재 내역 가져오기
+                const response = await axios.get(`${API_BASE}/ticket-items/approval-history`, {
+                    params: { status: statusFilter, type: typeFilter }
+                })
+                
+                const items = response.data.items || []
+                
+                if (items.length === 0) {
+                    document.getElementById('admin-approval-history').innerHTML = '<p class="text-gray-500 text-center py-8">결재 내역이 없습니다.</p>'
+                    return
+                }
+                
+                const html = items.map(item => {
+                    let itemData = {}
+                    try {
+                        itemData = typeof item.item_data === 'string' ? JSON.parse(item.item_data) : (item.item_data || {})
+                    } catch(e) {
+                        console.warn('item_data 파싱 실패:', e)
+                    }
+                    
+                    const statusBadge = item.status === 'completed' 
+                        ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">승인됨</span>'
+                        : '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">거부됨</span>'
+                    
+                    const typeLabel = item.item_type === 'point_request' ? '포인트 요청' 
+                        : item.item_type === 'betting' ? '배팅 신청' 
+                        : '도서 주문'
+                    
+                    return `
+                        <div class="border rounded p-4 hover:bg-gray-50 transition">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-bold">${item.member_name || '알 수 없음'}</span>
+                                        ${statusBadge}
+                                        <span class="text-xs text-gray-500">${typeLabel}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600">티켓 #${item.ticket_id} | 담당자: ${item.assigned_to_name || '미지정'}</p>
+                                    ${item.item_type === 'point_request' ? `<p class="text-sm">금액: ${(itemData.amount || 0).toLocaleString()}원</p>` : ''}
+                                    ${item.notes ? `<p class="text-xs text-gray-600 mt-1">사유: ${item.notes}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-gray-500 pt-2 border-t">
+                                <span>요청: ${new Date(item.requested_at).toLocaleString()}</span>
+                                ${item.approved_at ? `<span>처리: ${new Date(item.approved_at).toLocaleString()}</span>` : ''}
+                                ${item.approved_by_name ? `<span>승인자: ${item.approved_by_name}</span>` : ''}
+                            </div>
+                        </div>
+                    `
+                }).join('')
+                
+                document.getElementById('admin-approval-history').innerHTML = html
+            } catch (error) {
+                console.error('결재 내역 로드 오류:', error)
+                document.getElementById('admin-approval-history').innerHTML = '<p class="text-red-500 text-center py-8">결재 내역을 불러오는데 실패했습니다.</p>'
             }
         }
 

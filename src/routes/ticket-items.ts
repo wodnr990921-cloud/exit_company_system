@@ -17,14 +17,17 @@ ticketItems.get('/pending-approvals', async (c) => {
         ti.*,
         t.ticket_number,
         t.title as ticket_title,
+        t.assigned_to,
         m.name as member_name,
         s1.name as requested_by_name,
-        s2.name as processor_name
+        s2.name as processor_name,
+        s3.name as assigned_to_name
       FROM ticket_items ti
       JOIN tickets t ON ti.ticket_id = t.id
       LEFT JOIN members m ON t.member_id = m.id
       LEFT JOIN staff s1 ON ti.requested_by = s1.id
       LEFT JOIN staff s2 ON ti.processed_by = s2.id
+      LEFT JOIN staff s3 ON t.assigned_to = s3.id
       WHERE ti.status = 'approval_pending'
       ORDER BY ti.requested_at DESC
     `).all()
@@ -39,6 +42,57 @@ ticketItems.get('/pending-approvals', async (c) => {
   } catch (error) {
     console.error('결재 대기 목록 조회 오류:', error)
     return c.json({ error: '결재 대기 목록 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 결재 내역 조회
+ticketItems.get('/approval-history', async (c) => {
+  try {
+    const { env } = c
+    const status = c.req.query('status') || 'all'
+    const type = c.req.query('type') || 'all'
+    
+    let query = `
+      SELECT 
+        ti.*,
+        t.ticket_number,
+        t.title as ticket_title,
+        t.assigned_to,
+        m.name as member_name,
+        s1.name as requested_by_name,
+        s2.name as approved_by_name,
+        s3.name as assigned_to_name
+      FROM ticket_items ti
+      JOIN tickets t ON ti.ticket_id = t.id
+      LEFT JOIN members m ON t.member_id = m.id
+      LEFT JOIN staff s1 ON ti.requested_by = s1.id
+      LEFT JOIN staff s2 ON ti.approved_by = s2.id
+      LEFT JOIN staff s3 ON t.assigned_to = s3.id
+      WHERE ti.status IN ('completed', 'rejected')
+    `
+    
+    if (status !== 'all') {
+      query += ` AND ti.status = '${status}'`
+    }
+    
+    if (type !== 'all') {
+      query += ` AND ti.item_type = '${type}'`
+    }
+    
+    query += ` ORDER BY ti.approved_at DESC LIMIT 100`
+    
+    const { results: items } = await env.DB.prepare(query).all()
+
+    return c.json({ 
+      success: true, 
+      items: items.map(item => ({
+        ...item,
+        item_data: JSON.parse(item.item_data as string)
+      }))
+    })
+  } catch (error) {
+    console.error('결재 내역 조회 오류:', error)
+    return c.json({ error: '결재 내역 조회 중 오류가 발생했습니다.' }, 500)
   }
 })
 
