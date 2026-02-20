@@ -1535,4 +1535,207 @@ betting.post('/admin/trigger-collect', async (c) => {
   }
 })
 
+// ==========================================
+// 정산 관리 (관리자 승인 시스템)
+// ==========================================
+
+// 정산 대기 목록 조회
+betting.get('/settlements/pending', async (c) => {
+  try {
+    const { results: settlements } = await c.env.DB.prepare(`
+      SELECT 
+        bf.id as folder_id,
+        bf.folder_number,
+        bf.folder_type,
+        bf.total_bet_amount,
+        bf.frozen_amount,
+        bf.result,
+        bf.settlement_status,
+        bf.created_at as settled_at,
+        m.name as member_name,
+        m.id as member_id,
+        t.id as ticket_id
+      FROM bet_folders bf
+      JOIN members m ON bf.member_id = m.id
+      LEFT JOIN tickets t ON bf.ticket_id = t.id
+      WHERE bf.settlement_status = 'settled'
+      AND bf.result = 'win'
+      ORDER BY bf.created_at DESC
+    `).all()
+    
+    // 각 폴더의 경기 내역 조회
+    for (const settlement of settlements || []) {
+      const { results: bets } = await c.env.DB.prepare(`
+        SELECT 
+          b.bet_type,
+          b.odds,
+          b.result,
+          m.match_name,
+          m.home_team,
+          m.away_team,
+          m.home_score,
+          m.away_score
+        FROM bets b
+        JOIN matches m ON b.match_id = m.id
+        WHERE b.folder_id = ?
+      `).bind(settlement.folder_id).all()
+      
+      ;(settlement as any).matches = bets
+    }
+    
+    return c.json({ settlements: settlements || [] })
+  } catch (error) {
+    console.error('정산 대기 목록 조회 오류:', error)
+    return c.json({ error: '정산 목록을 불러오는데 실패했습니다.' }, 500)
+  }
+})
+
+// 정산 승인
+betting.post('/settlements/:id/approve', async (c) => {
+  try {
+    const folderId = c.req.param('id')
+    const body = await c.req.json()
+    const { approved_by } = body
+    
+    if (!approved_by) {
+      return c.json({ error: '승인자 ID가 필요합니다.' }, 400)
+    }
+    
+    // 폴더 정보 조회
+    const folder = await c.env.DB.prepare(`
+      SELECT * FROM bet_folders WHERE id = ?
+    `).bind(folderId).first()
+    
+    if (!folder) {
+      return c.json({ error: '폴더를 찾을 수 없습니다.' }, 404)
+    }
+    
+    const folderData = folder as any
+    
+    if (folderData.settlement_status !== 'settled') {
+      return c.json({ error: '정산 대기 상태가 아닙니다.' }, 400)
+    }
+    
+    // 트랜잭션 시작
+    // 1. 폴더 상태 업데이트
+    await c.env.DB.prepare(`
+      UPDATE bet_folders 
+      SET settlement_status = 'approved',
+          approved_by = ?,
+          approved_at = datetime('now')
+      WHERE id = ?
+    `).bind(approved_by, folderId).run()
+    
+    // 2. 회원에게 포인트 지급
+    await c.env.DB.prepare(`
+      UPDATE members 
+      SET betting_points = betting_points + ?
+      WHERE id = ?
+    `).bind(folderData.frozen_amount, folderData.member_id).run()
+    
+    // 3. 당첨 알림 생성 (티켓이 있는 경우)
+    if (folderData.ticket_id) {
+      const message = `🎉 당첨 안내
+
+배팅 번호: ${folderData.folder_number}
+배팅 금액: ${Number(folderData.total_bet_amount).toLocaleString()}원
+당첨 금액: ${Number(folderData.frozen_amount).toLocaleString()}원
+
+배팅 포인트가 지급되었습니다.`
+      
+      await c.env.DB.prepare(`
+        INSERT INTO ticket_comments (ticket_id, content, comment_type, created_by, created_at)
+        VALUES (?, ?, 'response', ?, datetime('now'))
+      `).bind(folderData.ticket_id, message, approved_by).run()
+    }
+    
+    return c.json({ 
+      success: true, 
+      message: '정산이 승인되었습니다.',
+      folder_id: folderId,
+      amount: folderData.frozen_amount
+    })
+  } catch (error) {
+    console.error('정산 승인 오류:', error)
+    return c.json({ error: '정산 승인에 실패했습니다.' }, 500)
+  }
+})
+
+// 정산 반려
+betting.post('/settlements/:id/reject', async (c) => {
+  try {
+    const folderId = c.req.param('id')
+    const body = await c.req.json()
+    const { approved_by, rejection_reason } = body
+    
+    if (!approved_by || !rejection_reason) {
+      return c.json({ error: '승인자 ID와 반려 사유가 필요합니다.' }, 400)
+    }
+    
+    // 폴더 정보 조회
+    const folder = await c.env.DB.prepare(`
+      SELECT * FROM bet_folders WHERE id = ?
+    `).bind(folderId).first()
+    
+    if (!folder) {
+      return c.json({ error: '폴더를 찾을 수 없습니다.' }, 404)
+    }
+    
+    const folderData = folder as any
+    
+    if (folderData.settlement_status !== 'settled') {
+      return c.json({ error: '정산 대기 상태가 아닙니다.' }, 400)
+    }
+    
+    // 폴더 상태 업데이트 (반려)
+    await c.env.DB.prepare(`
+      UPDATE bet_folders 
+      SET settlement_status = 'rejected',
+          approved_by = ?,
+          approved_at = datetime('now'),
+          rejection_reason = ?,
+          frozen_amount = 0
+      WHERE id = ?
+    `).bind(approved_by, rejection_reason, folderId).run()
+    
+    return c.json({ 
+      success: true, 
+      message: '정산이 반려되었습니다.',
+      folder_id: folderId,
+      reason: rejection_reason
+    })
+  } catch (error) {
+    console.error('정산 반려 오류:', error)
+    return c.json({ error: '정산 반려에 실패했습니다.' }, 500)
+  }
+})
+
+// 정산 완료 목록 조회
+betting.get('/settlements/approved', async (c) => {
+  try {
+    const { results: settlements } = await c.env.DB.prepare(`
+      SELECT 
+        bf.id as folder_id,
+        bf.folder_number,
+        bf.folder_type,
+        bf.total_bet_amount,
+        bf.frozen_amount,
+        bf.approved_at,
+        m.name as member_name,
+        s.name as approved_by_name
+      FROM bet_folders bf
+      JOIN members m ON bf.member_id = m.id
+      LEFT JOIN staff s ON bf.approved_by = s.id
+      WHERE bf.settlement_status = 'approved'
+      ORDER BY bf.approved_at DESC
+      LIMIT 100
+    `).all()
+    
+    return c.json({ settlements: settlements || [] })
+  } catch (error) {
+    console.error('정산 완료 목록 조회 오류:', error)
+    return c.json({ error: '정산 목록을 불러오는데 실패했습니다.' }, 500)
+  }
+})
+
 export default betting

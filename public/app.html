@@ -5470,53 +5470,78 @@ console.log('권한 관리 함수 로드 완료')
                     return
                 }
                 
-                const html = settlements.map(s => `
-                    <div class="border rounded-lg p-4 bg-white hover:shadow-md transition">
-                        <div class="flex justify-between items-start mb-3">
-                            <div>
-                                <h4 class="font-bold text-lg">${s.folder_number}</h4>
-                                <p class="text-sm text-gray-600">회원: ${s.member_name}</p>
+                const html = settlements.map(s => {
+                    // 총 배당률 계산
+                    const totalOdds = s.matches?.reduce((acc, m) => acc * (m.odds || 1), 1) || 1
+                    
+                    // 경기 내역 HTML
+                    const matchesHtml = s.matches?.map(m => `
+                        <div class="text-xs py-1 border-t">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">${m.match_name || `${m.home_team} vs ${m.away_team}`}</span>
+                                <span class="font-medium">${m.bet_type} (${m.odds})</span>
                             </div>
-                            <span class="status-badge bg-yellow-100 text-yellow-800">
-                                <i class="fas fa-clock mr-1"></i>대기 중
-                            </span>
+                            ${m.home_score !== undefined && m.away_score !== undefined ? 
+                                `<div class="text-gray-500">결과: ${m.home_score} : ${m.away_score}</div>` : ''}
                         </div>
-                        
-                        <div class="grid grid-cols-2 gap-3 mb-3 text-sm">
-                            <div>
-                                <p class="text-gray-600">폴더 타입</p>
-                                <p class="font-medium">${s.folder_type === 'single' ? '단폴더' : '다폴더'}</p>
+                    `).join('') || ''
+                    
+                    return `
+                        <div class="border rounded-lg p-4 bg-white hover:shadow-md transition">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <h4 class="font-bold text-lg">${s.folder_number}</h4>
+                                    <p class="text-sm text-gray-600">회원: ${s.member_name}</p>
+                                    ${s.ticket_id ? `<p class="text-xs text-blue-500"><i class="fas fa-ticket mr-1"></i>티켓 #${s.ticket_id}</p>` : ''}
+                                </div>
+                                <span class="status-badge bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-clock mr-1"></i>대기 중
+                                </span>
                             </div>
-                            <div>
-                                <p class="text-gray-600">배팅 금액</p>
-                                <p class="font-medium text-blue-600">${s.total_bet_amount.toLocaleString()}원</p>
+                            
+                            <div class="grid grid-cols-2 gap-3 mb-3 text-sm">
+                                <div>
+                                    <p class="text-gray-600">폴더 타입</p>
+                                    <p class="font-medium">${s.folder_type === 'single' ? '단폴더' : '다폴더'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">배팅 금액</p>
+                                    <p class="font-medium text-blue-600">${Number(s.total_bet_amount).toLocaleString()}원</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">총 배당률</p>
+                                    <p class="font-medium text-purple-600">${totalOdds.toFixed(2)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">예상 당첨금 (동결)</p>
+                                    <p class="font-bold text-green-600 text-lg">${Number(s.frozen_amount).toLocaleString()}원</p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-gray-600">총 배당률</p>
-                                <p class="font-medium text-purple-600">${s.total_odds.toFixed(2)}</p>
+                            
+                            ${matchesHtml ? `
+                                <div class="bg-gray-50 rounded p-2 mb-3">
+                                    <p class="text-xs font-semibold text-gray-700 mb-1">배팅 내역</p>
+                                    ${matchesHtml}
+                                </div>
+                            ` : ''}
+                            
+                            <div class="text-xs text-gray-500 mb-3 pb-3 border-b">
+                                <i class="fas fa-calendar mr-1"></i>${new Date(s.settled_at).toLocaleString()}
                             </div>
-                            <div>
-                                <p class="text-gray-600">정산 금액</p>
-                                <p class="font-bold text-green-600 text-lg">${s.settlement_amount.toLocaleString()}원</p>
+                            
+                            <div class="flex gap-2">
+                                <button onclick="approveSettlement(${s.folder_id})" 
+                                        class="flex-1 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
+                                    <i class="fas fa-check mr-2"></i>승인 (포인트 지급)
+                                </button>
+                                <button onclick="showRejectModal(${s.folder_id})" 
+                                        class="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition">
+                                    <i class="fas fa-times mr-2"></i>반려
+                                </button>
                             </div>
                         </div>
-                        
-                        <div class="text-xs text-gray-500 mb-3 pb-3 border-b">
-                            <i class="fas fa-calendar mr-1"></i>${new Date(s.created_at).toLocaleString()}
-                        </div>
-                        
-                        <div class="flex gap-2">
-                            <button onclick="approveSettlement(${s.id})" 
-                                    class="flex-1 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                                <i class="fas fa-check mr-2"></i>승인
-                            </button>
-                            <button onclick="showRejectModal(${s.id})" 
-                                    class="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                                <i class="fas fa-times mr-2"></i>거부
-                            </button>
-                        </div>
-                    </div>
-                `).join('')
+                    `
+                }).join('')
                 
                 container.innerHTML = html
             } catch (error) {
@@ -5527,16 +5552,16 @@ console.log('권한 관리 함수 로드 완료')
         
         // 정산 승인
         async function approveSettlement(settlementId) {
-            if (!confirm('정산을 승인하시겠습니까? 회원에게 포인트가 지급됩니다.')) {
+            if (!confirm('✅ 정산을 승인하시겠습니까?\n\n회원에게 포인트가 즉시 지급되고, 당첨 안내 알림이 티켓에 추가됩니다.')) {
                 return
             }
             
             try {
-                await axios.post(`${API_BASE}/betting/settlements/${settlementId}/approve`, {
+                const response = await axios.post(`${API_BASE}/betting/settlements/${settlementId}/approve`, {
                     approved_by: currentStaff.id
                 })
                 
-                showToast('정산이 승인되었습니다.', 'success', 3000)
+                showToast(`정산 승인 완료! ${Number(response.data.amount).toLocaleString()}원이 지급되었습니다.`, 'success', 3000)
                 loadPendingSettlements()
             } catch (error) {
                 console.error('정산 승인 오류:', error)
@@ -5546,25 +5571,27 @@ console.log('권한 관리 함수 로드 완료')
         
         // 정산 거부 모달 표시
         function showRejectModal(settlementId) {
-            const notes = prompt('거부 사유를 입력해주세요:')
-            if (notes === null) return  // 취소
+            const reason = prompt('❌ 반려 사유를 입력해주세요:\n(예: 경기 결과 오류, 중복 정산 등)')
+            if (reason === null || reason.trim() === '') {
+                return
+            }
             
-            rejectSettlement(settlementId, notes)
+            rejectSettlement(settlementId, reason.trim())
         }
         
         // 정산 거부
-        async function rejectSettlement(settlementId, notes) {
+        async function rejectSettlement(settlementId, reason) {
             try {
                 await axios.post(`${API_BASE}/betting/settlements/${settlementId}/reject`, {
                     approved_by: currentStaff.id,
-                    notes: notes || '사유 없음'
+                    rejection_reason: reason
                 })
                 
-                showToast('정산이 거부되었습니다.', 'info', 3000)
+                showToast('정산이 반려되었습니다.', 'info', 3000)
                 loadPendingSettlements()
             } catch (error) {
-                console.error('정산 거부 오류:', error)
-                alert('정산 거부 실패: ' + (error.response?.data?.error || error.message))
+                console.error('정산 반려 오류:', error)
+                alert('정산 반려 실패: ' + (error.response?.data?.error || error.message))
             }
         }
 
