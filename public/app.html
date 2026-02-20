@@ -426,6 +426,11 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2 md:space-x-4">
+                    <!-- 환영 메시지 -->
+                    <span class="hidden lg:inline text-gray-700 text-sm">
+                        <span id="welcome-message"></span>
+                    </span>
+                    
                     <!-- 실시간 알림 아이콘 -->
                     <div class="relative no-print">
                         <button onclick="event.stopPropagation(); toggleNotifications()" class="relative text-gray-600 hover:text-gray-800">
@@ -3880,6 +3885,12 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('current-user-name-mobile').textContent = currentStaff.name
                 document.getElementById('mobile-menu-user-name').textContent = currentStaff.name
                 
+                // 환영 메시지 표시
+                const welcomeMsg = document.getElementById('welcome-message')
+                if (welcomeMsg) {
+                    welcomeMsg.textContent = `${currentStaff.name}님 환영합니다!`
+                }
+                
                 // 권한에 따른 UI 초기화
                 initializePermissions()
 
@@ -3937,6 +3948,12 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('current-user-name').textContent = currentStaff.name
                 document.getElementById('current-user-name-mobile').textContent = currentStaff.name
                 document.getElementById('mobile-menu-user-name').textContent = currentStaff.name
+                
+                // 환영 메시지 표시
+                const welcomeMsg = document.getElementById('welcome-message')
+                if (welcomeMsg) {
+                    welcomeMsg.textContent = `${currentStaff.name}님 환영합니다!`
+                }
                 
                 // 권한에 따른 UI 초기화
                 initializePermissions()
@@ -5001,7 +5018,7 @@ console.log('권한 관리 함수 로드 완료')
         async function approveTicketItem(itemId, ticketId) {
             try {
                 await axios.post(`${API_BASE}/ticket-items/${itemId}/approve`, {
-                    approved_by: currentStaff.email
+                    approved_by: currentStaff.id  // staff ID 전송
                 })
                 alert('결재가 승인되었습니다.')
                 await loadPendingApprovals()
@@ -5021,7 +5038,7 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 await axios.post(`${API_BASE}/ticket-items/${itemId}/reject`, {
-                    approved_by: currentStaff.email,
+                    rejected_by: currentStaff.id,  // staff ID 전송
                     rejection_reason: reason
                 })
                 alert('결재가 거부되었습니다.')
@@ -5625,6 +5642,7 @@ console.log('권한 관리 함수 로드 완료')
                                     <th class="px-3 py-2 text-left font-medium">리그</th>
                                     <th class="px-3 py-2 text-left font-medium">경기일시</th>
                                     <th class="px-3 py-2 text-left font-medium">경기</th>
+                                    <th class="px-3 py-2 text-center font-medium">결과</th>
                                     <th class="px-3 py-2 text-center font-medium">승무패</th>
                                     <th class="px-3 py-2 text-center font-medium">언오바</th>
                                     <th class="px-3 py-2 text-center font-medium">핸디캡</th>
@@ -5653,6 +5671,10 @@ console.log('권한 관리 함수 로드 완료')
                                     }
                                     const statusInfo = statusLabels[m.status] || { text: m.status, class: 'bg-gray-100 text-gray-600' }
                                     
+                                    // 경기 결과 표시
+                                    const hasResult = m.home_score !== null && m.away_score !== null
+                                    const resultText = hasResult ? `${m.home_score} - ${m.away_score}` : '-'
+                                    
                                     return `
                                         <tr class="hover:bg-gray-50">
                                             <td class="px-3 py-2">
@@ -5671,6 +5693,9 @@ console.log('권한 관리 함수 로드 완료')
                                             <td class="px-3 py-2">
                                                 <div class="font-semibold">${m.match_name || `${m.home_team} vs ${m.away_team}`}</div>
                                                 <div class="text-xs text-gray-500">${m.home_team} vs ${m.away_team}</div>
+                                            </td>
+                                            <td class="px-3 py-2 text-center">
+                                                <span class="font-bold ${hasResult ? 'text-blue-600' : 'text-gray-400'}">${resultText}</span>
                                             </td>
                                             <td class="px-3 py-2 text-center text-xs">
                                                 ${hasWinDrawLoss ? `
@@ -6115,21 +6140,15 @@ console.log('권한 관리 함수 로드 완료')
             addConsoleLog(`🔄 결과 불러오기 시작... (${selectedConsoleLeagues.length}개 리그)`)
             
             try {
-                // Worker 수동 트리거
-                addConsoleLog('  - Match Result Worker 트리거 중...')
+                // 경기 목록 새로고침
+                addConsoleLog('  - 경기 목록 새로고침 중...')
+                await loadMatchManagement()
                 
-                const response = await axios.post(`${API_BASE}/betting/admin/trigger-collect`, {
-                    mode: 'daily',
-                    leagues: selectedConsoleLeagues
-                })
-                
-                addConsoleLog('✅ 결과 불러오기 완료', 'success')
-                addConsoleLog(`  - 처리된 경기: ${response.data.processed || 0}개`)
-                addConsoleLog(`  - 정산된 배팅: ${response.data.settled || 0}개`)
-                showToast('결과 불러오기가 완료되었습니다', 'success', 3000)
+                addConsoleLog('✅ 경기 목록 새로고침 완료', 'success')
+                showToast('경기 목록이 새로고침되었습니다', 'success', 3000)
             } catch (error) {
-                addConsoleLog('❌ 결과 불러오기 실패: ' + error.message, 'error')
-                showToast('결과 불러오기 실패', 'error', 3000)
+                addConsoleLog('❌ 새로고침 실패: ' + error.message, 'error')
+                showToast('새로고침 실패', 'error', 3000)
             }
         }
 
