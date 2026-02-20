@@ -7,6 +7,41 @@ type Bindings = {
 
 const ticketItems = new Hono<{ Bindings: Bindings }>()
 
+// 결재 대기 목록 조회
+ticketItems.get('/pending-approvals', async (c) => {
+  try {
+    const { env } = c
+
+    const { results: items } = await env.DB.prepare(`
+      SELECT 
+        ti.*,
+        t.ticket_number,
+        t.title as ticket_title,
+        m.name as member_name,
+        s1.name as requested_by_name,
+        s2.name as processor_name
+      FROM ticket_items ti
+      JOIN tickets t ON ti.ticket_id = t.id
+      LEFT JOIN members m ON t.member_id = m.id
+      LEFT JOIN staff s1 ON ti.requested_by = s1.id
+      LEFT JOIN staff s2 ON ti.processed_by = s2.id
+      WHERE ti.status = 'approval_pending'
+      ORDER BY ti.requested_at DESC
+    `).all()
+
+    return c.json({ 
+      success: true, 
+      items: items.map(item => ({
+        ...item,
+        item_data: JSON.parse(item.item_data as string)
+      }))
+    })
+  } catch (error) {
+    console.error('결재 대기 목록 조회 오류:', error)
+    return c.json({ error: '결재 대기 목록 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 티켓의 모든 아이템 조회
 ticketItems.get('/:ticketId', async (c) => {
   try {

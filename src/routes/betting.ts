@@ -1635,18 +1635,43 @@ betting.post('/settlements/:id/approve', async (c) => {
     
     // 3. 당첨 알림 생성 (티켓이 있는 경우)
     if (folderData.ticket_id) {
-      const message = `🎉 당첨 안내
-
+      // 오늘 날짜
+      const today = new Date().toISOString().split('T')[0]
+      
+      // 오늘 생성된 response 타입 답변이 있는지 확인
+      const existingResponse = await c.env.DB.prepare(`
+        SELECT id, content 
+        FROM ticket_comments 
+        WHERE ticket_id = ? 
+          AND comment_type = 'response'
+          AND DATE(created_at) = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+      `).bind(folderData.ticket_id, today).first()
+      
+      const winMessage = `🎉 당첨 안내
 배팅 번호: ${folderData.folder_number}
 배팅 금액: ${Number(folderData.total_bet_amount).toLocaleString()}원
 당첨 금액: ${Number(folderData.frozen_amount).toLocaleString()}원
-
 배팅 포인트가 지급되었습니다.`
       
-      await c.env.DB.prepare(`
-        INSERT INTO ticket_comments (ticket_id, content, comment_type, created_by, created_at)
-        VALUES (?, ?, 'response', ?, datetime('now'))
-      `).bind(folderData.ticket_id, message, approved_by).run()
+      if (existingResponse) {
+        // 기존 답변이 있으면 내용 추가
+        const updatedContent = (existingResponse as any).content + '\n\n---\n\n' + winMessage
+        
+        await c.env.DB.prepare(`
+          UPDATE ticket_comments 
+          SET content = ?,
+              updated_at = datetime('now')
+          WHERE id = ?
+        `).bind(updatedContent, (existingResponse as any).id).run()
+      } else {
+        // 새로운 답변 생성
+        await c.env.DB.prepare(`
+          INSERT INTO ticket_comments (ticket_id, content, comment_type, created_by, created_at)
+          VALUES (?, ?, 'response', ?, datetime('now'))
+        `).bind(folderData.ticket_id, winMessage, approved_by).run()
+      }
     }
     
     return c.json({ 
