@@ -7493,14 +7493,24 @@ console.log('권한 관리 함수 로드 완료')
                 form.addEventListener('submit', async (e) => {
                     e.preventDefault()
                     
+                    const rawDate = document.getElementById('new-match-date').value
+                    // datetime-local 형식을 SQLite DATETIME 형식으로 변환
+                    const formattedDate = rawDate ? rawDate.replace('T', ' ') + ':00' : null
+                    
                     const data = {
                         match_name: document.getElementById('new-match-name').value,
                         home_team: document.getElementById('new-home-team').value,
                         away_team: document.getElementById('new-away-team').value,
-                        match_date: document.getElementById('new-match-date').value,
+                        match_date: formattedDate,
                         league: document.getElementById('new-league').value,
                         betting_type: document.getElementById('new-betting-type').value
                     }
+                    
+                    console.log('경기 추가:', {
+                        rawDate,
+                        formattedDate,
+                        data
+                    })
                     
                     // 배팅 타입에 따른 추가 데이터
                     if (data.betting_type === 'win_draw_lose') {
@@ -8129,9 +8139,21 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
 
+            // datetime-local 형식 (YYYY-MM-DDTHH:mm)을 SQLite DATETIME 형식 (YYYY-MM-DD HH:mm:ss)으로 변환
+            const formattedDate = matchDate.replace('T', ' ') + ':00'
+            
+            console.log('경기 등록:', {
+                matchName,
+                matchDate: matchDate,
+                formattedDate: formattedDate,
+                homeTeam,
+                awayTeam,
+                bettingType
+            })
+
             const data = {
                 match_name: matchName,
-                match_date: matchDate,
+                match_date: formattedDate,  // 변환된 날짜 사용
                 home_team: homeTeam,
                 away_team: awayTeam,
                 betting_type: bettingType
