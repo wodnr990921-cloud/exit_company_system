@@ -28,20 +28,9 @@ const app = new Hono<{ Bindings: Bindings }>()
 // CORS 설정 - 기본 설정 사용
 app.use('/api/*', cors())
 
-// HTML 파일 내용을 변수로 저장 (빌드 시 포함됨)
-// 프로덕션에서는 Cloudflare Pages가 직접 서빙하므로 이 코드는 실행되지 않음
+// 메인 페이지를 app.html로 리다이렉트
 app.get('/', async (c) => {
-  // 로컬 개발 환경용 - 단순 메시지 반환
-  return c.html(`
-    <html>
-    <head><title>EXIT System</title></head>
-    <body>
-      <h1>EXIT System</h1>
-      <p>API is running. Access <a href="/app.html">/app.html</a> for the full application.</p>
-      <p>Or use the API endpoints at <code>/api/*</code></p>
-    </body>
-    </html>
-  `)
+  return c.redirect('/app.html')
 })
 
 // API 라우트 등록
