@@ -90,17 +90,14 @@ auth.post('/generate-api-token', async (c) => {
       return c.json({ error: '인증 실패' }, 401)
     }
 
-    // 관리자 권한 체크 (role 3 = admin)
-    // TEMPORARY: Allow all staff to generate API tokens for GitHub Actions setup
-    // TODO: Re-enable role check after initial setup
-    // if (staff.role !== 3) {
-    //   return c.json({ 
-    //     error: '관리자 권한이 필요합니다.',
-    //     message: `현재 role: ${staff.role}, 필요한 role: 3 (admin)`,
-    //     current_role: staff.role,
-    //     required_role: 3
-    //   }, 403)
-    // }
+    // 관리자 권한 체크 (role 3 = admin 또는 role 'admin')
+    if (staff.role !== 3 && staff.role !== 'admin') {
+      return c.json({ 
+        error: '관리자 권한이 필요합니다.',
+        message: `현재 role: ${staff.role}, 필요한 role: 3 또는 'admin'`,
+        current_role: staff.role
+      }, 403)
+    }
 
     console.log(`API 토큰 생성: ${staff.email} (role: ${staff.role})`)
 
