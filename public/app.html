@@ -10466,19 +10466,23 @@ console.log('권한 관리 함수 로드 완료')
                     status: 'assigned'
                 })
                 
-                console.log('티켓 생성 데이터:', { member_id: memberId, staff_id: parseInt(staffId) }) // 디버깅
+                console.log('티켓 생성 데이터:', { 
+                    member_id: memberId, 
+                    assigned_to: parseInt(staffId),
+                    created_by: currentStaff.id 
+                }) // 디버깅
                 
                 // 3. 티켓 생성 및 확정 (임시 티켓 → 정식 티켓)
                 const ticketRes = await axios.post(`${API_BASE}/tickets`, {
                     member_id: memberId,  // null 가능 (미지정)
-                    staff_id: parseInt(staffId),
+                    assigned_to: parseInt(staffId),  // 담당자 배정
+                    created_by: currentStaff.id,  // 생성자 (필수)
                     ticket_type: 'mailroom',
                     priority: 'normal',
                     title: `우편물 처리: ${memberName}`,
                     description: memberId 
                         ? `우편물 검수 완료\n발신자: ${name}\n수용번호: ${number}\n기관: ${institution}`
-                        : `우편물 검수 완료\n회원: 미지정\n담당자가 추후 회원을 연결해주세요.`,
-                    status: 'in_progress'
+                        : `우편물 검수 완료\n회원: 미지정\n담당자가 추후 회원을 연결해주세요.`
                 })
                 
                 const ticketNumber = ticketRes.data.ticket.ticket_number

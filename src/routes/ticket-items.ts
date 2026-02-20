@@ -387,8 +387,18 @@ ticketItems.post('/:itemId/request-approval', async (c) => {
 ticketItems.post('/:itemId/approve', async (c) => {
   try {
     const itemId = c.req.param('itemId')
-    const { approved_by, notes } = await c.req.json()
+    console.log('결재 승인 요청:', { itemId })
+    
+    const body = await c.req.json()
+    console.log('결재 승인 데이터:', body)
+    
+    const { approved_by, notes } = body
     const { env } = c
+
+    if (!approved_by) {
+      console.error('approved_by 필드 누락')
+      return c.json({ error: '승인자 정보가 필요합니다.' }, 400)
+    }
 
     // 아이템 정보 조회
     const item = await env.DB.prepare(`
@@ -397,6 +407,8 @@ ticketItems.post('/:itemId/approve', async (c) => {
       JOIN tickets t ON ti.ticket_id = t.id
       WHERE ti.id = ?
     `).bind(itemId).first()
+
+    console.log('조회된 아이템:', item)
 
     if (!item) {
       return c.json({ error: '아이템을 찾을 수 없습니다.' }, 404)
@@ -408,6 +420,8 @@ ticketItems.post('/:itemId/approve', async (c) => {
 
     const itemData = JSON.parse(item.item_data as string)
     const processingData = item.processing_data ? JSON.parse(item.processing_data as string) : {}
+    
+    console.log('아이템 데이터:', { itemData, processingData })
 
     // 실제 처리 수행
     switch (item.item_type) {

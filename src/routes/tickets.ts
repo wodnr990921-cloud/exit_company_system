@@ -180,9 +180,12 @@ tickets.get('/:id', async (c) => {
 tickets.post('/', async (c) => {
   try {
     const body = await c.req.json()
+    console.log('티켓 생성 요청 데이터:', body)
     const { title, description, member_id, ticket_type, priority, assigned_to, created_by, betting_data, metadata, image_keys } = body
 
+    console.log('검증 필드:', { title, ticket_type, created_by })
     if (!title || !ticket_type || !created_by) {
+      console.error('필수 필드 누락:', { title, ticket_type, created_by })
       return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
     }
 
