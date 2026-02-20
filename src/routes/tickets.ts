@@ -104,7 +104,7 @@ tickets.get('/:id', async (c) => {
 
     const ticket = await c.env.DB.prepare(
       `SELECT t.*, 
-              m.name as member_name, m.points as member_points, m.betting_points as member_betting_points,
+              m.name as member_name, m.member_number, m.institution, m.points as member_points, m.betting_points as member_betting_points,
               s.name as assigned_to_name,
               c.name as created_by_name
        FROM tickets t
@@ -127,7 +127,40 @@ tickets.get('/:id', async (c) => {
        ORDER BY tc.created_at ASC`
     ).bind(id).all()
 
-    return c.json({ ticket, comments: comments || [] })
+    // ticket_items를 통해 관련 mail_items의 이미지 수집
+    const { results: ticketItems } = await c.env.DB.prepare(
+      `SELECT ti.*, mi.image_keys, mi.mail_number
+       FROM ticket_items ti
+       LEFT JOIN mail_items mi ON ti.mail_item_id = mi.id
+       WHERE ti.ticket_id = ?`
+    ).bind(id).all()
+
+    // 모든 mail_items의 이미지를 병합
+    let allImageKeys: string[] = []
+    if (ticketItems && ticketItems.length > 0) {
+      for (const item of ticketItems) {
+        const itemData = item as any
+        if (itemData.image_keys) {
+          try {
+            const keys = JSON.parse(itemData.image_keys)
+            if (Array.isArray(keys)) {
+              allImageKeys = allImageKeys.concat(keys)
+            }
+          } catch (e) {
+            console.error('이미지 키 파싱 오류:', e)
+          }
+        }
+      }
+    }
+
+    // ticket에 이미지 정보 추가
+    const ticketWithImages = {
+      ...ticket,
+      all_image_keys: allImageKeys.length > 0 ? allImageKeys : null,
+      ticket_items_count: ticketItems?.length || 0
+    }
+
+    return c.json({ ticket: ticketWithImages, comments: comments || [] })
   } catch (error) {
     console.error('티켓 상세 조회 오류:', error)
     return c.json({ error: '티켓 상세 조회 중 오류가 발생했습니다.' }, 500)

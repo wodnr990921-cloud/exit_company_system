@@ -6974,18 +6974,14 @@ console.log('권한 관리 함수 로드 완료')
                 // 경기 데이터는 로드되었지만 요청사항 탭의 배팅 추가 모달에서 사용됨
                 // showAddRequestModal('betting')에서 loadMatchesForBetting()를 호출하여 경기 목록 표시
 
-                // 이미지 로드 (우선순위: all_image_keys > mailroom_id > 빈 배열)
-                if (ticket.all_image_keys && ticket.all_image_keys.length > 0) {
-                    // ticket_items를 통해 수집된 모든 이미지 사용
-                    console.log('티켓 이미지 로드:', ticket.all_image_keys.length, '개')
-                    initMailImageViewer(ticket.all_image_keys)
-                } else if (ticket.mailroom_id) {
-                    // 기존 방식: mailroom_id로 이미지 로드
+                // 우편물 이미지 로드 (mailroom_id가 있는 경우)
+                if (ticket.mailroom_id) {
                     try {
                         const mailRes = await axios.get(`${API_BASE}/mailroom/${ticket.mailroom_id}`)
                         const mailItem = mailRes.data.mailroom_item
                         
                         if (mailItem && mailItem.image_keys) {
+                            // 이미지 뷰어 초기화
                             initMailImageViewer(mailItem.image_keys)
                         } else {
                             initMailImageViewer([])
@@ -6995,7 +6991,7 @@ console.log('권한 관리 함수 로드 완료')
                         initMailImageViewer([])
                     }
                 } else {
-                    // 이미지 없음
+                    // mailroom_id가 없으면 빈 뷰어
                     initMailImageViewer([])
                 }
 
