@@ -1,27 +1,27 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.9
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.10
 
-## ✅ 최근 업데이트 (v56.9 - 2026-02-19)
+## ✅ 최근 업데이트 (v56.10 - 2026-02-19)
+
+### 🐛 버그 수정 (v56.10)
+- **📅 경기 등록 날짜/시간 오류 수정**: 
+  - HTML5 `datetime-local` 형식 (`YYYY-MM-DDTHH:mm`)을 SQLite DATETIME 형식 (`YYYY-MM-DD HH:mm:ss`)으로 변환
+  - 경기 등록 시 날짜가 1970년 1월 1일로 고정되던 문제 해결
+  - 경기 관리 모든 입력 지점에서 날짜 변환 적용 완료
 
 ### 🐛 버그 수정 (v56.9)
-- **🚨 무한 로딩 오류 수정**: 
-  - `memberSearchTimeout` 변수 중복 선언으로 인한 SyntaxError 수정
-  - 페이지 로딩 정상화
-- **🔍 이미지 디버깅 로그 추가**: 
-  - 티켓 상세 모달에서 `image_keys` 파싱 과정을 콘솔에 상세 로깅
-  - 이미지 표시 문제 원인 파악을 위한 디버그 정보 추가
+- **🚨 무한 로딩 오류 수정**: `memberSearchTimeout` 변수 중복 선언으로 인한 SyntaxError 수정
+- **🔍 이미지 디버깅 로그 추가**: 티켓 상세 모달에서 `image_keys` 파싱 과정을 콘솔에 상세 로깅
 
 ### 🐛 버그 수정 (v56.8)
-- **💾 담당자 배정 500 오류 수정**: 
-  - `tickets` 테이블에 `metadata` 컬럼 추가 (마이그레이션 0021)
-  - 담당자 배정 시 티켓 생성 실패 문제 해결
+- **💾 담당자 배정 500 오류 수정**: `tickets` 테이블에 `metadata` 컬럼 추가 (마이그레이션 0021)
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://90622df4.exit-company-system-5je.pages.dev/
+- **Latest Preview**: https://ce1ebd15.exit-company-system-5je.pages.dev/
 - **Build Size**: 152.80 kB (동일)
-- **Build Time**: 886 ms
-- **Deploy Time**: 13.9 sec
-- **Last Updated**: 2026-02-19 08:35 UTC
+- **Build Time**: 1.06 sec
+- **Deploy Time**: 14.4 sec
+- **Last Updated**: 2026-02-19 09:05 UTC
 
 ## 🎯 주요 기능 (완료)
 
