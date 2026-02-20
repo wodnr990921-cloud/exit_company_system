@@ -1635,6 +1635,104 @@ betting.post('/settlements/:id/approve', async (c) => {
     
     // 3. 당첨 알림 생성 (티켓이 있는 경우)
     if (folderData.ticket_id) {
+      // 배팅 내역 조회 (경기 정보 포함)
+      const { results: bets } = await c.env.DB.prepare(`
+        SELECT 
+          b.bet_type,
+          b.odds,
+          m.match_name,
+          m.home_team,
+          m.away_team,
+          m.home_score,
+          m.away_score,
+          m.match_date
+        FROM bets b
+        JOIN matches m ON b.match_id = m.id
+        WHERE b.folder_id = ?
+      `).bind(folderId).all()
+      
+      const isSingle = folderData.folder_type === 'single'
+      const betAmount = Number(folderData.total_bet_amount)
+      
+      // 총 배당률 계산
+      let totalOdds = 1.0
+      for (const bet of bets) {
+        totalOdds *= Number(bet.odds)
+      }
+      
+      // 적용 배당 계산 (단폴더 패널티)
+      let appliedOdds = totalOdds
+      if (isSingle) {
+        if (totalOdds < 1.5) {
+          appliedOdds = totalOdds - 0.1
+        } else {
+          appliedOdds = totalOdds - 0.15
+        }
+      }
+      
+      // 총 당첨금 계산 (배팅금 x 적용 배당)
+      const grossWin = betAmount * appliedOdds
+      
+      // 수수료 계산
+      let fee = 0
+      const netWin = grossWin - betAmount  // 순수 당첨금 (배팅금 제외)
+      
+      if (isSingle) {
+        // 단폴더: 기본 2만원 + 순수익 마진
+        fee = 20000
+        if (netWin < 500000) {
+          fee += netWin * 0.05  // 5%
+        } else {
+          fee += netWin * 0.08  // 8%
+        }
+      } else {
+        // 다폴더: 순수익 마진만
+        if (netWin < 500000) {
+          fee = netWin * 0.05  // 5%
+        } else {
+          fee = netWin * 0.08  // 8%
+        }
+      }
+      
+      // 최종 당첨금
+      const finalWin = grossWin - fee
+      
+      // 경기 내역 문자열 생성
+      const matchDetails = bets.map((bet, idx) => {
+        const betTypeText = {
+          'home_win': '홈승',
+          'away_win': '원정승',
+          'draw': '무승부',
+          'over': '오버',
+          'under': '언더',
+          'handicap_home': '핸디캡 홈',
+          'handicap_away': '핸디캡 원정'
+        }[bet.bet_type] || bet.bet_type
+        
+        const matchDateStr = new Date(bet.match_date).toLocaleDateString('ko-KR', { 
+          month: 'long', 
+          day: 'numeric' 
+        })
+        
+        return `${idx + 1}. ${matchDateStr} ${bet.match_name || `${bet.home_team} vs ${bet.away_team}`} (${betTypeText}, 배당 ${bet.odds})`
+      }).join('\n')
+      
+      const winMessage = `🎉 축하합니다! 당첨되었습니다!
+
+📋 배팅 번호: ${folderData.folder_number}
+📅 적중 경기:
+${matchDetails}
+
+💰 정산 내역:
+- 배팅금: ${betAmount.toLocaleString()}원
+- 원 배당: ${totalOdds.toFixed(2)}배
+- 적용 배당: ${appliedOdds.toFixed(2)}배${isSingle ? ' (단폴더 패널티 적용)' : ''}
+- 총 당첨금: ${grossWin.toLocaleString()}원
+- 수수료: ${fee.toLocaleString()}원${isSingle ? ' (기본 2만원 + 마진)' : ' (순수익 마진)'}
+- 실 수령액: ${finalWin.toLocaleString()}원
+
+✅ 배팅 포인트가 지급되었습니다.`
+      
       // 오늘 날짜
       const today = new Date().toISOString().split('T')[0]
       
@@ -1649,15 +1747,9 @@ betting.post('/settlements/:id/approve', async (c) => {
         LIMIT 1
       `).bind(folderData.ticket_id, today).first()
       
-      const winMessage = `🎉 당첨 안내
-배팅 번호: ${folderData.folder_number}
-배팅 금액: ${Number(folderData.total_bet_amount).toLocaleString()}원
-당첨 금액: ${Number(folderData.frozen_amount).toLocaleString()}원
-배팅 포인트가 지급되었습니다.`
-      
       if (existingResponse) {
         // 기존 답변이 있으면 내용 추가
-        const updatedContent = (existingResponse as any).content + '\n\n---\n\n' + winMessage
+        const updatedContent = (existingResponse as any).content + '\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n' + winMessage
         
         await c.env.DB.prepare(`
           UPDATE ticket_comments 
