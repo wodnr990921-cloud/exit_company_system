@@ -8448,14 +8448,19 @@ console.log('권한 관리 함수 로드 완료')
                     const ticketsWithImages = await Promise.all(tickets.map(async (t) => {
                         try {
                             const itemsRes = await axios.get(`${API_BASE}/tickets/${t.id}/items`)
+                            console.log(`티켓 ${t.id} 아이템 조회:`, itemsRes.data)
                             const mailItems = itemsRes.data.items.filter(item => item.item_type === 'mail')
+                            console.log(`티켓 ${t.id} 우편물 아이템:`, mailItems)
                             t.mail_images = mailItems.map(item => item.mail_item_key).filter(key => key)
+                            console.log(`티켓 ${t.id} 이미지 키:`, t.mail_images)
                         } catch (error) {
                             console.error(`티켓 ${t.id} 이미지 로드 실패:`, error)
                             t.mail_images = []
                         }
                         return t
                     }))
+                    
+                    console.log('✅ 이미지 표시 완료:', ticketsWithImages.filter(t => t.mail_images?.length > 0).length, '개')
                     
                     ticketsHtml = ticketsWithImages.map(t => `
                         <div class="border-b pb-3 mb-3">
@@ -8476,6 +8481,7 @@ console.log('권한 관리 함수 로드 완료')
                                         <img src="${API_BASE}/mailroom/image/${key}" 
                                              class="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition"
                                              onclick="event.stopPropagation(); showImageModal('${API_BASE}/mailroom/image/${key}')"
+                                             onerror="console.error('이미지 로드 실패:', '${key}'); this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22>X</text></svg>'"
                                              alt="우편물"
                                              title="클릭하여 크게 보기">
                                     `).join('')}
