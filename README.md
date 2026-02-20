@@ -1,4 +1,22 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v56.10
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v57.0
+
+## ✅ 최근 업데이트 (v57.0 - 2026-02-20)
+
+### 🚀 새로운 기능 (v57.0)
+- **🤖 GitHub Actions 자동 경기 일정 등록**:
+  - api-sport.io API와 연동하여 자동으로 경기 일정 및 배당 정보 수집
+  - **매일 오전 9시 KST**: 하루치 경기 일정 등록
+  - **매일 오후 9시 KST**: 다음날 경기 일정 등록
+  - **매주 목요일 오후 2시 KST**: 일주일치 경기 일정 일괄 등록
+  - 16개 리그 지원 (EPL, La Liga, Serie A, Bundesliga, Ligue 1, K League, MLB, KBO, NBA, WNBA, KBL, WKBL, V-League, NFL, NHL)
+  - 승무패, 오버/언더, 핸디캡 배당 자동 수집
+- **🔐 JWT 기반 API 인증 시스템**:
+  - `POST /api/auth/generate-api-token`: 관리자 전용 API 토큰 생성
+  - `verifyToken` 미들웨어: 보안 API 엔드포인트 보호
+  - `POST /api/betting/matches/bulk`: 인증 필수 (Bearer Token)
+- **📊 자동화 스크립트**:
+  - `scripts/fetch-matches.js`: api-sport.io 데이터 변환 및 일괄 업로드
+  - `.github/workflows/match-scheduler.yml`: 스케줄 실행 워크플로우
 
 ## ✅ 최근 업데이트 (v56.10 - 2026-02-19)
 
@@ -17,11 +35,12 @@
 
 ## 🌐 배포 정보
 - **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://ce1ebd15.exit-company-system-5je.pages.dev/
-- **Build Size**: 152.80 kB (동일)
+- **Latest Preview**: https://dfcce31e.exit-company-system-5je.pages.dev/
+- **Build Size**: 161.26 kB (+8.46 kB - JWT 인증 추가)
 - **Build Time**: 1.06 sec
-- **Deploy Time**: 14.4 sec
-- **Last Updated**: 2026-02-19 09:05 UTC
+- **Deploy Time**: 11.2 sec
+- **Last Updated**: 2026-02-20 06:30 UTC
+- **GitHub Actions**: ✅ 자동 경기 일정 등록 활성화
 
 ## 🎯 주요 기능 (완료)
 
@@ -92,6 +111,7 @@
 | 직원 관리 | ❌ | ❌ | ✅ |
 | 승인 관리 | ❌ | ❌ | ✅ |
 | 통계 리포트 | ✅ (제한) | ✅ | ✅ |
+| **API 토큰 생성** | ❌ | ❌ | ✅ |
 
 ## 🏗️ 기술 스택
 - **Backend**: Hono + TypeScript
@@ -99,6 +119,8 @@
 - **Database**: Cloudflare D1 (SQLite)
 - **Storage**: Cloudflare R2
 - **Deployment**: Cloudflare Pages
+- **Automation**: GitHub Actions (경기 일정 자동 등록)
+- **Authentication**: JWT (API 토큰 기반)
 - **Dev Tools**: Wrangler, Vite, PM2
 
 ## 📊 데이터베이스 스키마
