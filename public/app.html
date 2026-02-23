@@ -2666,6 +2666,13 @@
                             <div class="flex justify-between items-center mb-4">
                                 <h4 class="font-bold">등록된 경기 일정</h4>
                                 <div class="flex gap-2">
+                                    <a href="/api/betting/matches/template" download="경기목록_템플릿.xlsx" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-download mr-2"></i>양식 다운로드
+                                    </a>
+                                    <button onclick="document.getElementById('match-excel-upload').click()" class="btn btn-info btn-sm">
+                                        <i class="fas fa-file-excel mr-2"></i>엑셀 업로드
+                                    </button>
+                                    <input type="file" id="match-excel-upload" accept=".xlsx,.xls" style="display:none" onchange="handleMatchExcelUpload(event)">
                                     <button onclick="showBettingConsole()" class="btn btn-info btn-sm">
                                         <i class="fas fa-terminal mr-2"></i>배팅 관리 콘솔
                                     </button>
@@ -7817,6 +7824,40 @@ console.log('권한 관리 함수 로드 완료')
         function closeMatchSettlementModal() {
             document.getElementById('match-settlement-modal').classList.add('hidden')
         }
+
+        // 엑셀 업로드 처리
+        async function handleMatchExcelUpload(event) {
+            const file = event.target.files[0]
+            if (!file) return
+            
+            if (!file.name.match(/\.(xlsx|xls)$/)) {
+                alert('엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.')
+                return
+            }
+            
+            try {
+                showToast('엑셀 파일 업로드 중...', 'info')
+                
+                const formData = new FormData()
+                formData.append('file', file)
+                
+                const response = await axios.post(`${API_BASE}/betting/matches/upload`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                })
+                
+                showToast(`${response.data.count}개 경기가 등록되었습니다`, 'success')
+                await loadMatchManagementList()
+                
+                // 파일 입력 초기화
+                event.target.value = ''
+            } catch (error) {
+                console.error('엑셀 업로드 오류:', error)
+                const errorMsg = error.response?.data?.error || '엑셀 업로드에 실패했습니다'
+                alert(`오류: ${errorMsg}`)
+                event.target.value = ''
+            }
+        }
+
 
         // 완료된 경기 목록 로드 및 정산 통계
         async function loadCompletedMatches() {
