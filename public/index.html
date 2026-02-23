@@ -2023,9 +2023,25 @@
                                 <label class="block text-sm font-medium mb-2 text-blue-700">
                                     <i class="fas fa-user-tie mr-1"></i>담당자 선택 (필수)
                                 </label>
-                                <select id="inspection-staff" class="w-full px-3 py-2 border rounded bg-white">
-                                    <option value="">-- 담당자를 선택하세요 --</option>
-                                </select>
+                                <div class="relative">
+                                    <input 
+                                        type="text" 
+                                        id="inspection-staff-search" 
+                                        class="w-full px-3 py-2 border rounded"
+                                        placeholder="담당자 이름 검색..."
+                                        oninput="searchStaffForInspection(this.value)"
+                                        onfocus="showStaffSearchResults()"
+                                        autocomplete="off"
+                                    >
+                                    <input type="hidden" id="inspection-staff" value="">
+                                    <div id="staff-search-results" class="hidden absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+                                </div>
+                                <div id="selected-staff-info" class="hidden mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                                    <span id="selected-staff-text"></span>
+                                    <button type="button" onclick="clearSelectedStaff()" class="ml-2 text-red-500 hover:text-red-700">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                             </div>
                             
                             <div class="flex gap-2 mt-4">
@@ -3114,9 +3130,26 @@
                         <!-- 담당자 배정 -->
                         <div>
                             <label class="block text-sm font-medium mb-1">담당자 배정</label>
-                            <select id="ticket-assigned-to" class="w-full px-3 py-2 border rounded">
-                                <option value="">미배정</option>
-                            </select>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="ticket-assigned-search" 
+                                    class="w-full px-3 py-2 border rounded"
+                                    placeholder="담당자 이름 검색 (선택사항)"
+                                    oninput="searchStaffForTicket(this.value)"
+                                    onfocus="showTicketStaffSearchResults()"
+                                    autocomplete="off"
+                                >
+                                <input type="hidden" id="ticket-assigned-to" value="">
+                                <div id="ticket-staff-search-results" class="hidden absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+                            </div>
+                            <div id="selected-ticket-staff-info" class="hidden mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                                <span id="selected-ticket-staff-text"></span>
+                                <button type="button" onclick="clearSelectedTicketStaff()" class="ml-2 text-red-500 hover:text-red-700">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">담당자를 지정하지 않으면 미배정 상태로 생성됩니다.</p>
                         </div>
 
                         <!-- 이미지 첨부 -->
@@ -4806,6 +4839,8 @@ console.log('권한 관리 함수 로드 완료')
         let currentView = 'dashboard'
         let currentAttendanceId = null
         let selectedProcessedMails = []  // 검수 탭 체크박스 선택된 우편물 ID 배열
+        let staffSearchResults = []  // 담당자 검색 결과
+        let staffSearchTimeout = null  // 담당자 검색 디바운스
         
         // 페이지네이션 상태 관리
         const pagination = {
@@ -9705,19 +9740,7 @@ console.log('권한 관리 함수 로드 완료')
         // 티켓 생성 모달
         async function showNewTicketModal() {
             try {
-                // 직원 목록 로드
-                const staffRes = await axios.get(`${API_BASE}/staff`)
-                const staff = staffRes.data.staff || []
-                
-                const staffOptions = staff.map(s => {
-                    let roleText = '직원'
-                    if (s.role === 'admin') roleText = '관리자'
-                    else if (s.role === 'viewer') roleText = '뷰어'
-                    return `<option value="${s.id}">${s.name} (${roleText})</option>`
-                }).join('')
-                document.getElementById('ticket-assigned-to').innerHTML = '<option value="">미배정</option>' + staffOptions
-
-                // 모달 열기
+                // 모달 열기 (담당자는 검색 UI로 선택)
                 document.getElementById('new-ticket-modal').classList.remove('hidden')
             } catch (error) {
                 console.error('티켓 생성 모달 오류:', error)
@@ -9855,6 +9878,103 @@ console.log('권한 관리 함수 로드 완료')
                 loadMatchesForTicket()
             } else {
                 bettingFields.classList.add('hidden')
+            }
+        }
+        
+        // 티켓 모달용 담당자 검색
+        let ticketStaffSearchResults = []
+        let ticketStaffSearchTimeout = null
+        
+        async function searchStaffForTicket(query) {
+            clearTimeout(ticketStaffSearchTimeout)
+            
+            ticketStaffSearchTimeout = setTimeout(async () => {
+                try {
+                    if (!currentStaff) {
+                        console.error('로그인 정보가 없습니다.')
+                        return
+                    }
+                    
+                    const res = await axios.get(`${API_BASE}/staff`)
+                    let allStaff = res.data.staff || []
+                    
+                    // 검색어가 있으면 필터링
+                    if (query && query.trim()) {
+                        const searchTerm = query.toLowerCase()
+                        allStaff = allStaff.filter(staff => 
+                            staff.name.toLowerCase().includes(searchTerm) ||
+                            staff.email.toLowerCase().includes(searchTerm) ||
+                            staff.role.toLowerCase().includes(searchTerm)
+                        )
+                    }
+                    
+                    ticketStaffSearchResults = allStaff
+                    displayTicketStaffSearchResults()
+                } catch (error) {
+                    console.error('담당자 검색 오류:', error)
+                    const resultsDiv = document.getElementById('ticket-staff-search-results')
+                    resultsDiv.innerHTML = '<div class="p-2 text-red-600 text-sm">담당자 목록을 불러올 수 없습니다.</div>'
+                    resultsDiv.classList.remove('hidden')
+                }
+            }, 300)
+        }
+        
+        // 티켓 담당자 검색 결과 표시
+        function displayTicketStaffSearchResults() {
+            const resultsDiv = document.getElementById('ticket-staff-search-results')
+            
+            if (ticketStaffSearchResults.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-2 text-gray-500 text-sm">검색 결과가 없습니다.</div>'
+                resultsDiv.classList.remove('hidden')
+                return
+            }
+            
+            resultsDiv.innerHTML = ticketStaffSearchResults.map(staff => {
+                let roleText = '직원'
+                if (staff.role === 'admin') roleText = '관리자'
+                else if (staff.role === 'viewer') roleText = '뷰어'
+                
+                return `
+                    <div class="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0" onclick="selectStaffForTicket(${staff.id}, '${staff.name.replace(/'/g, "\\'")}', '${roleText}')">
+                        <div class="font-medium">${staff.name}</div>
+                        <div class="text-xs text-gray-500">${staff.email} · ${roleText}</div>
+                    </div>
+                `
+            }).join('')
+            
+            resultsDiv.classList.remove('hidden')
+        }
+        
+        // 티켓 담당자 선택
+        function selectStaffForTicket(id, name, roleText) {
+            document.getElementById('ticket-assigned-to').value = id
+            document.getElementById('ticket-assigned-search').value = ''
+            document.getElementById('ticket-staff-search-results').classList.add('hidden')
+            
+            const infoDiv = document.getElementById('selected-ticket-staff-info')
+            const textSpan = document.getElementById('selected-ticket-staff-text')
+            textSpan.innerHTML = `<i class="fas fa-user-tie mr-1"></i><strong>${name}</strong> (${roleText})`
+            infoDiv.classList.remove('hidden')
+        }
+        
+        // 티켓 담당자 선택 해제
+        function clearSelectedTicketStaff() {
+            document.getElementById('ticket-assigned-to').value = ''
+            document.getElementById('ticket-assigned-search').value = ''
+            document.getElementById('selected-ticket-staff-info').classList.add('hidden')
+            document.getElementById('ticket-staff-search-results').classList.add('hidden')
+        }
+        
+        // 티켓 담당자 검색 결과 표시
+        function showTicketStaffSearchResults() {
+            const input = document.getElementById('ticket-assigned-search')
+            const value = input.value.trim()
+            
+            if (value || ticketStaffSearchResults.length > 0) {
+                searchStaffForTicket(value)
+            } else {
+                // 입력값이 없으면 전체 목록 표시
+                searchStaffForTicket('')
             }
         }
         
@@ -11763,20 +11883,110 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
         
-        // 담당자 목록 로드
+        // 담당자 검색 (검수 모달용)
+        async function searchStaffForInspection(query) {
+            clearTimeout(staffSearchTimeout)
+            
+            staffSearchTimeout = setTimeout(async () => {
+                try {
+                    if (!currentStaff) {
+                        console.error('로그인 정보가 없습니다.')
+                        return
+                    }
+                    
+                    const res = await axios.get(`${API_BASE}/staff`)
+                    let allStaff = res.data.staff || []
+                    
+                    // 검색어가 있으면 필터링
+                    if (query && query.trim()) {
+                        const searchTerm = query.toLowerCase()
+                        allStaff = allStaff.filter(staff => 
+                            staff.name.toLowerCase().includes(searchTerm) ||
+                            staff.email.toLowerCase().includes(searchTerm) ||
+                            staff.role.toLowerCase().includes(searchTerm)
+                        )
+                    }
+                    
+                    staffSearchResults = allStaff
+                    displayStaffSearchResults()
+                } catch (error) {
+                    console.error('담당자 검색 오류:', error)
+                    const resultsDiv = document.getElementById('staff-search-results')
+                    resultsDiv.innerHTML = '<div class="p-2 text-red-600 text-sm">담당자 목록을 불러올 수 없습니다.</div>'
+                    resultsDiv.classList.remove('hidden')
+                }
+            }, 300)
+        }
+        
+        // 담당자 검색 결과 표시
+        function displayStaffSearchResults() {
+            const resultsDiv = document.getElementById('staff-search-results')
+            
+            if (staffSearchResults.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-2 text-gray-500 text-sm">검색 결과가 없습니다.</div>'
+                resultsDiv.classList.remove('hidden')
+                return
+            }
+            
+            resultsDiv.innerHTML = staffSearchResults.map(staff => {
+                let roleText = '직원'
+                if (staff.role === 'admin') roleText = '관리자'
+                else if (staff.role === 'viewer') roleText = '뷰어'
+                
+                return `
+                    <div class="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0" onclick="selectStaffForInspection(${staff.id}, '${staff.name.replace(/'/g, "\\'")}', '${roleText}')">
+                        <div class="font-medium">${staff.name}</div>
+                        <div class="text-xs text-gray-500">${staff.email} · ${roleText}</div>
+                    </div>
+                `
+            }).join('')
+            
+            resultsDiv.classList.remove('hidden')
+        }
+        
+        // 담당자 선택
+        function selectStaffForInspection(id, name, roleText) {
+            document.getElementById('inspection-staff').value = id
+            document.getElementById('inspection-staff-search').value = ''
+            document.getElementById('staff-search-results').classList.add('hidden')
+            
+            const infoDiv = document.getElementById('selected-staff-info')
+            const textSpan = document.getElementById('selected-staff-text')
+            textSpan.innerHTML = `<i class="fas fa-user-tie mr-1"></i><strong>${name}</strong> (${roleText})`
+            infoDiv.classList.remove('hidden')
+        }
+        
+        // 담당자 선택 해제
+        function clearSelectedStaff() {
+            document.getElementById('inspection-staff').value = ''
+            document.getElementById('inspection-staff-search').value = ''
+            document.getElementById('selected-staff-info').classList.add('hidden')
+            document.getElementById('staff-search-results').classList.add('hidden')
+        }
+        
+        // 담당자 검색 결과 표시
+        function showStaffSearchResults() {
+            const input = document.getElementById('inspection-staff-search')
+            const value = input.value.trim()
+            
+            if (value || staffSearchResults.length > 0) {
+                searchStaffForInspection(value)
+            } else {
+                // 입력값이 없으면 전체 목록 표시
+                searchStaffForInspection('')
+            }
+        }
+        
+        // 담당자 목록 로드 (하위 호환성 유지)
         async function loadStaffList() {
             try {
-                const res = await axios.get(`${API_BASE}/staff`)
-                const staffList = res.data.staff || []
+                if (!currentStaff) {
+                    console.error('로그인 정보가 없습니다.')
+                    return
+                }
                 
-                const staffSelect = document.getElementById('inspection-staff')
-                staffSelect.innerHTML = '<option value="">-- 담당자를 선택하세요 --</option>' +
-                    staffList.map(staff => {
-                        let roleText = '직원'
-                        if (staff.role === 'admin') roleText = '관리자'
-                        else if (staff.role === 'viewer') roleText = '뷰어'
-                        return `<option value="${staff.id}">${staff.name} (${roleText})</option>`
-                    }).join('')
+                // 초기 담당자 목록 로드 (검색 UI로 대체됨)
+                await searchStaffForInspection('')
             } catch (error) {
                 console.error('담당자 목록 로드 오류:', error)
             }
