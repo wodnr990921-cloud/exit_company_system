@@ -2825,14 +2825,23 @@
                                 </div>
                             </div>
                             
-                            <!-- 검색 필터 -->
-                            <div class="mb-4">
+                            <!-- 검색 및 날짜 필터 -->
+                            <div class="mb-4 space-y-3">
                                 <div class="relative">
                                     <input type="text" id="match-management-search" 
                                            placeholder="경기 검색 (팀명, 리그명...)" 
                                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                           oninput="filterMatchManagement(this.value)">
+                                           oninput="filterMatchManagement()">
                                     <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                                </div>
+                                
+                                <!-- 날짜 필터 버튼 -->
+                                <div class="flex gap-2 items-center">
+                                    <span class="text-sm text-gray-600 font-medium">기간:</span>
+                                    <button onclick="setMatchDateFilter(2)" id="date-filter-2" class="px-3 py-1 text-sm rounded bg-blue-600 text-white font-medium">2일</button>
+                                    <button onclick="setMatchDateFilter(7)" id="date-filter-7" class="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300">7일</button>
+                                    <button onclick="setMatchDateFilter(30)" id="date-filter-30" class="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300">30일</button>
+                                    <button onclick="setMatchDateFilter(null)" id="date-filter-all" class="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300">전체</button>
                                 </div>
                             </div>
                             
@@ -7645,27 +7654,64 @@ console.log('권한 관리 함수 로드 완료')
 
         // 경기 관리 목록 로드
         let allMatchesForManagement = []
+        let managementDateFilter = 2  // 기본 2일
         
         async function loadMatchManagement() {
             try {
                 const response = await axios.get(`${API_BASE}/betting/matches`)
                 allMatchesForManagement = response.data.matches || []
-                renderMatchManagement(allMatchesForManagement)
+                filterMatchManagement()
             } catch (error) {
                 console.error('경기 관리 목록 로드 오류:', error)
                 document.getElementById('match-management-list').innerHTML = '<p class="text-red-500 text-center py-4">경기 목록을 불러오는데 실패했습니다</p>'
             }
         }
         
-        // 경기 관리 검색 필터
-        function filterMatchManagement(search) {
-            const filtered = allMatchesForManagement.filter(m => {
-                const searchLower = search.toLowerCase()
-                return (m.match_name?.toLowerCase().includes(searchLower) ||
-                        m.home_team?.toLowerCase().includes(searchLower) ||
-                        m.away_team?.toLowerCase().includes(searchLower) ||
-                        m.league?.toLowerCase().includes(searchLower))
+        // 날짜 필터 설정
+        function setMatchDateFilter(days) {
+            managementDateFilter = days
+            
+            // 버튼 스타일 업데이트
+            document.querySelectorAll('[id^="date-filter-"]').forEach(btn => {
+                btn.className = 'px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300'
             })
+            
+            const activeBtn = days === null ? 'date-filter-all' : `date-filter-${days}`
+            document.getElementById(activeBtn).className = 'px-3 py-1 text-sm rounded bg-blue-600 text-white font-medium'
+            
+            filterMatchManagement()
+        }
+        
+        // 경기 관리 검색 필터 (날짜 + 검색어)
+        function filterMatchManagement() {
+            const search = document.getElementById('match-management-search').value
+            const now = new Date()
+            
+            let filtered = allMatchesForManagement
+            
+            // 날짜 필터 적용
+            if (managementDateFilter !== null) {
+                const cutoffDate = new Date(now)
+                cutoffDate.setDate(cutoffDate.getDate() + managementDateFilter)
+                
+                filtered = filtered.filter(m => {
+                    if (!m.match_date) return false
+                    const matchDate = new Date(m.match_date)
+                    return matchDate <= cutoffDate && matchDate >= now
+                })
+            }
+            
+            // 검색어 필터 적용
+            if (search) {
+                const searchLower = search.toLowerCase()
+                filtered = filtered.filter(m => {
+                    return (m.match_name?.toLowerCase().includes(searchLower) ||
+                            m.home_team?.toLowerCase().includes(searchLower) ||
+                            m.away_team?.toLowerCase().includes(searchLower) ||
+                            m.league?.toLowerCase().includes(searchLower))
+                })
+            }
+            
             renderMatchManagement(filtered)
         }
         
@@ -7683,11 +7729,11 @@ console.log('권한 관리 함수 로드 완료')
                 groupedByDate[dateKey].push(m)
             })
             
-            // 날짜순 정렬
+            // 날짜순 정렬 (최신순)
             const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
                 if (a === '날짜 미정') return 1
                 if (b === '날짜 미정') return -1
-                return new Date(a) - new Date(b)
+                return new Date(b) - new Date(a)  // 최신순 (내림차순)
             })
             
             const html = sortedDates.map(dateKey => {
@@ -15583,9 +15629,9 @@ console.log('권한 관리 함수 로드 완료')
                                     'MLB': 'MLB', 'KBO': 'KBO', 'NBA': 'NBA', 'KBL': 'KBL', 'WKBL': 'WKBL', 'KOVO': 'KOVO'
                                 }
                                 
-                                const hasWinDrawLoss = m.home_odds && m.draw_odds && m.away_odds
-                                const hasOverUnder = m.over_line && m.over_odds && m.under_odds
-                                const hasHandicap = m.handicap_line !== null && m.handicap_line !== undefined && m.handicap_home_odds && m.handicap_away_odds
+                                const hasWinDrawLoss = m.home_odds || m.draw_odds || m.away_odds
+                                const hasOverUnder = m.over_line || m.over_odds || m.under_odds
+                                const hasHandicap = (m.handicap_line !== null && m.handicap_line !== undefined) || m.handicap_home_odds || m.handicap_away_odds
                                 
                                 // 상태 표시
                                 const statusLabels = {
@@ -15626,27 +15672,27 @@ console.log('권한 관리 함수 로드 완료')
                                         <td class="px-3 py-2 text-center text-xs">
                                             ${hasWinDrawLoss ? `
                                                 <div class="flex gap-1 justify-center">
-                                                    <span class="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">${m.home_odds}</span>
+                                                    <span class="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">${m.home_odds || '-'}</span>
                                                     <span class="px-1.5 py-0.5 bg-gray-50 text-gray-700 rounded font-medium">${m.draw_odds || '-'}</span>
-                                                    <span class="px-1.5 py-0.5 bg-red-50 text-red-700 rounded font-medium">${m.away_odds}</span>
+                                                    <span class="px-1.5 py-0.5 bg-red-50 text-red-700 rounded font-medium">${m.away_odds || '-'}</span>
                                                 </div>
                                             ` : '<span class="text-gray-400">-</span>'}
                                         </td>
                                         <td class="px-3 py-2 text-center text-xs">
                                             ${hasOverUnder ? `
-                                                <div>${m.over_line}</div>
+                                                <div>${m.over_line || '-'}</div>
                                                 <div class="flex gap-1 justify-center mt-0.5">
-                                                    <span class="px-1.5 py-0.5 bg-green-50 text-green-700 rounded font-medium">O ${m.over_odds}</span>
-                                                    <span class="px-1.5 py-0.5 bg-green-50 text-green-700 rounded font-medium">U ${m.under_odds}</span>
+                                                    <span class="px-1.5 py-0.5 bg-green-50 text-green-700 rounded font-medium">O ${m.over_odds || '-'}</span>
+                                                    <span class="px-1.5 py-0.5 bg-green-50 text-green-700 rounded font-medium">U ${m.under_odds || '-'}</span>
                                                 </div>
                                             ` : '<span class="text-gray-400">-</span>'}
                                         </td>
                                         <td class="px-3 py-2 text-center text-xs">
                                             ${hasHandicap ? `
-                                                <div>${m.handicap_line > 0 ? '+' : ''}${m.handicap_line}</div>
+                                                <div>${m.handicap_line !== null && m.handicap_line !== undefined ? (m.handicap_line > 0 ? '+' : '') + m.handicap_line : '-'}</div>
                                                 <div class="flex gap-1 justify-center mt-0.5">
-                                                    <span class="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-medium">${m.handicap_home_odds}</span>
-                                                    <span class="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-medium">${m.handicap_away_odds}</span>
+                                                    <span class="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-medium">${m.handicap_home_odds || '-'}</span>
+                                                    <span class="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-medium">${m.handicap_away_odds || '-'}</span>
                                                 </div>
                                             ` : '<span class="text-gray-400">-</span>'}
                                         </td>
