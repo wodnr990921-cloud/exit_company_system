@@ -1,499 +1,177 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v60.3
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v61.1
 
-## ✅ 최신 업데이트 (v60.3 - 2026-02-23)
+## ✅ 최신 업데이트 (v61.1 - 2026-02-23)
 
-### 📱 텔레그램 2봇 1채널 시스템 구현 (v60.3)
-- **🎯 Admin Bot (관리자 전용)**:
-  - 봇: @ExitSystem_bot (8482830575:AAGsth2J04_...)
-  - 승인 기능: 인라인 키보드 (✅ 승인 / ❌ 거절 버튼)
-  - 명령어: `/status`, `/pending`, `/transactions`, `/help`
-  - 권한 검증: TELEGRAM_ADMIN_USER_ID로 관리자만 승인 가능
-  - Webhook: `/api/telegram/webhook/admin`
-  
-- **👥 Staff Bot (직원용)**:
-  - 정보 조회 전용 (승인 권한 없음)
-  - 명령어: `/mytickets`, `/price`, `/help`
-  - 가격표 조회: AI 메모리에서 가격 정보 자동 조회
-  - Webhook: `/api/telegram/webhook/staff`
-  
-- **📢 공유 채널 (브로드캐스트)**:
-  - Private 채널에 모든 알림 집중
-  - 두 봇 모두 채널 관리자로 추가
-  - 승인 요청 시 관리자만 버튼 사용 가능
-  - 채널 ID는 `-100`으로 시작 (예: `-1001234567890`)
+### 📱 텔레그램 채널 중심 운영 시스템 (v61.1)
+**모든 기능이 텔레그램 채널에서 직접 작동합니다!**
 
-### 🔧 기술적 구현
-- **Callback Query 처리**:
-  - 인라인 버튼 클릭 → Callback query 수신
-  - 사용자 ID 검증 → 관리자만 승인/거절
-  - 메시지 업데이트: 승인/거절 상태 표시
-  - answerCallbackQuery로 즉시 피드백
+- **🎯 채널 기반 명령어 시스템**:
+  - 채널에서 직접 명령어 입력으로 모든 정보 조회 가능
+  - `/status` - 전체 티켓 현황
+  - `/pending` - 승인 대기 목록
+  - `/transactions` - 오늘의 입출금
+  - `/unconfirmed` - 미확인 입금
+  - `/settle` - 자동 정산 실행
+  - `/bookkeep` - 자동 장부 정리
+  - `/help` - 명령어 도움말
   
-- **환경 변수 (4개)**:
-  - `TELEGRAM_ADMIN_BOT_TOKEN`: Admin Bot 토큰
-  - `TELEGRAM_STAFF_BOT_TOKEN`: Staff Bot 토큰 (새로 생성 필요)
-  - `TELEGRAM_CHANNEL_ID`: 채널 ID (-100으로 시작)
-  - `TELEGRAM_ADMIN_USER_ID`: 관리자 사용자 ID
-  
-- **API 엔드포인트**:
-  - `POST /api/telegram/webhook/admin` - Admin Bot
-  - `POST /api/telegram/webhook/staff` - Staff Bot
-  - `POST /api/telegram/notify` - 채널 알림 전송
+- **🤖 3개 봇 통합 시스템**:
+  - **Admin Bot** (@ExitSystem_bot): `8482830575:AAGsth2J04_JWafIpPJOHPrCvvMc6aF2A6A`
+    - 채널 명령어 처리
+    - 승인/거절 인라인 버튼 (관리자 전용)
+  - **Staff Bot** (@ExitStaff_bot): `8492223729:AAGGbXgRr-Iip_s7utWnF5N_P2UncASa_No`
+    - 직원 정보 조회
+    - 미확인 입금 출처 확인 버튼
+  - **Parser Bot**: `8257328345:AAFggBQxqlaQ8jDTTrhD0kYOVr-1p2sxAK0`
+    - 입출금 메시지 자동 파싱
+    - DB 저장 및 채널 알림
+
+- **📊 자동화 기능**:
+  - 입출금 메시지 실시간 파싱
+  - 자동 정산 (`/settle`)
+  - 자동 장부 정리 (`/bookkeep`)
+  - 미확인 입금 알림 및 출처 확인 버튼
+
+- **🔐 권한 관리**:
+  - 채널 ID: `-1003833345597`
+  - 관리자 ID: `8565387378` (승인/거절 권한)
+  - 직원 ID: `8534363302` (조회 권한)
+
+### 🛠️ 기술적 구현 (v61.1)
+- **채널 포스트 처리**: `update.channel_post` 핸들링
+- **명령어 필터**: `/`로 시작하는 메시지만 처리
+- **OCR 모델 변경**: gpt-4o → gpt-4o-mini (비용 절감, 속도 향상)
+- **환경 변수 (6개)**:
+  ```
+  TELEGRAM_ADMIN_BOT_TOKEN=8482830575:AAGsth2J04_JWafIpPJOHPrCvvMc6aF2A6A
+  TELEGRAM_STAFF_BOT_TOKEN=8492223729:AAGGbXgRr-Iip_s7utWnF5N_P2UncASa_No
+  TELEGRAM_PARSER_BOT_TOKEN=8257328345:AAFggBQxqlaQ8jDTTrhD0kYOVr-1p2sxAK0
+  TELEGRAM_CHANNEL_ID=-1003833345597
+  TELEGRAM_ADMIN_USER_ID=8565387378
+  TELEGRAM_STAFF_USER_IDS=8534363302
+  ```
 
 ### 📋 설정 가이드
-- **TELEGRAM_2BOT_SETUP.md** 참조
-- Staff Bot 생성 방법
-- 채널 생성 및 봇 추가 방법
-- Chat ID 확인 방법 (3가지)
-- Webhook 설정 명령어
-- 테스트 curl 명령어
+**중요**: Cloudflare Pages 환경 변수 설정이 필수입니다!
+- **CLOUDFLARE_ENV_SETUP.md** 참조 (단계별 설정 가이드)
+- **TELEGRAM_AUTOMATION_GUIDE.md** 참조 (자동화 시스템 상세)
+- **CHANNEL_GUIDE.md** 참조 (채널 운영 가이드)
 
-### 🛠️ 파일 변경사항
-- `src/routes/telegram.ts`: 2봇 webhook 분리 (+489 lines)
-- `src/index.tsx`: Bindings 업데이트 (4개 변수)
-- `.dev.vars`: 환경 변수 추가
-- `TELEGRAM_2BOT_SETUP.md`: 상세 설정 가이드 (새 파일)
+### 🚀 빠른 시작
+1. **Cloudflare Pages 환경 변수 설정** (위 6개 변수)
+2. **Admin Bot을 채널에 관리자로 추가**
+3. **웹훅 설정**:
+   ```bash
+   curl -X POST https://api.telegram.org/bot8482830575:AAGsth2J04_JWafIpPJOHPrCvvMc6aF2A6A/setWebhook \
+     -H "Content-Type: application/json" \
+     -d '{"url":"https://exit-company-system-5je.pages.dev/api/telegram/webhook/admin"}'
+   ```
+4. **채널에서 테스트**: `/help` 입력
 
-### 📦 빌드 정보
-- **배포 URL**: https://3b379ab8.exit-company-system-5je.pages.dev
-- **Git 커밋**: b02ffcf
-- **빌드 크기**: 210.97 kB (+4.64 kB from v60.0)
-- **최종 업데이트**: 2026-02-23 15:25 KST
-
----
-
-## ✅ 이전 업데이트 (v60.0 - 2026-02-23)
-
-### 🎯 배팅 관리 대폭 개선 (v60.0)
-- **⚽ 스마트 경기 필터링**:
-  - 배팅 추가 시 당일+이후 경기만 표시 (과거 경기 자동 제외)
-  - 경기 목록 접기/펼치기 UI로 깔끔한 레이아웃
-  - 리그 배지와 포맷된 경기 날짜 표시
-  
-- **🔍 실시간 경기 검색**:
-  - 검색창 추가 (팀명, 리그명으로 자동완성)
-  - 입력 즉시 필터링 (filterMatches 함수)
-  - 검색어 없으면 전체 경기 표시
-  
-- **📊 엑셀 관리 확인**:
-  - 엑셀 업로드/다운로드 기능 이미 구현되어 있음
-  - 양식 다운로드: `/api/betting/matches/template`
-  - 일괄 등록 가능
-
-### 🧠 AI 챗봇 메모리 시스템 (v60.0)
-- **💾 영구 메모리 저장**:
-  - 새 테이블: `ai_memory` (D1 데이터베이스)
-  - 카테고리: 가격/수수료, 배당률, 업무 규정, 일반 정보
-  - 키-값 구조로 유연한 정보 저장
-  
-- **🎓 AI 학습 능력**:
-  - 관리자가 입력한 정보를 AI가 기억
-  - 가격표, 배당률, 정책을 챗봇 응답에 자동 반영
-  - 시스템 프롬프트에 메모리 컨텍스트 포함
-  
-- **⚙️ 메모리 관리 UI**:
-  - 관리자 페이지 → 시스템 설정 탭에 추가
-  - 카테고리별 색상 구분 (가격:녹색, 배당:파랑, 규정:노랑)
-  - 추가/삭제 버튼으로 간편 관리
-  - 수정일 자동 기록
-  
-- **📝 초기 데이터**:
-  - 도서발주, 포인트충전, 배팅수수료, 긴급처리 가격
-  - 축구, 야구, 농구, 배구 배당률 정보
-  - 마이그레이션 시 자동 삽입
-
-### 🛠️ API & 기술적 변경
-- **새 API 엔드포인트**:
-  - `GET /api/ai/memory` - 메모리 목록 조회 (카테고리 필터)
-  - `POST /api/ai/memory` - 메모리 추가/수정
-  - `DELETE /api/ai/memory/:id` - 메모리 삭제
-  
-- **데이터베이스 마이그레이션**:
-  - `0025_create_ai_memory.sql`
-  - 인덱스: `idx_ai_memory_category`, `idx_ai_memory_key`
-  
-- **프론트엔드 함수**:
-  - `loadMatchesForBetting()` - 당일+이후 경기 필터링
-  - `toggleMatchExpand(matchId)` - 경기 카드 접기/펼치기
-  - `filterMatches(query)` - 실시간 검색
-  - `loadAiMemories()`, `addAiMemory()`, `deleteAiMemory(id)` - 메모리 관리
-
-### 📦 빌드 정보
-- **배포 URL**: https://1665e523.exit-company-system-5je.pages.dev
-- **Git 커밋**: 4dec7f9
-- **빌드 크기**: 206.33 kB (+2.04 kB from v59.2)
-- **백업**: exit-company-v59.2-before-major-updates (https://www.genspark.ai/api/files/s/WNoAWsEq)
+### 📦 배포 정보 (v61.1)
+- **Production URL**: https://exit-company-system-5je.pages.dev
+- **Latest Deploy**: https://df69ac6d.exit-company-system-5je.pages.dev
+- **Git 커밋**: da8bbfb (Cloudflare env guide)
+- **빌드 크기**: 221.21 kB
+- **최종 업데이트**: 2026-02-23 15:30 KST
+- **상태**: ⚠️ 환경 변수 설정 필요
 
 ---
 
-## ✅ 이전 업데이트 (v59.2 - 2026-02-23)
+## ✅ 이전 업데이트 (v61.0 - 2026-02-23)
 
-### 🎨 UI/UX 대폭 개선 (v59.2)
-- **🎯 티켓 상세 모달 레이아웃 재설계**:
-  - 회원 정보 → 기본 정보 → OCR 원문 → 요약 순서로 재배치
-  - 상태 변경 컨트롤을 모달 최하단 footer로 이동 (가로 배치)
-  - 댓글/답변을 별도 탭으로 분리 (티켓 정보 | 댓글/답변 | 요청사항)
-  - 각 섹션 명확히 구분되어 가독성 향상
-
-- **✅ 티켓 상태 변경 승인 확인**:
-  - 변경 사항 미리보기 다이얼로그
-  - 승인 후 적용 안내 메시지
-  - 변경 전후 비교 표시
+### 📱 텔레그램 자동화 시스템 구축 (v61.0)
+- **💼 직원 기능 강화**:
+  - `/unconfirmed` 명령어: 미확인 입금 조회
+  - 출처 확인 인라인 버튼 (업무경비, 회원출금, 물품구매, 기타)
+  - 직원 ID 검증 (`TELEGRAM_STAFF_USER_IDS`)
   
-- **🤖 AI 챗봇 항상 표시**:
-  - 모든 페이지에서 우측 하단 플로팅 버튼
-  - 어느 화면에서든 즉시 AI 도움말 접근 가능
-
-## ✅ 최근 업데이트 (v59.1 - 2026-02-23)
-
-### 🎨 UX 개선 (v59.1)
-- **🤖 AI 챗봇 위젯 전역화**:
-  - 모든 화면에서 접근 가능한 플로팅 버튼
-  - 우측 하단 고정 위치 (보라색 그라데이션)
-  - 최소화/닫기 버튼 추가
-  - 스크롤 문제 해결 (고정 높이: 메시지 400px, 전체 600px)
+- **🔄 Parser Bot 통합**:
+  - 입출금 메시지 자동 파싱 (정규식)
+  - 예: "입금 1,000,000원 홍길동" → DB 저장
+  - 실시간 채널 알림
+  - 미확인 입금 자동 감지 및 출처 확인 버튼
   
-- **💬 직원 소통 위젯 분리**:
-  - 티켓 모달 전용으로 변경
-  - 티켓 열 때만 자동 표시
-  - 티켓 닫으면 자동 숨김
-  - 미확인 댓글 수 배지 (빨간색, 애니메이션)
+- **💰 자동 정산 시스템**:
+  - `/api/telegram/auto-settlement` 엔드포인트
+  - 당일 배팅 결과 자동 처리
+  - 당첨금 자동 지급 (포인트 업데이트)
+  - 손실 합산 및 순이익 계산
+  - 채널 알림 (예: 25건 정산, 5,000,000P 지급, 3,000,000P 순이익)
   
-- **📝 가독성 개선**:
-  - 모든 채팅 텍스트 검은색으로 변경
-  - 글씨 두께 일관성 (font-medium)
-  - 메시지 배경색 명확히 구분 (내 메시지: 파란색, 상대방: 흰색)
+- **📚 자동 장부 시스템**:
+  - `/api/telegram/auto-bookkeeping` 엔드포인트
+  - 당일 입출금 요약
+  - 카테고리별 경비 집계
+  - 미확인 입금 알림
+  - 순현금 흐름 계산
+  - 채널 리포트 (예: 10,000,000원 입금, 3,500,000원 출금, 6,500,000원 순증)
 
-### 🔧 기술적 개선
-- 탭 기반 단일 위젯 → 독립적인 두 개 위젯으로 분리
-- 고정 높이 설정으로 스크롤 오버플로우 방지
-- 메시지 영역 자동 스크롤 (scrollTop = scrollHeight)
+### 🐛 버그 수정 (v61.0)
+- **JavaScript 오류 수정**:
+  - `toggleAiWidget is not defined` 해결
+  - `Illegal return statement` 수정
+  - 인라인 onclick 제거, DOMContentLoaded 리스너 추가
+  - `saveAllMatchesBulk` 함수 구조 개선
 
-## ✅ 최근 업데이트 (v59.0 - 2026-02-23)
+### 📦 빌드 정보 (v61.0)
+- **배포 URL**: https://1b7e5e34.exit-company-system-5je.pages.dev
+- **Git 커밋**: 9942f8c (JS 오류 수정)
+- **빌드 크기**: 218.11 kB (+7.14 kB from v60.3)
 
-### 🚀 새로운 기능 (v59.0)
-- **💰 텔레그램 입출금 자동알림 시스템**:
-  - **메시지 파싱**: 은행 입출금 알림 메시지 자동 분석
-    - 패턴: `[입금] 1,000,000원 / 홍길동 / 국민은행 123-45-678901 / 2024.02.23 14:30`
-    - 간단 패턴: `입금 1000000 홍길동`
-  - **자동 회원 매칭**:
-    - 정확한 이름 매칭 (100% 신뢰도)
-    - 부분 이름 매칭 (70% 신뢰도)
-    - 이전 입금 이력 기반 (90% 신뢰도)
-  - **미확인 입금 관리**:
-    - 자동 매칭 제안 (신뢰도 점수 포함)
-    - 수동 회원 검색 및 매칭
-    - 실시간 대기 큐 관리
-  
-- **📊 장부 정리 시스템**:
-  - **거래 분류**: 입금, 출금, 경비 자동 분류
-  - **경비 처리**:
-    - 카테고리별 관리 (사무용품, 공과금, 서비스 수수료, 유지보수 등)
-    - 상세 항목 및 영수증 첨부
-  - **통계 리포트**:
-    - 일일/기간별 입출금 통계
-    - 미확인 입금 수
-    - 승인 대기 건수
-  
-- **✅ 입출금 결재 워크플로우**:
-  - **승인 프로세스**:
-    - 원클릭 승인/거부
-    - 승인 메모 및 거부 사유 기록
-  - **상태 관리**: pending → approved/rejected
-  - **담당자 추적**: 승인자 및 승인 시간 기록
-  
-- **🎯 관리자 페이지 "입출금 관리" 탭**:
-  - 실시간 통계 위젯 (오늘의 입출금, 미확인, 대기중)
-  - 미확인 입금 목록 (자동 제안 포함)
-  - 거래 내역 필터링 (유형, 상태, 기간)
-  - 빠른 승인/거부 버튼
+---
 
-### 🔧 API 엔드포인트
-```bash
-# 텔레그램 메시지 처리
-POST /api/transactions/telegram/process
-Body: { "message": "[입금] 1000000원 / 홍길동 / ...", "message_id": 123 }
+## ✅ 이전 업데이트 (v60.3 - 2026-02-23)
 
-# 미확인 입금 조회
-GET /api/transactions/pending
+### 📱 텔레그램 2봇 1채널 시스템 구현 (v60.3)
+- **Admin Bot**: 승인 기능 (인라인 버튼)
+- **Staff Bot**: 조회 전용
+- **공유 채널**: 모든 알림 집중
+- **문서**: TELEGRAM_2BOT_SETUP.md 생성
 
-# 입금 수동 매칭
-POST /api/transactions/pending/:id/match
-Body: { "member_id": 1, "staff_id": 2 }
-
-# 거래 목록 조회
-GET /api/transactions?type=deposit&status=pending&start_date=2024-02-01&end_date=2024-02-23
-
-# 거래 승인/거부
-POST /api/transactions/:id/approve
-Body: { "staff_id": 1, "memo": "확인 완료" }
-
-POST /api/transactions/:id/reject
-Body: { "staff_id": 1, "reason": "금액 불일치" }
-
-# 경비 등록
-POST /api/transactions/:id/expense
-Body: { "category": "office_supplies", "description": "복사용지", "amount": 50000 }
-
-# 통계 조회
-GET /api/transactions/stats?start_date=2024-02-01&end_date=2024-02-23
-```
-
-### 📋 데이터베이스 스키마
-- **transactions**: 입출금/경비 거래 기록
-  - 거래 유형, 금액, 입금자명, 계좌 정보
-  - 회원 매칭 (자동/수동), 신뢰도 점수
-  - 분류 (회원입금, 환불, 당첨금, 경비 등)
-  - 결재 상태 및 담당자
-  
-- **pending_deposits**: 미확인 입금 대기 큐
-  - 자동 매칭 제안 (회원 ID, 사유, 점수)
-  - 처리 상태 및 담당자
-  
-- **expense_items**: 경비 상세 항목
-  - 카테고리/하위분류
-  - 설명 및 영수증
-
-### 🎯 사용 시나리오
-1. **입금 알림 수신**:
-   - 텔레그램 봇이 은행 알림 수신
-   - `/api/transactions/telegram/process`로 자동 처리
-   - 회원 자동 매칭 (신뢰도 계산)
-   
-2. **미확인 입금 처리**:
-   - 관리자 페이지 → 입출금 관리 탭
-   - 미확인 입금 목록 확인
-   - 자동 제안 확인 또는 수동 검색
-   - 매칭 완료
-   
-3. **거래 승인**:
-   - 거래 내역에서 대기중인 항목 확인
-   - 승인/거부 버튼 클릭
-   - 메모/사유 입력
-   
-4. **장부 정리**:
-   - 기간별 거래 조회
-   - 경비 항목 분류
-   - 통계 리포트 확인
-
-### 🐛 버그 수정
-- **JavaScript await SyntaxError**: `cancelCommentEdit` 함수 내 await 위치 수정
-
-## ✅ 최근 업데이트 (v58.1 - 2026-02-23)
-
-### 🚀 새로운 기능 (v58.1)
-- **⚙️ 시스템 설정 콘솔**:
-  - 관리자 페이지에 "시스템 설정" 탭 추가
-  - **API 키 관리**:
-    - OpenAI API Key 설정
-    - Telegram Bot Token 및 Chat ID 설정
-  - **정산 파라미터 설정**:
-    - 정산 수수료율 (%)
-    - 최소/최대 정산 금액 (원)
-    - 포인트 전환 비율
-  - **알림 설정**:
-    - 티켓 생성/배정 알림 토글
-    - 승인 요청 알림 토글
-    - 배팅 결과 알림 토글
-  - **시스템 설정**:
-    - 자동 마감 시간 설정
-    - 티켓 자동 삭제 기간 (일)
-    - 세션 타임아웃 (분)
-  - **API**: `GET/POST /api/settings`로 설정 조회/저장
-  - **데이터베이스**: D1 settings 테이블에 저장
-
-### 🔧 설정 관리 방법
-1. 관리자 페이지 접속
-2. "시스템 설정" 탭 클릭
-3. 각 설정값 입력
-4. "저장" 버튼 클릭
-
-**Note**: API 키는 프로덕션에서는 Cloudflare 환경변수로 관리하고, 개발 환경에서는 `.dev.vars` 파일 사용을 권장합니다.
-
-## ✅ 최근 업데이트 (v58.0 - 2026-02-23)
-
-### 🚀 새로운 기능 (v58.0)
-- **🤖 OpenAI GPT-4o-mini 통합 AI 챗봇**:
-  - Function Calling을 활용한 실시간 데이터 조회
-  - 회원 검색, 티켓 통계, 도서 검색, 메뉴얼 검색
-  - 자연어 기반 질의응답
-  - 티켓 상세 모달 내 우측 하단 위젯
-  
-- **📱 텔레그램 봇 자동화 시스템**:
-  - Webhook 기반 실시간 알림
-  - 명령어: `/start`, `/status`, `/mytickets`, `/help`
-  - 알림 종류:
-    - 신규 티켓 생성 알림
-    - 티켓 배정 알림
-    - 승인 요청 알림
-    - 배팅 결과 알림
-    - 정산 완료 알림
-  
-- **💬 직원 소통 채널**:
-  - 메신저 스타일 내부 댓글 시스템
-  - 자신의 댓글 우측 정렬 (파란색)
-  - 다른 직원 댓글 좌측 정렬 (흰색)
-  
-- **✍️ 회원 답변 리치 텍스트 에디터**:
-  - Quill 에디터 통합
-  - 굵게, 밑줄, 이탤릭, 목록 지원
-  - 답변 템플릿 (주문, 포인트, 배팅 등)
-  - 저장된 답변 카드 형태로 표시
-
-### 🔧 환경 설정
-
-#### OpenAI API Key 설정
-```bash
-# 로컬 개발
-cp .dev.vars.example .dev.vars
-# .dev.vars 파일에 OPENAI_API_KEY 입력
-
-# 프로덕션
-wrangler secret put OPENAI_API_KEY
-# API Key 입력
-```
-
-#### 텔레그램 봇 설정
-1. **봇 생성**: @BotFather에게 `/newbot` 명령
-2. **토큰 받기**: Bot Token 저장
-3. **Chat ID 확인**: 봇에게 메시지 전송 후 `https://api.telegram.org/bot<TOKEN>/getUpdates`에서 확인
-
-```bash
-# 로컬 개발
-# .dev.vars 파일에 추가
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
-
-# 프로덕션
-wrangler secret put TELEGRAM_BOT_TOKEN
-wrangler secret put TELEGRAM_CHAT_ID
-```
-
-4. **Webhook 설정**:
-```bash
-curl -X POST https://your-domain.pages.dev/api/telegram/setup-webhook \
-  -H "Content-Type: application/json" \
-  -d '{"webhook_url": "https://your-domain.pages.dev/api/telegram/webhook"}'
-```
-
-#### 알림 전송 예시
-```bash
-curl -X POST https://your-domain.pages.dev/api/telegram/notify \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "ticket_created",
-    "data": {
-      "ticket_number": "T-2024-001",
-      "title": "도서 발주",
-      "member_name": "홍길동",
-      "ticket_type": "ORDER"
-    }
-  }'
-```
-
-## ✅ 최근 업데이트 (v57.1 - 2026-02-20)
-
-### 🐛 버그 수정 (v57.1)
-- **📅 시즌 계산 수정**:
-  - 2026년 2월 → 2024/2025 시즌 = 2024로 올바르게 계산
-  - 자동 시즌 계산 로직: 8월 이후 = 현재 연도, 그 외 = 이전 연도
-- **🏆 경기명 약자 표시**:
-  - 팀 이름 대신 약자 사용 (예: `WES vs FUL` 대신 `West Ham vs Fulham`)
-  - API에서 제공하는 `team.code` 사용
-  - code가 없으면 팀 이름 앞 3글자 사용
-
-## ✅ 최근 업데이트 (v57.0 - 2026-02-20)
-
-### 🚀 새로운 기능 (v57.0)
-- **🤖 GitHub Actions 자동 경기 일정 등록**:
-  - api-sport.io API와 연동하여 자동으로 경기 일정 및 배당 정보 수집
-  - **매일 오전 9시 KST**: 하루치 경기 일정 등록
-  - **매일 오후 9시 KST**: 다음날 경기 일정 등록
-  - **매주 목요일 오후 2시 KST**: 일주일치 경기 일정 일괄 등록
-  - 16개 리그 지원 (EPL, La Liga, Serie A, Bundesliga, Ligue 1, K League, MLB, KBO, NBA, WNBA, KBL, WKBL, V-League, NFL, NHL)
-  - 승무패, 오버/언더, 핸디캡 배당 자동 수집
-- **🔐 JWT 기반 API 인증 시스템**:
-  - `POST /api/auth/generate-api-token`: 관리자 전용 API 토큰 생성
-  - `verifyToken` 미들웨어: 보안 API 엔드포인트 보호
-  - `POST /api/betting/matches/bulk`: 인증 필수 (Bearer Token)
-- **📊 자동화 스크립트**:
-  - `scripts/fetch-matches.js`: api-sport.io 데이터 변환 및 일괄 업로드
-  - `.github/workflows/match-scheduler.yml`: 스케줄 실행 워크플로우
-
-## ✅ 최근 업데이트 (v56.10 - 2026-02-19)
-
-### 🐛 버그 수정 (v56.10)
-- **📅 경기 등록 날짜/시간 오류 수정**: 
-  - HTML5 `datetime-local` 형식 (`YYYY-MM-DDTHH:mm`)을 SQLite DATETIME 형식 (`YYYY-MM-DD HH:mm:ss`)으로 변환
-  - 경기 등록 시 날짜가 1970년 1월 1일로 고정되던 문제 해결
-  - 경기 관리 모든 입력 지점에서 날짜 변환 적용 완료
-
-### 🐛 버그 수정 (v56.9)
-- **🚨 무한 로딩 오류 수정**: `memberSearchTimeout` 변수 중복 선언으로 인한 SyntaxError 수정
-- **🔍 이미지 디버깅 로그 추가**: 티켓 상세 모달에서 `image_keys` 파싱 과정을 콘솔에 상세 로깅
-
-### 🐛 버그 수정 (v56.8)
-- **💾 담당자 배정 500 오류 수정**: `tickets` 테이블에 `metadata` 컬럼 추가 (마이그레이션 0021)
-
-## 🌐 배포 정보
-- **Production URL**: https://exit-company-system.pages.dev/
-- **Latest Preview**: https://5b2b9525.exit-company-system-5je.pages.dev/
-- **Build Size**: 161.43 kB (동일)
-- **Build Time**: 907 ms
-- **Deploy Time**: 13.5 sec
-- **Last Updated**: 2026-02-20 07:15 UTC
-- **GitHub Actions**: ✅ 자동 경기 일정 등록 활성화
+---
 
 ## 🎯 주요 기능 (완료)
 
-### ✅ v54.0 - 삭제 기능 (관리자 전용)
-- **티켓 삭제**: 관리자만 티켓 및 관련 댓글·아이템 CASCADE 삭제 가능
-- **회원 삭제**: 관리자만 회원 삭제 가능 (단, 관련 티켓이 없을 때만)
-- **권한 확인**: `hasPermission('delete')` 함수로 권한 검증
-- **UI 표시**: Admin 역할일 때만 빨간 휴지통 버튼 표시
+### ✅ 텔레그램 통합 시스템
+- **채널 기반 운영**: 모든 명령어를 채널에서 실행
+- **3개 봇 시스템**: Admin, Staff, Parser Bot
+- **자동화**: 입출금 파싱, 정산, 장부 정리
+- **권한 관리**: 관리자/직원 역할 분리
+- **실시간 알림**: 티켓, 승인, 배팅, 정산 알림
 
-### ✅ v53.0 - 답변 상세 모달 (경량화)
-- **답변 목록 클릭**: 클릭 시 상세 내용을 모달로 표시
-- **티켓 열기 버튼**: 답변과 연결된 티켓을 바로 열 수 있는 버튼 추가
-- **레터헤드 적용**: 답변 출력 시 로컬 이미지 사용 (`/exit-letterhead-response.png`)
-- **템플릿 자동 적용**: 
-  ```
-  (사서함주소)-(수용번호) (회원 성명)님 귀하
-  ex) 남인천 사서함 343-1111 김테스트님 귀하
-  
-  [답변 내용]
-  ```
+### ✅ AI 시스템
+- **GPT-4o-mini 챗봇**: 실시간 데이터 조회 (Function Calling)
+- **AI 메모리**: 가격표, 배당률, 규정 학습
+- **OCR**: 우편물 이미지 자동 인식 (gpt-4o-mini)
 
 ### ✅ 티켓 관리
 - **티켓 생성**: ORDER, INQUIRY, PURCHASE_ORDER, POINT_ADJUSTMENT, MEMBER, MAIL_INSPECTION, BETTING
 - **티켓 상세**: 댓글, 이미지, 상태 변경, 담당자 배정
-- **티켓 삭제**: 관리자 전용, CASCADE 삭제 (댓글·아이템 포함)
+- **티켓 삭제**: 관리자 전용, CASCADE 삭제
 
 ### ✅ 회원 관리
 - **회원 등록/수정**: 성명, 수용번호, 교정시설, 사서함 주소, 입금자명
 - **포인트 관리**: 일반 포인트, 배팅 포인트 조정
-- **회원 삭제**: 관리자 전용 (관련 티켓 없을 때만)
-
-### ✅ 우편물 관리
-- **우편 등록/검수**: 이미지 업로드, 검수 상태 관리
-- **일괄 배당**: 여러 우편물을 한 번에 직원에게 배당
-- **티켓 자동 생성**: 우편물 검수 후 티켓 자동 생성
-
-### ✅ 답변 관리
-- **답변 입력**: 회원별 답변 작성
-- **답변 출력**: 레터헤드 포함 인쇄용 템플릿
-- **답변 통계**: 일별, 주별, 월별 통계
+- **회원 삭제**: 관리자 전용
 
 ### ✅ 배팅 시스템
-- **경기 관리**: 경기 일정, 배당률 설정
+- **경기 관리**: 경기 일정, 배당률 설정 (자동 수집)
 - **배팅 폴더**: 단폴더/조합폴더 생성
 - **포인트 관리**: 배팅 포인트 충전/차감
+- **자동 정산**: 배팅 결과 자동 처리
+
+### ✅ 입출금 관리
+- **자동 파싱**: 텔레그램 메시지 자동 분석
+- **회원 매칭**: 자동/수동 매칭 (신뢰도 점수)
+- **승인 워크플로우**: pending → approved/rejected
+- **장부 정리**: 카테고리별 경비 관리
 
 ### ✅ 관리자 기능
 - **직원 관리**: 직원 등록/수정/삭제, 역할 관리
 - **승인 관리**: 회원 정보 수정 승인
 - **통계 리포트**: 대시보드, 일일 마감 리포트
-- **활동 로그**: 시스템 활동 기록 조회
+- **시스템 설정**: API 키, 정산 파라미터, 알림 설정
 
 ## 🔐 권한 매트릭스
 
@@ -512,8 +190,8 @@ curl -X POST https://your-domain.pages.dev/api/telegram/notify \
 | 배팅 관리 | ❌ | ✅ | ✅ |
 | 직원 관리 | ❌ | ❌ | ✅ |
 | 승인 관리 | ❌ | ❌ | ✅ |
-| 통계 리포트 | ✅ (제한) | ✅ | ✅ |
-| **API 토큰 생성** | ❌ | ❌ | ✅ |
+| 텔레그램 승인 | ❌ | ❌ | ✅ |
+| API 토큰 생성 | ❌ | ❌ | ✅ |
 
 ## 🏗️ 기술 스택
 - **Backend**: Hono + TypeScript
@@ -522,16 +200,15 @@ curl -X POST https://your-domain.pages.dev/api/telegram/notify \
 - **Storage**: Cloudflare R2
 - **Deployment**: Cloudflare Pages
 - **Automation**: GitHub Actions (경기 일정 자동 등록)
+- **AI**: OpenAI GPT-4o-mini
+- **Bot**: Telegram Bot API (3개 봇)
 - **Authentication**: JWT (API 토큰 기반)
 - **Dev Tools**: Wrangler, Vite, PM2
 
-## 📊 데이터베이스 스키마
-
-### 주요 테이블
+## 📊 주요 데이터베이스 테이블
 - `members`: 회원 정보
 - `tickets`: 티켓 정보
 - `ticket_comments`: 티켓 댓글
-- `ticket_items`: 티켓 아이템 (도서 등)
 - `mail_items`: 우편물 정보
 - `responses`: 답변 정보
 - `staff`: 직원 정보
@@ -539,10 +216,18 @@ curl -X POST https://your-domain.pages.dev/api/telegram/notify \
 - `betting_matches`: 배팅 경기
 - `bet_folders`: 배팅 폴더
 - `bets`: 배팅 내역
+- `transactions`: 입출금/경비 거래
+- `pending_deposits`: 미확인 입금 대기 큐
+- `ai_memory`: AI 챗봇 메모리
+- `settings`: 시스템 설정
 
 ## 🚀 로컬 개발
 
 ```bash
+# 환경 변수 설정
+cp .dev.vars.example .dev.vars
+# .dev.vars 파일 편집
+
 # 개발 서버 시작 (PM2)
 npm run build
 pm2 start ecosystem.config.cjs
@@ -563,7 +248,7 @@ npm run db:reset
 ```bash
 # Cloudflare Pages 배포
 npm run build
-npx wrangler pages deploy dist --project-name exit-company-system
+npx wrangler pages deploy dist
 
 # D1 프로덕션 마이그레이션
 npm run db:migrate:prod
@@ -571,15 +256,43 @@ npm run db:migrate:prod
 
 ## 🐛 알려진 이슈
 
-없음 (v56.1 기준)
+### ⚠️ 환경 변수 미설정 (v61.1)
+**증상**: Admin Bot이 채널에서 응답하지 않음 (500 에러)
+
+**원인**: Cloudflare Pages 환경 변수 미설정
+
+**해결 방법**:
+1. Cloudflare Pages 대시보드 접속
+2. exit-company-system 프로젝트 선택
+3. Settings → Environment variables
+4. 다음 6개 변수를 Production 환경에 추가:
+   ```
+   TELEGRAM_ADMIN_BOT_TOKEN=8482830575:AAGsth2J04_JWafIpPJOHPrCvvMc6aF2A6A
+   TELEGRAM_STAFF_BOT_TOKEN=8492223729:AAGGbXgRr-Iip_s7utWnF5N_P2UncASa_No
+   TELEGRAM_PARSER_BOT_TOKEN=8257328345:AAFggBQxqlaQ8jDTTrhD0kYOVr-1p2sxAK0
+   TELEGRAM_CHANNEL_ID=-1003833345597
+   TELEGRAM_ADMIN_USER_ID=8565387378
+   TELEGRAM_STAFF_USER_IDS=8534363302
+   ```
+5. Retry deployment 또는 재배포
+6. 채널에서 `/help` 테스트
+
+**상세 가이드**: `CLOUDFLARE_ENV_SETUP.md` 참조
 
 ## 📝 다음 단계 권장사항
 
-1. **모바일 UX 최적화**: 반응형 디자인 개선
-2. **고급 검색/필터**: 다중 조건 검색 기능
-3. **알림 시스템**: 실시간 알림 (Cloudflare Durable Objects)
-4. **엑셀 내보내기**: 통계/리포트 엑셀 다운로드
-5. **권한 세분화**: 더 상세한 권한 관리 (RBAC)
+1. **✅ 환경 변수 설정**: Cloudflare Pages 환경 변수 추가 (최우선)
+2. **텔레그램 봇 테스트**: 채널에서 모든 명령어 테스트
+3. **자동화 스케줄**: GitHub Actions로 정산/장부 자동 실행
+4. **모바일 UX 최적화**: 반응형 디자인 개선
+5. **알림 확장**: 더 많은 이벤트에 대한 알림 추가
+
+## 📚 문서
+
+- **CLOUDFLARE_ENV_SETUP.md**: 환경 변수 설정 가이드 ⭐
+- **TELEGRAM_AUTOMATION_GUIDE.md**: 자동화 시스템 상세
+- **CHANNEL_GUIDE.md**: 채널 운영 가이드
+- **TELEGRAM_2BOT_SETUP.md**: 2봇 설정 가이드
 
 ## 📞 지원
 
@@ -588,6 +301,6 @@ npm run db:migrate:prod
 
 ---
 
-**Last Updated**: 2026-02-19  
-**Version**: v56.1  
-**Status**: ✅ Production Ready
+**Last Updated**: 2026-02-23  
+**Version**: v61.1  
+**Status**: ⚠️ 환경 변수 설정 필요 (CLOUDFLARE_ENV_SETUP.md 참조)
