@@ -167,6 +167,14 @@ const openAIFunctions = [
       },
       required: ['keyword']
     }
+  },
+  {
+    name: 'getPendingDeposits',
+    description: '미확인 입금 내역을 조회합니다. 회원 매칭이 필요한 입금 건을 확인할 수 있습니다.',
+    parameters: {
+      type: 'object',
+      properties: {}
+    }
   }
 ]
 
@@ -276,6 +284,30 @@ const availableFunctions = {
     }
     
     return results
+  },
+  
+  // 미확인 입금 조회
+  getPendingDeposits: async (db: D1Database) => {
+    try {
+      const result = await db.prepare(`
+        SELECT 
+          pd.*,
+          t.amount, t.depositor_name, t.bank_name, t.account_number, t.transaction_date,
+          m.name as suggested_member_name,
+          m.inmate_number as suggested_inmate_number
+        FROM pending_deposits pd
+        JOIN transactions t ON pd.transaction_id = t.id
+        LEFT JOIN members m ON pd.suggested_member_id = m.id
+        WHERE pd.status = 'pending'
+        ORDER BY pd.created_at DESC
+        LIMIT 20
+      `).all()
+      
+      return result.results || []
+    } catch (error) {
+      console.error('미확인 입금 조회 오류:', error)
+      return []
+    }
   }
 }
 
@@ -313,6 +345,7 @@ ai.post('/chat', async (c: Context) => {
 - 업무 절차 안내 (도서 발주, 포인트 조정, 배팅 처리 등)
 - 가격 및 수수료 안내
 - 티켓 통계 및 현황 제공
+- 미확인 입금 내역 조회
 
 사용 가능한 함수:
 - searchMember: 회원 검색
@@ -320,6 +353,7 @@ ai.post('/chat', async (c: Context) => {
 - getTicketStats: 티켓 통계
 - searchBooks: 도서 검색
 - searchManual: 메뉴얼 검색
+- getPendingDeposits: 미확인 입금 조회
 
 현재 티켓 컨텍스트:
 ${ticket_context ? JSON.stringify(ticket_context, null, 2) : '없음'}${memoryContext}
@@ -330,6 +364,7 @@ ${ticket_context ? JSON.stringify(ticket_context, null, 2) : '없음'}${memoryCo
 - 필요 시 함수를 호출하여 정확한 데이터 제공
 - 저장된 메모리 정보를 우선적으로 활용
 - 새로운 가격표나 중요 정보를 알려주면 기억하겠다고 응답
+- 미확인 입금 조회 시 입금자명, 금액, 날짜, 제안된 회원 정보를 상세히 표시
 - 마크다운 형식으로 깔끔하게 구조화`
 
     // 대화 히스토리 구성
@@ -372,6 +407,9 @@ ${ticket_context ? JSON.stringify(ticket_context, null, 2) : '없음'}${memoryCo
           break
         case 'searchManual':
           functionResult = availableFunctions.searchManual(functionArgs.keyword)
+          break
+        case 'getPendingDeposits':
+          functionResult = await availableFunctions.getPendingDeposits(db)
           break
         default:
           functionResult = { error: 'Unknown function' }

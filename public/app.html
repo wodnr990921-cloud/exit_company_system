@@ -6485,7 +6485,7 @@ console.log('권한 관리 함수 로드 완료')
 
         // 리그 목록 로드 및 필터
         let selectedLeague = 'all'
-        let allMatchesCache = []
+        // allMatchesCache는 아래에서 전역으로 선언됨 (중복 제거)
 
         async function loadLeagueList() {
             try {

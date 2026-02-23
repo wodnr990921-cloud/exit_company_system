@@ -145,47 +145,62 @@ function parseBankNotification(message: string): {
   return null
 }
 
-// 입금자명으로 회원 자동 매칭
+// 입금자명으로 회원 자동 매칭 (회원정보의 depositor_name 필드 사용)
 async function matchMemberByName(db: D1Database, depositorName: string): Promise<{
   memberId: number | null
   confidence: number
   reason: string
 }> {
   try {
-    // 정확한 이름 매칭
-    const exactMatch = await db.prepare(`
-      SELECT id, name FROM members 
-      WHERE name = ? OR inmate_number LIKE ?
+    // 1순위: 회원 테이블의 depositor_name 정확 매칭
+    const exactDepositorMatch = await db.prepare(`
+      SELECT id, name, depositor_name FROM members 
+      WHERE depositor_name = ?
       LIMIT 1
-    `).bind(depositorName, `%${depositorName}%`).first()
+    `).bind(depositorName).first()
     
-    if (exactMatch) {
+    if (exactDepositorMatch) {
       return {
-        memberId: exactMatch.id as number,
+        memberId: exactDepositorMatch.id as number,
         confidence: 1.0,
-        reason: `정확한 이름 매칭: ${exactMatch.name}`
+        reason: `등록된 입금자명 정확 매칭: ${exactDepositorMatch.depositor_name} (회원: ${exactDepositorMatch.name})`
       }
     }
     
-    // 부분 매칭 (성씨 + 이름 일부)
-    const partialMatch = await db.prepare(`
+    // 2순위: 회원 이름과 정확 매칭 (입금자명 미등록 회원용)
+    const exactNameMatch = await db.prepare(`
       SELECT id, name FROM members 
-      WHERE name LIKE ?
+      WHERE name = ?
+      LIMIT 1
+    `).bind(depositorName).first()
+    
+    if (exactNameMatch) {
+      return {
+        memberId: exactNameMatch.id as number,
+        confidence: 0.8,
+        reason: `회원명 정확 매칭: ${exactNameMatch.name} (입금자명 미등록)`
+      }
+    }
+    
+    // 3순위: depositor_name 부분 매칭
+    const partialDepositorMatch = await db.prepare(`
+      SELECT id, name, depositor_name FROM members 
+      WHERE depositor_name LIKE ?
       LIMIT 5
     `).bind(`%${depositorName}%`).all()
     
-    if (partialMatch.results && partialMatch.results.length > 0) {
-      const firstMatch = partialMatch.results[0]
+    if (partialDepositorMatch.results && partialDepositorMatch.results.length > 0) {
+      const firstMatch = partialDepositorMatch.results[0]
       return {
         memberId: firstMatch.id as number,
         confidence: 0.7,
-        reason: `부분 매칭: ${firstMatch.name} (${partialMatch.results.length}개 후보)`
+        reason: `입금자명 부분 매칭: ${firstMatch.depositor_name} (회원: ${firstMatch.name}, ${partialDepositorMatch.results.length}개 후보)`
       }
     }
     
-    // 최근 입금 이력 기반 매칭
+    // 4순위: 이전 입금 이력 기반 매칭
     const recentMatch = await db.prepare(`
-      SELECT m.id, m.name, COUNT(*) as count
+      SELECT m.id, m.name, m.depositor_name, COUNT(*) as count
       FROM transactions t
       JOIN members m ON t.member_id = m.id
       WHERE t.depositor_name = ? AND t.transaction_type = 'deposit'
@@ -198,7 +213,7 @@ async function matchMemberByName(db: D1Database, depositorName: string): Promise
       return {
         memberId: recentMatch.id as number,
         confidence: 0.9,
-        reason: `이전 입금 이력 기반: ${recentMatch.name} (${recentMatch.count}회)`
+        reason: `이전 입금 이력 기반: ${recentMatch.name} (${recentMatch.count}회, 입금자: ${recentMatch.depositor_name || depositorName})`
       }
     }
     
