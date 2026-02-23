@@ -15271,7 +15271,18 @@ console.log('권한 관리 함수 로드 완료')
             
             try {
                 const response = await axios.get(`${API_BASE}/tickets/${currentTicketId}/comments`)
-                const allComments = response.data.comments || []
+                console.log('📥 API 응답:', response.data)
+                
+                // API 응답 구조 확인: response.data가 배열인지, {comments: []} 형태인지
+                let allComments = []
+                if (Array.isArray(response.data)) {
+                    allComments = response.data
+                } else if (response.data.comments && Array.isArray(response.data.comments)) {
+                    allComments = response.data.comments
+                } else {
+                    console.warn('⚠️ 예상치 못한 응답 구조:', response.data)
+                }
+                
                 // internal 타입만 필터링
                 const comments = allComments.filter(c => c.comment_type === 'internal')
                 
@@ -15281,6 +15292,7 @@ console.log('권한 관리 함수 로드 완료')
                 updateUnreadBadge(comments)
             } catch (error) {
                 console.error('직원 댓글 로드 오류:', error)
+                console.error('에러 상세:', error.response?.data)
             }
         }
         
