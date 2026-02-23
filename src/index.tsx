@@ -30,6 +30,8 @@ type Bindings = {
   TELEGRAM_STAFF_BOT_TOKEN: string
   TELEGRAM_CHANNEL_ID: string
   TELEGRAM_ADMIN_USER_ID: string
+  TELEGRAM_STAFF_USER_IDS: string
+  TELEGRAM_PARSER_BOT_TOKEN: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()

@@ -7,6 +7,8 @@ type Bindings = {
   TELEGRAM_STAFF_BOT_TOKEN: string
   TELEGRAM_CHANNEL_ID: string
   TELEGRAM_ADMIN_USER_ID: string
+  TELEGRAM_STAFF_USER_IDS: string
+  TELEGRAM_PARSER_BOT_TOKEN: string
 }
 
 const telegram = new Hono<{ Bindings: Bindings }>()
@@ -119,6 +121,39 @@ telegram.post('/webhook/staff', async (c: Context) => {
     const update = await c.req.json()
     console.log('📱 [Staff Bot] Webhook:', update)
     
+    const db = c.env.DB
+    const staffBotToken = c.env.TELEGRAM_STAFF_BOT_TOKEN
+    const staffUserIds = c.env.TELEGRAM_STAFF_USER_IDS?.split(',') || []
+    
+    // Callback query 처리 (인라인 버튼)
+    if (update.callback_query) {
+      const callbackQuery = update.callback_query
+      const chatId = callbackQuery.message.chat.id.toString()
+      const userId = callbackQuery.from.id.toString()
+      const data = callbackQuery.data
+      
+      // 직원 권한 확인
+      if (!staffUserIds.includes(userId)) {
+        await fetch(`https://api.telegram.org/bot${staffBotToken}/answerCallbackQuery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callback_query_id: callbackQuery.id,
+            text: '❌ 권한이 없습니다.',
+            show_alert: true
+          })
+        })
+        return c.json({ ok: true })
+      }
+      
+      // 출처 확인 처리
+      if (data.startsWith('source_')) {
+        await handleSourceConfirmation(db, staffBotToken, chatId, data, callbackQuery, userId)
+      }
+      
+      return c.json({ ok: true })
+    }
+    
     const message = update.message
     if (!message || !message.text) {
       return c.json({ ok: true })
@@ -127,13 +162,11 @@ telegram.post('/webhook/staff', async (c: Context) => {
     const chatId = message.chat.id.toString()
     const text = message.text
     const username = message.from.username || message.from.first_name
-    
-    const staffBotToken = c.env.TELEGRAM_STAFF_BOT_TOKEN
-    const db = c.env.DB
+    const userId = message.from.id.toString()
     
     // 명령어 처리
     if (text.startsWith('/')) {
-      await handleStaffCommand(staffBotToken, chatId, text, username, db)
+      await handleStaffCommand(staffBotToken, chatId, text, username, db, userId, staffUserIds)
     } else {
       // 일반 메시지는 AI에게 전달
       const reply = `받은 메시지: "${text}"\n\nAI 챗봇 기능은 웹에서 이용해주세요: https://exit-company-system-5je.pages.dev`
@@ -198,17 +231,38 @@ async function handleAdminCommand(botToken: string, chatId: string, command: str
 }
 
 // Staff 명령어 처리
-async function handleStaffCommand(botToken: string, chatId: string, command: string, username: string, db: D1Database) {
+async function handleStaffCommand(
+  botToken: string, 
+  chatId: string, 
+  command: string, 
+  username: string, 
+  db: D1Database,
+  userId: string,
+  staffUserIds: string[]
+) {
   const [cmd, ...args] = command.split(' ')
+  
+  // 권한 확인
+  if (!staffUserIds.includes(userId)) {
+    await sendTelegramMessage(botToken, chatId, '❌ 권한이 없습니다.')
+    return
+  }
   
   switch (cmd) {
     case '/start':
       await sendTelegramMessage(botToken, chatId, 
         `안녕하세요 ${username}님! 👋\n\n*EXIT COMPANY 직원 봇*입니다.\n\n사용 가능한 명령어:\n` +
+        `/unconfirmed - 미확인 입금 조회\n` +
         `/mytickets - 내 담당 티켓\n` +
         `/price - 가격표 조회\n` +
         `/help - 도움말`
       )
+      break
+      
+    case '/unconfirmed':
+      const unconfirmed = await getUnconfirmedDeposits(db)
+      const unconfirmedMsg = formatUnconfirmedDeposits(unconfirmed)
+      await sendTelegramMessage(botToken, chatId, unconfirmedMsg)
       break
       
     case '/mytickets':
@@ -225,6 +279,7 @@ async function handleStaffCommand(botToken: string, chatId: string, command: str
       await sendTelegramMessage(botToken, chatId, 
         `*직원 명령어*\n\n` +
         `/start - 봇 시작\n` +
+        `/unconfirmed - 미확인 입금 조회\n` +
         `/mytickets - 내 담당 티켓\n` +
         `/price - 가격표 조회\n` +
         `/help - 이 도움말`
@@ -490,6 +545,110 @@ function formatTransactionsMessage(transactions: any[]) {
   return message
 }
 
+// 미확인 입금 조회
+async function getUnconfirmedDeposits(db: D1Database) {
+  const result = await db.prepare(`
+    SELECT * FROM transactions 
+    WHERE type = 'deposit' 
+    AND status = 'pending'
+    AND (member_id IS NULL OR member_name IS NULL)
+    ORDER BY created_at DESC 
+    LIMIT 10
+  `).all()
+  
+  return result.results || []
+}
+
+// 출처 확인 안되는 출금 조회
+async function getUnconfirmedWithdrawals(db: D1Database) {
+  const result = await db.prepare(`
+    SELECT * FROM transactions 
+    WHERE type = 'withdraw' 
+    AND status = 'pending'
+    AND (source IS NULL OR source = '')
+    ORDER BY created_at DESC 
+    LIMIT 10
+  `).all()
+  
+  return result.results || []
+}
+
+// 출처 확인 처리
+async function handleSourceConfirmation(
+  db: D1Database,
+  botToken: string,
+  chatId: string,
+  data: string,
+  callbackQuery: any,
+  userId: string
+) {
+  try {
+    // data format: source_{transactionId}_{source}
+    const parts = data.split('_')
+    const transactionId = parts[1]
+    const source = parts.slice(2).join('_')
+    
+    // DB 업데이트
+    await db.prepare(`
+      UPDATE transactions 
+      SET source = ?, 
+          updated_at = CURRENT_TIMESTAMP,
+          updated_by = ?
+      WHERE id = ?
+    `).bind(source, userId, transactionId).run()
+    
+    // 콜백 쿼리 응답
+    await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        callback_query_id: callbackQuery.id,
+        text: `✅ 출처를 "${source}"로 등록했습니다.`,
+        show_alert: false
+      })
+    })
+    
+    // 메시지 업데이트
+    const originalText = callbackQuery.message.text
+    const updatedText = originalText + `\n\n✅ *출처 확인됨*: ${source}\n담당자: <@${userId}> (${new Date().toLocaleString('ko-KR')})`
+    
+    await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: callbackQuery.message.message_id,
+        text: updatedText,
+        parse_mode: 'Markdown'
+      })
+    })
+  } catch (error) {
+    console.error('출처 확인 처리 오류:', error)
+  }
+}
+
+// 미확인 입금 포맷
+function formatUnconfirmedDeposits(deposits: any[]) {
+  if (deposits.length === 0) {
+    return '✅ 미확인 입금이 없습니다.'
+  }
+  
+  let message = '💳 *미확인 입금 내역*\n\n'
+  deposits.forEach((d: any, idx: number) => {
+    message += `${idx + 1}. 💰 ${Number(d.amount).toLocaleString()}원\n`
+    message += `   입금자: ${d.depositor_name || '미확인'}\n`
+    message += `   시간: ${new Date(d.created_at).toLocaleString('ko-KR')}\n`
+    if (d.memo) {
+      message += `   메모: ${d.memo}\n`
+    }
+    message += `\n`
+  })
+  
+  message += `\n📝 회원 매칭은 웹에서 처리해주세요.`
+  
+  return message
+}
+
 function formatPriceMessage(prices: any[]) {
   if (prices.length === 0) {
     return '📋 등록된 가격표가 없습니다.'
@@ -532,6 +691,298 @@ telegram.post('/setup-webhook', async (c: Context) => {
     return c.json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
+    }, 500)
+  }
+})
+
+// 파서 봇 Webhook (입출금 자동 파싱)
+telegram.post('/webhook/parser', async (c: Context) => {
+  try {
+    const update = await c.req.json()
+    console.log('📱 [Parser Bot] Webhook:', update)
+    
+    const message = update.message || update.channel_post
+    if (!message || !message.text) {
+      return c.json({ ok: true })
+    }
+    
+    const text = message.text
+    const db = c.env.DB
+    const adminBotToken = c.env.TELEGRAM_ADMIN_BOT_TOKEN
+    const channelId = c.env.TELEGRAM_CHANNEL_ID
+    
+    // 입출금 메시지 파싱
+    const parsed = parseTransactionMessage(text)
+    
+    if (parsed) {
+      // DB에 저장
+      const result = await saveTransaction(db, parsed)
+      
+      // 채널에 알림
+      if (result.success) {
+        let notification = `${parsed.type === 'deposit' ? '💵' : '💸'} *${parsed.type === 'deposit' ? '입금' : '출금'} 감지*\n\n`
+        notification += `금액: ${Number(parsed.amount).toLocaleString()}원\n`
+        notification += `${parsed.type === 'deposit' ? '입금자' : '출금자'}: ${parsed.name}\n`
+        notification += `시간: ${new Date().toLocaleString('ko-KR')}\n`
+        
+        if (parsed.type === 'deposit' && !parsed.member_id) {
+          notification += `\n⚠️ *미확인 입금* - 회원 매칭 필요`
+        }
+        
+        if (parsed.type === 'withdraw' && !parsed.source) {
+          notification += `\n⚠️ *출처 미확인* - 출금 사유 확인 필요\n\n`
+          
+          // 직원에게 출처 확인 버튼 제공
+          const keyboard = createInlineKeyboard([
+            [
+              { text: '💼 업무 경비', callback_data: `source_${result.id}_업무경비` },
+              { text: '🏦 회원 출금', callback_data: `source_${result.id}_회원출금` }
+            ],
+            [
+              { text: '📦 물품 구매', callback_data: `source_${result.id}_물품구매` },
+              { text: '🔧 기타', callback_data: `source_${result.id}_기타` }
+            ]
+          ])
+          
+          await sendTelegramMessage(adminBotToken, channelId, notification, { reply_markup: keyboard })
+          return c.json({ ok: true, saved: true, needs_source: true })
+        }
+        
+        await sendTelegramMessage(adminBotToken, channelId, notification)
+        return c.json({ ok: true, saved: true })
+      }
+    }
+    
+    return c.json({ ok: true, parsed: false })
+  } catch (error) {
+    console.error('[Parser Bot] Webhook 오류:', error)
+    return c.json({ ok: false, error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+  }
+})
+
+// 입출금 메시지 파싱
+function parseTransactionMessage(text: string): {
+  type: 'deposit' | 'withdraw',
+  amount: number,
+  name: string,
+  bank?: string,
+  account?: string,
+  memo?: string,
+  member_id?: number,
+  source?: string
+} | null {
+  try {
+    // 입금 패턴: "입금 1,000,000원 홍길동 (국민은행)"
+    const depositPattern = /입금[\\s]*([\\d,]+)[원]?[\\s]*([\\w가-힣]+)/i
+    const depositMatch = text.match(depositPattern)
+    
+    if (depositMatch) {
+      const amount = parseInt(depositMatch[1].replace(/,/g, ''))
+      const name = depositMatch[2]
+      
+      return {
+        type: 'deposit',
+        amount,
+        name,
+        memo: text
+      }
+    }
+    
+    // 출금 패턴: "출금 500,000원 김철수"
+    const withdrawPattern = /출금[\\s]*([\\d,]+)[원]?[\\s]*([\\w가-힣]+)/i
+    const withdrawMatch = text.match(withdrawPattern)
+    
+    if (withdrawMatch) {
+      const amount = parseInt(withdrawMatch[1].replace(/,/g, ''))
+      const name = withdrawMatch[2]
+      
+      return {
+        type: 'withdraw',
+        amount,
+        name,
+        memo: text
+      }
+    }
+    
+    return null
+  } catch (error) {
+    console.error('파싱 오류:', error)
+    return null
+  }
+}
+
+// 거래 저장
+async function saveTransaction(db: D1Database, data: any) {
+  try {
+    const result = await db.prepare(`
+      INSERT INTO transactions (
+        type, amount, member_name, bank, account_number, 
+        memo, status, source, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).bind(
+      data.type,
+      data.amount,
+      data.name,
+      data.bank || null,
+      data.account || null,
+      data.memo || null,
+      'pending',
+      data.source || null
+    ).run()
+    
+    return {
+      success: true,
+      id: result.meta.last_row_id
+    }
+  } catch (error) {
+    console.error('거래 저장 오류:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+// 자동 정산 API
+telegram.post('/auto-settlement', async (c: Context) => {
+  try {
+    const db = c.env.DB
+    const adminBotToken = c.env.TELEGRAM_ADMIN_BOT_TOKEN
+    const channelId = c.env.TELEGRAM_CHANNEL_ID
+    
+    // 오늘 정산 대상 배팅 조회
+    const bettings = await db.prepare(`
+      SELECT b.*, m.name as member_name
+      FROM betting_folders b
+      LEFT JOIN members m ON b.member_id = m.id
+      WHERE DATE(b.created_at) = DATE('now')
+      AND b.status IN ('win', 'lose')
+      AND b.settled = 0
+    `).all()
+    
+    let totalWin = 0
+    let totalLose = 0
+    let settledCount = 0
+    
+    for (const bet of (bettings.results || [])) {
+      const amount = Number(bet.bet_amount)
+      
+      if (bet.status === 'win') {
+        const winAmount = amount * (bet.total_odds || 1)
+        totalWin += winAmount
+        
+        // 포인트 지급
+        await db.prepare(`
+          UPDATE members 
+          SET points = points + ?
+          WHERE id = ?
+        `).bind(winAmount, bet.member_id).run()
+      } else {
+        totalLose += amount
+      }
+      
+      // 정산 완료 표시
+      await db.prepare(`
+        UPDATE betting_folders 
+        SET settled = 1, settled_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(bet.id).run()
+      
+      settledCount++
+    }
+    
+    // 채널에 정산 결과 알림
+    let message = `💰 *자동 정산 완료*\n\n`
+    message += `📊 정산 건수: ${settledCount}건\n`
+    message += `✅ 당첨금 지급: ${totalWin.toLocaleString()}P\n`
+    message += `📉 낙첨 회수: ${totalLose.toLocaleString()}P\n`
+    message += `📈 순수익: ${(totalLose - totalWin).toLocaleString()}P\n`
+    message += `\n⏰ ${new Date().toLocaleString('ko-KR')}`
+    
+    await sendTelegramMessage(adminBotToken, channelId, message)
+    
+    return c.json({
+      success: true,
+      settled_count: settledCount,
+      total_win: totalWin,
+      total_lose: totalLose,
+      net_profit: totalLose - totalWin
+    })
+  } catch (error) {
+    console.error('자동 정산 오류:', error)
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, 500)
+  }
+})
+
+// 장부 정리 API
+telegram.post('/auto-bookkeeping', async (c: Context) => {
+  try {
+    const db = c.env.DB
+    const adminBotToken = c.env.TELEGRAM_ADMIN_BOT_TOKEN
+    const channelId = c.env.TELEGRAM_CHANNEL_ID
+    
+    // 오늘 입출금 내역 정리
+    const transactions = await db.prepare(`
+      SELECT * FROM transactions
+      WHERE DATE(created_at) = DATE('now')
+      ORDER BY created_at DESC
+    `).all()
+    
+    let totalDeposit = 0
+    let totalWithdraw = 0
+    let unconfirmedDeposit = 0
+    let expenseByCategory: any = {}
+    
+    for (const trans of (transactions.results || [])) {
+      const amount = Number(trans.amount)
+      
+      if (trans.type === 'deposit') {
+        totalDeposit += amount
+        if (trans.status === 'pending' || !trans.member_id) {
+          unconfirmedDeposit += amount
+        }
+      } else if (trans.type === 'withdraw') {
+        totalWithdraw += amount
+        const category = trans.source || '미분류'
+        expenseByCategory[category] = (expenseByCategory[category] || 0) + amount
+      }
+    }
+    
+    // 장부 정리 리포트
+    let message = `📚 *일일 장부 정리*\n\n`
+    message += `📅 ${new Date().toLocaleDateString('ko-KR')}\n\n`
+    message += `💵 총 입금: ${totalDeposit.toLocaleString()}원\n`
+    message += `💸 총 출금: ${totalWithdraw.toLocaleString()}원\n`
+    message += `📊 순 현금흐름: ${(totalDeposit - totalWithdraw).toLocaleString()}원\n`
+    
+    if (unconfirmedDeposit > 0) {
+      message += `\n⚠️ 미확인 입금: ${unconfirmedDeposit.toLocaleString()}원\n`
+    }
+    
+    if (Object.keys(expenseByCategory).length > 0) {
+      message += `\n💼 *경비 내역*:\n`
+      for (const [category, amount] of Object.entries(expenseByCategory)) {
+        message += `  • ${category}: ${(amount as number).toLocaleString()}원\n`
+      }
+    }
+    
+    await sendTelegramMessage(adminBotToken, channelId, message)
+    
+    return c.json({
+      success: true,
+      total_deposit: totalDeposit,
+      total_withdraw: totalWithdraw,
+      unconfirmed_deposit: unconfirmedDeposit,
+      expense_by_category: expenseByCategory
+    })
+  } catch (error) {
+    console.error('장부 정리 오류:', error)
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, 500)
   }
 })
