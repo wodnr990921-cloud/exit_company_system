@@ -7908,6 +7908,10 @@ console.log('권한 관리 함수 로드 완료')
                 
                 for (const row of matchRows) {
                     const matchId = row.dataset.matchId
+                    if (!matchId) {
+                        console.warn('경기 행에 data-match-id가 없습니다', row)
+                        continue
+                    }
                     const isNew = matchId.startsWith('new-')
                     
                     const getFieldValue = (field) => {
