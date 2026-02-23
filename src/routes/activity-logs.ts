@@ -6,10 +6,37 @@ type Bindings = {
 
 const activityLogs = new Hono<{ Bindings: Bindings }>()
 
+// 테이블 초기화 함수
+async function initActivityLogsTable(db: D1Database) {
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        staff_id INTEGER,
+        action TEXT NOT NULL,
+        action_description TEXT,
+        entity_type TEXT,
+        entity_id INTEGER,
+        details TEXT,
+        ip_address TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run()
+    
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_activity_logs_staff ON activity_logs(staff_id)').run()
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action)').run()
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_activity_logs_date ON activity_logs(created_at)').run()
+  } catch (error) {
+    console.error('활동 로그 테이블 초기화 오류:', error)
+  }
+}
+
 // 활동 로그 조회
 activityLogs.get('/', async (c) => {
   try {
     const { DB } = c.env
+    await initActivityLogsTable(DB)
+    
     const { start_date, end_date, staff_id, action } = c.req.query()
 
     let query = `
@@ -111,6 +138,8 @@ activityLogs.post('/', async (c) => {
 activityLogs.get('/stats', async (c) => {
   try {
     const { DB } = c.env
+    await initActivityLogsTable(DB)
+    
     const { start_date, end_date } = c.req.query()
 
     const result = await DB.prepare(`
