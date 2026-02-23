@@ -502,6 +502,9 @@
                 <button id="admin-nav-mobile" onclick="showView('admin'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
                     <i class="fas fa-user-shield mr-3 w-5"></i>관리자
                 </button>
+                <button id="settings-nav-mobile" onclick="showView('settings'); toggleMobileMenu()" class="mobile-nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 hidden">
+                    <i class="fas fa-cog mr-3 w-5"></i>환경설정
+                </button>
             </nav>
         </div>
 
@@ -529,6 +532,9 @@
                     </button>
                     <button id="admin-nav" onclick="showView('admin')" class="nav-item px-4 py-3 rounded-t-lg hidden">
                         <i class="fas fa-user-shield mr-2"></i>관리자
+                    </button>
+                    <button id="settings-nav" onclick="showView('settings')" class="nav-item px-4 py-3 rounded-t-lg hidden">
+                        <i class="fas fa-cog mr-2"></i>환경설정
                     </button>
                 </div>
             </div>
@@ -1093,6 +1099,9 @@
                         <button onclick="showAdminTab('activity-log')" id="admin-tab-activity-log" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
                             <i class="fas fa-history mr-2"></i>활동 로그
                         </button>
+                        <button onclick="showAdminTab('settings')" id="admin-tab-settings" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
+                            <i class="fas fa-cog mr-2"></i>시스템 설정
+                        </button>
                     </div>
                 </div>
 
@@ -1393,6 +1402,146 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 시스템 설정 탭 -->
+                <div id="admin-settings-tab" class="admin-tab-content hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- API 설정 -->
+                        <div class="card">
+                            <h3 class="text-lg font-bold mb-4"><i class="fas fa-key mr-2"></i>API 키 설정</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">OpenAI API Key</label>
+                                    <input type="password" id="setting-openai-key" class="w-full px-3 py-2 border rounded" placeholder="sk-...">
+                                    <p class="text-xs text-gray-500 mt-1">AI 챗봇에 사용됩니다</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Telegram Bot Token</label>
+                                    <input type="password" id="setting-telegram-token" class="w-full px-3 py-2 border rounded" placeholder="123456:ABC-DEF...">
+                                    <p class="text-xs text-gray-500 mt-1">텔레그램 알림에 사용됩니다</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Telegram Chat ID</label>
+                                    <input type="text" id="setting-telegram-chat-id" class="w-full px-3 py-2 border rounded" placeholder="-1001234567890">
+                                    <p class="text-xs text-gray-500 mt-1">알림을 받을 그룹/채널 ID</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 정산 설정 -->
+                        <div class="card">
+                            <h3 class="text-lg font-bold mb-4"><i class="fas fa-calculator mr-2"></i>정산 설정</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">정산 수수료 (%)</label>
+                                    <input type="number" id="setting-commission-rate" class="w-full px-3 py-2 border rounded" placeholder="10" step="0.01" min="0" max="100">
+                                    <p class="text-xs text-gray-500 mt-1">배팅 정산 시 적용되는 수수료율</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">최소 정산 금액 (원)</label>
+                                    <input type="number" id="setting-min-settlement" class="w-full px-3 py-2 border rounded" placeholder="10000" step="1000" min="0">
+                                    <p class="text-xs text-gray-500 mt-1">정산 가능한 최소 금액</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">최대 정산 금액 (원)</label>
+                                    <input type="number" id="setting-max-settlement" class="w-full px-3 py-2 border rounded" placeholder="5000000" step="10000" min="0">
+                                    <p class="text-xs text-gray-500 mt-1">1회 정산 가능한 최대 금액</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">포인트 전환 비율</label>
+                                    <input type="number" id="setting-point-conversion-rate" class="w-full px-3 py-2 border rounded" placeholder="1.0" step="0.01" min="0">
+                                    <p class="text-xs text-gray-500 mt-1">1원당 포인트 (예: 1.0 = 1원 = 1포인트)</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 알림 설정 -->
+                        <div class="card">
+                            <h3 class="text-lg font-bold mb-4"><i class="fas fa-bell mr-2"></i>알림 설정</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium">티켓 생성 알림</label>
+                                        <p class="text-xs text-gray-500">새 티켓 생성 시 알림</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="setting-notify-ticket-created" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium">티켓 배정 알림</label>
+                                        <p class="text-xs text-gray-500">티켓 배정 시 알림</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="setting-notify-ticket-assigned" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium">승인 요청 알림</label>
+                                        <p class="text-xs text-gray-500">승인 요청 시 알림</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="setting-notify-approval-request" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-sm font-medium">배팅 결과 알림</label>
+                                        <p class="text-xs text-gray-500">배팅 결과 확정 시 알림</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="setting-notify-betting-result" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 시스템 설정 -->
+                        <div class="card">
+                            <h3 class="text-lg font-bold mb-4"><i class="fas fa-sliders-h mr-2"></i>시스템 설정</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">자동 마감 시간</label>
+                                    <input type="time" id="setting-auto-closing-time" class="w-full px-3 py-2 border rounded" placeholder="23:59">
+                                    <p class="text-xs text-gray-500 mt-1">매일 자동으로 마감 처리할 시간</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">티켓 자동 삭제 기간 (일)</label>
+                                    <input type="number" id="setting-ticket-retention" class="w-full px-3 py-2 border rounded" placeholder="365" min="0">
+                                    <p class="text-xs text-gray-500 mt-1">완료 후 티켓 보관 기간 (0 = 삭제 안 함)</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">세션 타임아웃 (분)</label>
+                                    <input type="number" id="setting-session-timeout" class="w-full px-3 py-2 border rounded" placeholder="60" min="5">
+                                    <p class="text-xs text-gray-500 mt-1">자동 로그아웃 시간</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 저장 버튼 -->
+                    <div class="card mt-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-600">마지막 저장: <span id="settings-last-saved" class="font-medium">-</span></p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="loadSettings()" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
+                                    <i class="fas fa-sync mr-2"></i>새로고침
+                                </button>
+                                <button onclick="saveSettings()" class="btn btn-primary">
+                                    <i class="fas fa-save mr-2"></i>저장
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -1500,6 +1649,333 @@
                         <div class="flex justify-end space-x-2 mt-6">
                             <button onclick="closeNewMatchModal()" class="btn btn-secondary">취소</button>
                             <button onclick="createMatch()" class="btn btn-primary">등록</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 환경설정 뷰 -->
+        <div id="settings-view" class="view-content hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold"><i class="fas fa-cog mr-2"></i>환경설정</h2>
+                <button onclick="saveAllSettings()" class="btn btn-primary">
+                    <i class="fas fa-save mr-2"></i>전체 저장
+                </button>
+            </div>
+
+            <!-- 탭 메뉴 -->
+            <div class="card mb-6">
+                <div class="flex gap-2 border-b overflow-x-auto">
+                    <button onclick="showSettingsTab('api')" id="settings-tab-api" class="px-4 py-3 border-b-2 border-blue-500 text-blue-600 font-medium whitespace-nowrap">
+                        <i class="fas fa-plug mr-2"></i>API 키
+                    </button>
+                    <button onclick="showSettingsTab('settlement')" id="settings-tab-settlement" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300 whitespace-nowrap">
+                        <i class="fas fa-calculator mr-2"></i>정산 설정
+                    </button>
+                    <button onclick="showSettingsTab('notification')" id="settings-tab-notification" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300 whitespace-nowrap">
+                        <i class="fas fa-bell mr-2"></i>알림 설정
+                    </button>
+                    <button onclick="showSettingsTab('general')" id="settings-tab-general" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300 whitespace-nowrap">
+                        <i class="fas fa-sliders-h mr-2"></i>일반 설정
+                    </button>
+                </div>
+            </div>
+
+            <!-- API 키 탭 -->
+            <div id="settings-api-tab" class="settings-tab-content">
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-key mr-2"></i>API 키 관리</h3>
+                    <p class="text-sm text-gray-600 mb-4">⚠️ API 키는 암호화되어 저장됩니다. 보안에 주의하세요.</p>
+                    
+                    <div class="space-y-4">
+                        <!-- OpenAI API Key -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-robot text-blue-600 mr-2"></i>OpenAI API Key
+                            </label>
+                            <div class="flex gap-2">
+                                <input 
+                                    type="password" 
+                                    id="setting-openai_api_key" 
+                                    class="flex-1 px-3 py-2 border rounded" 
+                                    placeholder="sk-..."></input>
+                                <button onclick="togglePasswordVisibility('setting-openai_api_key')" class="btn btn-secondary">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">AI 챗봇에 사용됩니다 (GPT-4o-mini)</p>
+                        </div>
+
+                        <!-- Telegram Bot Token -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fab fa-telegram text-blue-500 mr-2"></i>Telegram Bot Token
+                            </label>
+                            <div class="flex gap-2">
+                                <input 
+                                    type="password" 
+                                    id="setting-telegram_bot_token" 
+                                    class="flex-1 px-3 py-2 border rounded" 
+                                    placeholder="123456:ABC-DEF..."></input>
+                                <button onclick="togglePasswordVisibility('setting-telegram_bot_token')" class="btn btn-secondary">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">@BotFather에서 발급받은 봇 토큰</p>
+                        </div>
+
+                        <!-- Telegram Chat ID -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fab fa-telegram text-blue-500 mr-2"></i>Telegram Chat ID
+                            </label>
+                            <input 
+                                type="text" 
+                                id="setting-telegram_chat_id" 
+                                class="w-full px-3 py-2 border rounded" 
+                                placeholder="123456789">
+                            <p class="text-xs text-gray-500 mt-1">알림을 받을 채팅방 ID</p>
+                        </div>
+
+                        <!-- API-Sport Key -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-futbol text-green-600 mr-2"></i>API-Sport.io API Key
+                            </label>
+                            <div class="flex gap-2">
+                                <input 
+                                    type="password" 
+                                    id="setting-api_sport_key" 
+                                    class="flex-1 px-3 py-2 border rounded" 
+                                    placeholder="API Key">
+                                <button onclick="togglePasswordVisibility('setting-api_sport_key')" class="btn btn-secondary">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">경기 일정 자동 수집에 사용</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t flex gap-2">
+                        <button onclick="testTelegramConnection()" class="btn btn-success">
+                            <i class="fas fa-paper-plane mr-2"></i>텔레그램 연결 테스트
+                        </button>
+                        <button onclick="testOpenAIConnection()" class="btn btn-success">
+                            <i class="fas fa-robot mr-2"></i>OpenAI 연결 테스트
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 정산 설정 탭 -->
+            <div id="settings-settlement-tab" class="settings-tab-content hidden">
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-calculator mr-2"></i>정산 모듈 설정</h3>
+                    
+                    <div class="space-y-4">
+                        <!-- 배팅 수수료율 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-trophy text-yellow-600 mr-2"></i>배팅 수수료율 (%)
+                            </label>
+                            <div class="flex gap-2 items-center">
+                                <input 
+                                    type="number" 
+                                    id="setting-betting_commission_rate" 
+                                    class="w-32 px-3 py-2 border rounded" 
+                                    min="0" 
+                                    max="100" 
+                                    step="0.1">
+                                <span class="text-sm text-gray-600">%</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">당첨금에서 차감되는 수수료 비율</p>
+                        </div>
+
+                        <!-- 도서 발주 수수료 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-book text-blue-600 mr-2"></i>도서 발주 수수료 (P)
+                            </label>
+                            <div class="flex gap-2 items-center">
+                                <input 
+                                    type="number" 
+                                    id="setting-book_order_commission" 
+                                    class="w-32 px-3 py-2 border rounded" 
+                                    min="0" 
+                                    step="100">
+                                <span class="text-sm text-gray-600">포인트</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">도서 실비에 추가되는 고정 수수료</p>
+                        </div>
+
+                        <!-- 포인트 환전 비율 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-coins text-green-600 mr-2"></i>포인트 환전 비율
+                            </label>
+                            <div class="flex gap-2 items-center">
+                                <span class="text-sm text-gray-600">1P =</span>
+                                <input 
+                                    type="number" 
+                                    id="setting-point_conversion_rate" 
+                                    class="w-32 px-3 py-2 border rounded" 
+                                    min="0" 
+                                    step="0.1">
+                                <span class="text-sm text-gray-600">원</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">포인트 충전/환전 시 적용 비율</p>
+                        </div>
+
+                        <!-- 긴급 처리 수수료 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-fire text-red-600 mr-2"></i>긴급 처리 수수료 (P)
+                            </label>
+                            <div class="flex gap-2 items-center">
+                                <input 
+                                    type="number" 
+                                    id="setting-urgent_processing_fee" 
+                                    class="w-32 px-3 py-2 border rounded" 
+                                    min="0" 
+                                    step="100">
+                                <span class="text-sm text-gray-600">포인트</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">긴급 우선순위 티켓 처리 시 추가 수수료</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t">
+                        <button onclick="resetSettlementSettings()" class="btn btn-danger">
+                            <i class="fas fa-undo mr-2"></i>기본값으로 초기화
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 알림 설정 탭 -->
+            <div id="settings-notification-tab" class="settings-tab-content hidden">
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-bell mr-2"></i>알림 설정</h3>
+                    
+                    <div class="space-y-4">
+                        <!-- 전체 알림 활성화 -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <div>
+                                <label class="font-medium">
+                                    <i class="fas fa-bell text-blue-600 mr-2"></i>텔레그램 알림 활성화
+                                </label>
+                                <p class="text-xs text-gray-500 mt-1">모든 텔레그램 알림을 켜거나 끕니다</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setting-notification_enabled" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
+                        <!-- 티켓 생성 알림 -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <div>
+                                <label class="font-medium">신규 티켓 생성 알림</label>
+                                <p class="text-xs text-gray-500 mt-1">티켓이 생성되면 텔레그램으로 알림</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setting-notification_ticket_created" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
+                        <!-- 티켓 배정 알림 -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <div>
+                                <label class="font-medium">티켓 배정 알림</label>
+                                <p class="text-xs text-gray-500 mt-1">담당자가 배정되면 알림</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setting-notification_ticket_assigned" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
+                        <!-- 승인 요청 알림 -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <div>
+                                <label class="font-medium">승인 요청 알림</label>
+                                <p class="text-xs text-gray-500 mt-1">포인트/주문 승인 요청 시 알림</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setting-notification_approval_request" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
+                        <!-- 배팅 결과 알림 -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <div>
+                                <label class="font-medium">배팅 결과 알림</label>
+                                <p class="text-xs text-gray-500 mt-1">배팅 당첨/낙첨 결과 알림</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setting-notification_betting_result" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 일반 설정 탭 -->
+            <div id="settings-general-tab" class="settings-tab-content hidden">
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-sliders-h mr-2"></i>일반 설정</h3>
+                    
+                    <div class="space-y-4">
+                        <!-- 시스템 이름 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-building mr-2"></i>시스템 이름
+                            </label>
+                            <input 
+                                type="text" 
+                                id="setting-system_name" 
+                                class="w-full px-3 py-2 border rounded" 
+                                placeholder="EXIT COMPANY">
+                        </div>
+
+                        <!-- 영업 시간 -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">
+                                    <i class="fas fa-clock mr-2"></i>영업 시작 시간
+                                </label>
+                                <input 
+                                    type="time" 
+                                    id="setting-service_start_time" 
+                                    class="w-full px-3 py-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">
+                                    <i class="fas fa-clock mr-2"></i>영업 종료 시간
+                                </label>
+                                <input 
+                                    type="time" 
+                                    id="setting-service_end_time" 
+                                    class="w-full px-3 py-2 border rounded">
+                            </div>
+                        </div>
+
+                        <!-- 일일 최대 티켓 수 -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-ticket-alt mr-2"></i>일일 최대 티켓 수
+                            </label>
+                            <input 
+                                type="number" 
+                                id="setting-max_ticket_per_day" 
+                                class="w-full px-3 py-2 border rounded" 
+                                min="0" 
+                                step="10">
+                            <p class="text-xs text-gray-500 mt-1">0 = 무제한</p>
                         </div>
                     </div>
                 </div>
@@ -4242,6 +4718,8 @@ console.log('권한 관리 함수 로드 완료')
                 loadPendingModifications()
             } else if (tabName === 'activity-log') {
                 initActivityLogDates()
+            } else if (tabName === 'settings') {
+                loadSettings()
             }
         }
 
@@ -8760,10 +9238,9 @@ console.log('권한 관리 함수 로드 완료')
             await saveResponseEdit(commentId)
         }
         
-        function cancelCommentEdit(commentId, originalContent) {
-            editingCommentId = null
-            cancelResponseEdit(commentId)
-        }
+        // 답변 템플릿 삽입 (기존 함수, 하위 호환성 유지)
+        function insertTemplate() {
+            // response 템플릿으로 리다이렉트
             const templateSelect = document.getElementById('comment-template')
             const responseTemplateSelect = document.getElementById('response-template')
             
@@ -8787,6 +9264,8 @@ console.log('권한 관리 함수 로드 완료')
         
         async function cancelCommentEdit(commentId, originalContent) {
             editingCommentId = null
+            cancelResponseEdit(commentId)
+        }
             await loadTicketComments(currentTicketId)
         }
 
@@ -13803,6 +14282,120 @@ console.log('권한 관리 함수 로드 완료')
             }
             
             document.getElementById('response-preview').innerHTML = preview
+        }
+
+        // ========================================
+        // 시스템 설정 관리
+        // ========================================
+        
+        // 설정 로드
+        async function loadSettings() {
+            try {
+                const response = await axios.get(`${API_BASE}/settings`)
+                const settings = response.data
+                
+                // API 키 설정
+                document.getElementById('setting-openai-key').value = settings.openai_key || ''
+                document.getElementById('setting-telegram-token').value = settings.telegram_token || ''
+                document.getElementById('setting-telegram-chat-id').value = settings.telegram_chat_id || ''
+                
+                // 정산 설정
+                document.getElementById('setting-commission-rate').value = settings.commission_rate || 10
+                document.getElementById('setting-min-settlement').value = settings.min_settlement || 10000
+                document.getElementById('setting-max-settlement').value = settings.max_settlement || 5000000
+                document.getElementById('setting-point-conversion-rate').value = settings.point_conversion_rate || 1.0
+                
+                // 알림 설정
+                document.getElementById('setting-notify-ticket-created').checked = settings.notify_ticket_created !== false
+                document.getElementById('setting-notify-ticket-assigned').checked = settings.notify_ticket_assigned !== false
+                document.getElementById('setting-notify-approval-request').checked = settings.notify_approval_request !== false
+                document.getElementById('setting-notify-betting-result').checked = settings.notify_betting_result !== false
+                
+                // 시스템 설정
+                document.getElementById('setting-auto-closing-time').value = settings.auto_closing_time || '23:59'
+                document.getElementById('setting-ticket-retention').value = settings.ticket_retention || 365
+                document.getElementById('setting-session-timeout').value = settings.session_timeout || 60
+                
+                // 마지막 저장 시간
+                if (settings.updated_at) {
+                    const date = new Date(settings.updated_at)
+                    document.getElementById('settings-last-saved').textContent = date.toLocaleString('ko-KR')
+                } else {
+                    document.getElementById('settings-last-saved').textContent = '저장 기록 없음'
+                }
+                
+                showToast('설정을 불러왔습니다', 'success')
+            } catch (error) {
+                console.error('설정 로드 오류:', error)
+                // 오류 시 기본값 설정
+                document.getElementById('setting-commission-rate').value = 10
+                document.getElementById('setting-min-settlement').value = 10000
+                document.getElementById('setting-max-settlement').value = 5000000
+                document.getElementById('setting-point-conversion-rate').value = 1.0
+                document.getElementById('setting-auto-closing-time').value = '23:59'
+                document.getElementById('setting-ticket-retention').value = 365
+                document.getElementById('setting-session-timeout').value = 60
+                document.getElementById('settings-last-saved').textContent = '설정 없음'
+                
+                if (error.response?.status !== 404) {
+                    showToast('설정을 불러오지 못했습니다. 기본값을 사용합니다.', 'warning')
+                }
+            }
+        }
+        
+        // 설정 저장
+        async function saveSettings() {
+            try {
+                const settings = {
+                    // API 키
+                    openai_key: document.getElementById('setting-openai-key').value,
+                    telegram_token: document.getElementById('setting-telegram-token').value,
+                    telegram_chat_id: document.getElementById('setting-telegram-chat-id').value,
+                    
+                    // 정산 설정
+                    commission_rate: parseFloat(document.getElementById('setting-commission-rate').value) || 10,
+                    min_settlement: parseInt(document.getElementById('setting-min-settlement').value) || 10000,
+                    max_settlement: parseInt(document.getElementById('setting-max-settlement').value) || 5000000,
+                    point_conversion_rate: parseFloat(document.getElementById('setting-point-conversion-rate').value) || 1.0,
+                    
+                    // 알림 설정
+                    notify_ticket_created: document.getElementById('setting-notify-ticket-created').checked,
+                    notify_ticket_assigned: document.getElementById('setting-notify-ticket-assigned').checked,
+                    notify_approval_request: document.getElementById('setting-notify-approval-request').checked,
+                    notify_betting_result: document.getElementById('setting-notify-betting-result').checked,
+                    
+                    // 시스템 설정
+                    auto_closing_time: document.getElementById('setting-auto-closing-time').value || '23:59',
+                    ticket_retention: parseInt(document.getElementById('setting-ticket-retention').value) || 365,
+                    session_timeout: parseInt(document.getElementById('setting-session-timeout').value) || 60
+                }
+                
+                // 유효성 검증
+                if (settings.commission_rate < 0 || settings.commission_rate > 100) {
+                    showToast('수수료율은 0-100% 사이여야 합니다', 'error')
+                    return
+                }
+                
+                if (settings.min_settlement < 0 || settings.max_settlement < settings.min_settlement) {
+                    showToast('최소/최대 정산 금액을 확인해주세요', 'error')
+                    return
+                }
+                
+                if (settings.session_timeout < 5) {
+                    showToast('세션 타임아웃은 최소 5분 이상이어야 합니다', 'error')
+                    return
+                }
+                
+                await axios.post(`${API_BASE}/settings`, settings)
+                
+                // 마지막 저장 시간 업데이트
+                document.getElementById('settings-last-saved').textContent = new Date().toLocaleString('ko-KR')
+                
+                showToast('설정이 저장되었습니다', 'success')
+            } catch (error) {
+                console.error('설정 저장 오류:', error)
+                showToast('설정 저장에 실패했습니다', 'error')
+            }
         }
     </script>
 </body>

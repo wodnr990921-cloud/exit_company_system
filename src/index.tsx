@@ -19,6 +19,7 @@ import responses from './routes/responses'
 import pointConversions from './routes/point-conversions'
 import ai from './routes/ai'
 import telegram from './routes/telegram'
+import settings from './routes/settings'
 
 type Bindings = {
   DB: D1Database
@@ -56,6 +57,7 @@ app.route('/api/responses', responses)
 app.route('/api/point-conversions', pointConversions)
 app.route('/api/ai', ai)
 app.route('/api/telegram', telegram)
+app.route('/api/settings', settings)
 
 // 메인 페이지
 
