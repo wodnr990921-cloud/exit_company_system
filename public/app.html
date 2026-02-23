@@ -2824,7 +2824,19 @@
                                     </button>
                                 </div>
                             </div>
-                            <div id="match-management-list" class="space-y-3"></div>
+                            
+                            <!-- 검색 필터 -->
+                            <div class="mb-4">
+                                <div class="relative">
+                                    <input type="text" id="match-management-search" 
+                                           placeholder="경기 검색 (팀명, 리그명...)" 
+                                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                           oninput="filterMatchManagement(this.value)">
+                                    <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                                </div>
+                            </div>
+                            
+                            <div id="match-management-list" class="space-y-3 max-h-[60vh] overflow-y-auto"></div>
                         </div>
                         
                         <div class="flex justify-end space-x-2">
@@ -7632,112 +7644,173 @@ console.log('권한 관리 함수 로드 완료')
         }
 
         // 경기 관리 목록 로드
+        let allMatchesForManagement = []
+        
         async function loadMatchManagement() {
             try {
                 const response = await axios.get(`${API_BASE}/betting/matches`)
-                const matches = response.data.matches || []
-
-                const html = matches.map((m, index) => `
-                    <div class="border rounded p-4 bg-gray-50" data-match-id="${m.id || 'new-' + index}">
-                        <!-- 기본 정보 -->
-                        <div class="grid grid-cols-12 gap-4 items-center mb-3">
-                            <div class="col-span-4">
-                                <label class="text-xs text-gray-600">경기명</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="${m.match_name || ''}" data-field="match_name">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="text-xs text-gray-600">홈팀</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="${m.home_team || ''}" data-field="home_team">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="text-xs text-gray-600">원정팀</label>
-                                <input type="text" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="${m.away_team || ''}" data-field="away_team">
-                            </div>
-                            <div class="col-span-4">
-                                <label class="text-xs text-gray-600">경기일시</label>
-                                <input type="datetime-local" class="w-full px-2 py-1 border rounded text-sm" 
-                                       value="${m.match_date ? new Date(m.match_date).toISOString().slice(0, 16) : ''}" data-field="match_date">
-                            </div>
-                        </div>
-                        
-                        <!-- 승무패 배당 -->
-                        <div class="bg-blue-50 p-3 rounded mb-3">
-                            <p class="text-xs font-bold text-blue-800 mb-2"><i class="fas fa-trophy mr-1"></i>승무패 배당</p>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-600">홈승 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.home_odds || ''}" data-field="home_odds" placeholder="1.50">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">무승부 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.draw_odds || ''}" data-field="draw_odds" placeholder="3.20">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">원정승 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.away_odds || ''}" data-field="away_odds" placeholder="2.10">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 언오바 배당 -->
-                        <div class="bg-green-50 p-3 rounded mb-3">
-                            <p class="text-xs font-bold text-green-800 mb-2"><i class="fas fa-chart-line mr-1"></i>언오바 배당</p>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-600">기준점</label>
-                                    <input type="number" step="0.5" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.over_line || ''}" data-field="over_line" placeholder="2.5">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">오버 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.over_odds || ''}" data-field="over_odds" placeholder="1.85">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">언더 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.under_odds || ''}" data-field="under_odds" placeholder="1.95">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 핸디캡 배당 -->
-                        <div class="bg-purple-50 p-3 rounded mb-3">
-                            <p class="text-xs font-bold text-purple-800 mb-2"><i class="fas fa-balance-scale mr-1"></i>핸디캡 배당</p>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-600">핸디캡 기준</label>
-                                    <input type="number" step="0.5" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.handicap_line || ''}" data-field="handicap_line" placeholder="-1.5">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">홈팀 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.handicap_home_odds || ''}" data-field="handicap_home_odds" placeholder="1.90">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-600">원정팀 배당</label>
-                                    <input type="number" step="0.01" class="w-full px-2 py-1 border rounded text-sm" 
-                                           value="${m.handicap_away_odds || ''}" data-field="handicap_away_odds" placeholder="1.90">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="flex justify-end space-x-2">
-                            ${m.id && isAdmin() ? `<button onclick="deleteMatch(${m.id})" class="btn btn-danger btn-sm"><i class="fas fa-trash mr-1"></i>삭제</button>` : ''}
-                        </div>
-                    </div>
-                `).join('')
-
-                document.getElementById('match-management-list').innerHTML = html || '<p class="text-gray-500 text-center py-4">등록된 경기가 없습니다.</p>'
+                allMatchesForManagement = response.data.matches || []
+                renderMatchManagement(allMatchesForManagement)
             } catch (error) {
                 console.error('경기 관리 목록 로드 오류:', error)
+                document.getElementById('match-management-list').innerHTML = '<p class="text-red-500 text-center py-4">경기 목록을 불러오는데 실패했습니다</p>'
+            }
+        }
+        
+        // 경기 관리 검색 필터
+        function filterMatchManagement(search) {
+            const filtered = allMatchesForManagement.filter(m => {
+                const searchLower = search.toLowerCase()
+                return (m.match_name?.toLowerCase().includes(searchLower) ||
+                        m.home_team?.toLowerCase().includes(searchLower) ||
+                        m.away_team?.toLowerCase().includes(searchLower) ||
+                        m.league?.toLowerCase().includes(searchLower))
+            })
+            renderMatchManagement(filtered)
+        }
+        
+        // 경기 관리 렌더링 (날짜별 그룹화, 컴팩트 목록)
+        function renderMatchManagement(matches) {
+            // 날짜별 그룹화
+            const groupedByDate = {}
+            matches.forEach(m => {
+                const dateKey = m.match_date ? new Date(m.match_date).toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }) : '날짜 미정'
+                if (!groupedByDate[dateKey]) groupedByDate[dateKey] = []
+                groupedByDate[dateKey].push(m)
+            })
+            
+            // 날짜순 정렬
+            const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
+                if (a === '날짜 미정') return 1
+                if (b === '날짜 미정') return -1
+                return new Date(a) - new Date(b)
+            })
+            
+            const html = sortedDates.map(dateKey => {
+                const matchesOnDate = groupedByDate[dateKey]
+                return `
+                    <div class="mb-4">
+                        <h5 class="font-bold text-lg mb-2 px-3 py-2 bg-blue-50 rounded">
+                            <i class="fas fa-calendar mr-2"></i>${dateKey} (${matchesOnDate.length}경기)
+                        </h5>
+                        <div class="space-y-2">
+                            ${matchesOnDate.map(m => {
+                                const matchDate = m.match_date ? new Date(m.match_date) : null
+                                const timeStr = matchDate ? matchDate.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'}) : '시간 미정'
+                                
+                                return `
+                                    <div class="border rounded p-3 bg-gray-50 hover:bg-gray-100" data-match-id="${m.id}">
+                                        <div class="grid grid-cols-12 gap-2 items-center">
+                                            <!-- 시간 -->
+                                            <div class="col-span-1 text-center">
+                                                <span class="text-xs font-bold text-gray-600">${timeStr}</span>
+                                            </div>
+                                            
+                                            <!-- 경기 정보 -->
+                                            <div class="col-span-4">
+                                                <div class="text-sm font-bold">${m.match_name || `${m.home_team} vs ${m.away_team}`}</div>
+                                                <div class="text-xs text-gray-500">${m.home_team} vs ${m.away_team}</div>
+                                            </div>
+                                            
+                                            <!-- 승무패 -->
+                                            <div class="col-span-2">
+                                                <div class="text-xs text-gray-600 mb-1">승무패</div>
+                                                <div class="flex gap-1">
+                                                    <input type="number" step="0.01" class="w-full px-1 py-0.5 border rounded text-xs" 
+                                                           value="${m.home_odds || ''}" data-field="home_odds" placeholder="홈" title="홈승">
+                                                    <input type="number" step="0.01" class="w-full px-1 py-0.5 border rounded text-xs" 
+                                                           value="${m.draw_odds || ''}" data-field="draw_odds" placeholder="무" title="무승부">
+                                                    <input type="number" step="0.01" class="w-full px-1 py-0.5 border rounded text-xs" 
+                                                           value="${m.away_odds || ''}" data-field="away_odds" placeholder="원" title="원정승">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 언오버 -->
+                                            <div class="col-span-2">
+                                                <div class="text-xs text-gray-600 mb-1">언오버</div>
+                                                <div class="flex gap-1">
+                                                    <input type="number" step="0.5" class="w-1/3 px-1 py-0.5 border rounded text-xs" 
+                                                           value="${m.over_line || ''}" data-field="over_line" placeholder="기준" title="기준선">
+                                                    <input type="number" step="0.01" class="w-1/3 px-1 py-0.5 border rounded text-xs" 
+                                                           value="${m.over_odds || ''}" data-field="over_odds" placeholder="오버" title="오버">
+                                                    <input type="number" step="0.01" class="w-1/3 px-1 py-0.5 border rounded text-xs" 
+                                                           value="${m.under_odds || ''}" data-field="under_odds" placeholder="언더" title="언더">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 핸디캡 -->
+                                            <div class="col-span-2">
+                                                <div class="text-xs text-gray-600 mb-1">핸디캡</div>
+                                                <div class="flex gap-1">
+                                                    <input type="number" step="0.5" class="w-1/3 px-1 py-0.5 border rounded text-xs" 
+                                                           value="${m.handicap_line || ''}" data-field="handicap_line" placeholder="기준" title="핸디캡">
+                                                    <input type="number" step="0.01" class="w-1/3 px-1 py-0.5 border rounded text-xs" 
+                                                           value="${m.handicap_home_odds || ''}" data-field="handicap_home_odds" placeholder="홈" title="홈">
+                                                    <input type="number" step="0.01" class="w-1/3 px-1 py-0.5 border rounded text-xs" 
+                                                           value="${m.handicap_away_odds || ''}" data-field="handicap_away_odds" placeholder="원" title="원정">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 액션 -->
+                                            <div class="col-span-1 text-right">
+                                                ${m.id ? `
+                                                    <button onclick="updateSingleMatch(${m.id})" class="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700" title="저장">
+                                                        <i class="fas fa-save"></i>
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `
+                            }).join('')}
+                        </div>
+                    </div>
+                `
+            }).join('')
+            
+            document.getElementById('match-management-list').innerHTML = html || '<p class="text-gray-500 text-center py-4">등록된 경기가 없습니다.</p>'
+        }
+
+        // 개별 경기 업데이트 (경기 관리에서)
+        async function updateSingleMatch(matchId) {
+            try {
+                const row = document.querySelector(`[data-match-id="${matchId}"]`)
+                if (!row) {
+                    showToast('경기를 찾을 수 없습니다', 'error')
+                    return
+                }
+                
+                const getFieldValue = (field) => {
+                    const input = row.querySelector(`[data-field="${field}"]`)
+                    return input ? input.value.trim() : ''
+                }
+                
+                const odds = {
+                    home_odds: parseFloat(getFieldValue('home_odds')) || null,
+                    draw_odds: parseFloat(getFieldValue('draw_odds')) || null,
+                    away_odds: parseFloat(getFieldValue('away_odds')) || null,
+                    over_line: parseFloat(getFieldValue('over_line')) || null,
+                    over_odds: parseFloat(getFieldValue('over_odds')) || null,
+                    under_odds: parseFloat(getFieldValue('under_odds')) || null,
+                    handicap_line: parseFloat(getFieldValue('handicap_line')) || null,
+                    handicap_home_odds: parseFloat(getFieldValue('handicap_home_odds')) || null,
+                    handicap_away_odds: parseFloat(getFieldValue('handicap_away_odds')) || null
+                }
+                
+                await axios.patch(`${API_BASE}/betting/matches/${matchId}/odds`, odds)
+                showToast('배당이 업데이트되었습니다', 'success')
+                
+                // 배팅 관리 페이지 경기 목록 새로고침
+                if (currentView === 'betting') {
+                    await loadUpcomingMatches()
+                }
+            } catch (error) {
+                console.error('경기 업데이트 오류:', error)
+                showToast('경기 업데이트에 실패했습니다', 'error')
             }
         }
 
