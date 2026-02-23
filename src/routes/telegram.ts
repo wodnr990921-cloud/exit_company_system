@@ -69,7 +69,7 @@ telegram.post('/webhook/admin', async (c: Context) => {
       const message = update.channel_post
       const text = message.text
       
-      if (text) {
+      if (text && text.startsWith('/')) {
         // 채널 명령어 처리
         await handleChannelCommand(db, adminBotToken, channelId, text, adminUserId)
       }
