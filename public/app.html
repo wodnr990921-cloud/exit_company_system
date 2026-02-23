@@ -3145,51 +3145,102 @@
 
                     <!-- 우측: 기존 티켓 정보 (60%) -->
                     <div class="w-3/5 flex flex-col overflow-hidden relative">
-                        <!-- 댓글 위젯 (메신저 스타일) -->
-                        <div id="comments-widget" class="absolute top-0 right-0 bottom-0 w-80 bg-white shadow-2xl border-l z-10 flex flex-col" style="display:none;">
-                            <!-- 위젯 헤더 -->
-                            <div class="p-3 bg-blue-600 text-white flex justify-between items-center">
-                                <div class="flex items-center">
-                                    <i class="fas fa-comments mr-2"></i>
-                                    <span class="font-bold">직원 소통 채널</span>
+                        <!-- 통합 위젯 (우측 하단 고정, 자동 표시) -->
+                        <div id="assistant-widget" class="fixed bottom-4 right-4 w-96 h-[500px] bg-white shadow-2xl rounded-lg border z-50 flex flex-col">
+                            <!-- 위젯 헤더 (탭 방식) -->
+                            <div class="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-t-lg flex items-center justify-between">
+                                <div class="flex flex-1">
+                                    <button 
+                                        id="tab-staff-chat" 
+                                        onclick="switchWidgetTab('staff')" 
+                                        class="flex-1 px-4 py-3 font-medium border-b-2 border-white transition"
+                                    >
+                                        <i class="fas fa-comments mr-2"></i>직원 소통
+                                        <span id="comments-badge-tab" class="ml-1 px-2 py-0.5 text-xs bg-red-500 rounded-full hidden">0</span>
+                                    </button>
+                                    <button 
+                                        id="tab-ai-chat" 
+                                        onclick="switchWidgetTab('ai')" 
+                                        class="flex-1 px-4 py-3 font-medium border-b-2 border-transparent hover:border-white/50 transition"
+                                    >
+                                        <i class="fas fa-robot mr-2"></i>AI 챗봇
+                                    </button>
                                 </div>
-                                <button onclick="toggleCommentsWidget()" class="text-white hover:text-gray-200">
-                                    <i class="fas fa-times"></i>
+                                <button onclick="toggleAssistantWidget()" class="px-3 py-3 hover:bg-white/20 transition">
+                                    <i class="fas fa-chevron-down" id="widget-chevron"></i>
                                 </button>
                             </div>
                             
-                            <!-- 채팅 메시지 영역 -->
-                            <div id="internal-comments-list" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
-                                <!-- 메시지 동적 생성 -->
-                            </div>
-                            
-                            <!-- 입력 영역 -->
-                            <div class="p-3 bg-white border-t">
-                                <div class="flex gap-2">
-                                    <input 
-                                        type="text" 
-                                        id="internal-comment-input" 
-                                        placeholder="지시사항 입력..." 
-                                        class="flex-1 px-3 py-2 border rounded"
-                                        onkeypress="if(event.key==='Enter') addInternalComment()"
-                                    >
-                                    <button onclick="addInternalComment()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
+                            <!-- 위젯 본문 -->
+                            <div id="widget-body" class="flex-1 flex flex-col overflow-hidden">
+                                <!-- 직원 소통 탭 -->
+                                <div id="widget-staff-chat" class="flex-1 flex flex-col">
+                                    <!-- 채팅 메시지 영역 -->
+                                    <div id="internal-comments-list" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+                                        <!-- 메시지 동적 생성 -->
+                                    </div>
+                                    
+                                    <!-- 입력 영역 -->
+                                    <div class="p-3 bg-white border-t">
+                                        <div class="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                id="internal-comment-input" 
+                                                placeholder="지시사항 입력..." 
+                                                class="flex-1 px-3 py-2 border rounded"
+                                                onkeypress="if(event.key==='Enter') addInternalComment()"
+                                            >
+                                            <button onclick="addInternalComment()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- AI 챗봇 탭 -->
+                                <div id="widget-ai-chat" class="flex-1 flex flex-col hidden">
+                                    <!-- 챗봇 메시지 영역 -->
+                                    <div id="ai-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-br from-gray-50 to-blue-50">
+                                        <div class="flex justify-center">
+                                            <div class="bg-white rounded-lg p-4 shadow-sm max-w-[80%] text-center">
+                                                <div class="text-blue-600 text-3xl mb-2">
+                                                    <i class="fas fa-robot"></i>
+                                                </div>
+                                                <p class="text-sm text-gray-600">안녕하세요! 티켓 처리를 도와드릴 AI 어시스턴트입니다.</p>
+                                                <p class="text-xs text-gray-500 mt-2">궁금하신 점을 입력해주세요.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 입력 영역 -->
+                                    <div class="p-3 bg-white border-t">
+                                        <div class="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                id="ai-chat-input" 
+                                                placeholder="AI에게 질문하기..." 
+                                                class="flex-1 px-3 py-2 border rounded"
+                                                onkeypress="if(event.key==='Enter') sendAiMessage()"
+                                            >
+                                            <button onclick="sendAiMessage()" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded hover:from-purple-700 hover:to-blue-700">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                        <div class="mt-2 flex gap-2 flex-wrap">
+                                            <button onclick="quickAiPrompt('이 티켓 요약해줘')" class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">
+                                                📋 티켓 요약
+                                            </button>
+                                            <button onclick="quickAiPrompt('답변 초안 작성해줘')" class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">
+                                                ✍️ 답변 초안
+                                            </button>
+                                            <button onclick="quickAiPrompt('처리 방법 추천해줘')" class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">
+                                                💡 처리 추천
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- 댓글 위젯 토글 버튼 -->
-                        <button 
-                            id="comments-widget-toggle" 
-                            onclick="toggleCommentsWidget()" 
-                            class="absolute top-4 right-4 z-20 bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-blue-700 flex items-center justify-center"
-                            title="직원 소통 채널"
-                        >
-                            <i class="fas fa-comments"></i>
-                            <span id="comments-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
-                        </button>
                         
                         <!-- 탭 네비게이션 -->
                         <div class="flex border-b bg-white">
@@ -7873,6 +7924,16 @@ console.log('권한 관리 함수 로드 완료')
                 
                 // Quill 에디터 초기화
                 initResponseEditor()
+                
+                // 위젯 자동 표시
+                const widget = document.getElementById('assistant-widget')
+                if (widget) {
+                    widget.style.display = 'flex'
+                    isWidgetMinimized = false
+                }
+                
+                // 직원 소통 탭으로 초기화
+                switchWidgetTab('staff')
             } catch (error) {
                 console.error('티켓 상세 로드 오류:', error)
                 console.error('에러 상세:', error.response?.data)
@@ -8131,6 +8192,149 @@ console.log('권한 관리 함수 로드 완료')
             }
         }
 
+        // 위젯 상태 관리
+        let currentWidgetTab = 'staff' // 'staff' 또는 'ai'
+        let isWidgetMinimized = false
+        let aiChatHistory = []
+        
+        // 위젯 탭 전환
+        function switchWidgetTab(tab) {
+            currentWidgetTab = tab
+            
+            const staffTab = document.getElementById('tab-staff-chat')
+            const aiTab = document.getElementById('tab-ai-chat')
+            const staffContent = document.getElementById('widget-staff-chat')
+            const aiContent = document.getElementById('widget-ai-chat')
+            
+            if (tab === 'staff') {
+                staffTab.classList.add('border-white')
+                staffTab.classList.remove('border-transparent')
+                aiTab.classList.remove('border-white')
+                aiTab.classList.add('border-transparent', 'hover:border-white/50')
+                
+                staffContent.classList.remove('hidden')
+                aiContent.classList.add('hidden')
+            } else {
+                aiTab.classList.add('border-white')
+                aiTab.classList.remove('border-transparent', 'hover:border-white/50')
+                staffTab.classList.remove('border-white')
+                staffTab.classList.add('border-transparent')
+                
+                aiContent.classList.remove('hidden')
+                staffContent.classList.add('hidden')
+            }
+        }
+        
+        // 위젯 최소화/복원 토글
+        function toggleAssistantWidget() {
+            const widget = document.getElementById('assistant-widget')
+            const body = document.getElementById('widget-body')
+            const chevron = document.getElementById('widget-chevron')
+            
+            if (isWidgetMinimized) {
+                // 복원
+                widget.style.height = '500px'
+                body.style.display = 'flex'
+                chevron.className = 'fas fa-chevron-down'
+                isWidgetMinimized = false
+            } else {
+                // 최소화
+                widget.style.height = 'auto'
+                body.style.display = 'none'
+                chevron.className = 'fas fa-chevron-up'
+                isWidgetMinimized = true
+            }
+        }
+        
+        // AI 챗봇 메시지 전송
+        async function sendAiMessage() {
+            const input = document.getElementById('ai-chat-input')
+            const message = input.value.trim()
+            if (!message) return
+            
+            input.value = ''
+            
+            // 사용자 메시지 추가
+            addAiChatMessage('user', message)
+            
+            // AI 응답 (현재는 더미, 나중에 실제 API 연동)
+            addAiChatMessage('assistant', '로딩중...', true)
+            
+            try {
+                // TODO: 실제 AI API 호출
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                
+                // 더미 응답
+                const responses = [
+                    `"${message}"에 대해 분석 중입니다. 티켓 정보를 확인하고 있어요.`,
+                    `현재 티켓은 ${currentTicket?.ticket_type || '알 수 없음'} 유형이며, 상태는 ${currentTicket?.status || '알 수 없음'}입니다.`,
+                    `회원: ${currentTicket?.member_name || '미지정'}\n담당자: ${currentTicket?.assigned_to_name || '미배정'}`,
+                    '더 도움이 필요하시면 말씀해주세요!'
+                ]
+                
+                removeLastAiMessage() // 로딩 메시지 제거
+                addAiChatMessage('assistant', responses[Math.floor(Math.random() * responses.length)])
+            } catch (error) {
+                removeLastAiMessage()
+                addAiChatMessage('assistant', '죄송합니다. 오류가 발생했습니다.')
+            }
+        }
+        
+        // 빠른 프롬프트
+        function quickAiPrompt(prompt) {
+            const input = document.getElementById('ai-chat-input')
+            input.value = prompt
+            sendAiMessage()
+        }
+        
+        // AI 채팅 메시지 추가
+        function addAiChatMessage(role, content, isLoading = false) {
+            const messagesDiv = document.getElementById('ai-chat-messages')
+            const messageId = `ai-msg-${Date.now()}`
+            
+            if (role === 'user') {
+                // 사용자 메시지 (우측)
+                const html = `
+                    <div id="${messageId}" class="flex justify-end">
+                        <div class="bg-blue-600 text-white rounded-lg px-4 py-2 shadow-sm max-w-[80%]">
+                            <p class="text-sm whitespace-pre-wrap">${content}</p>
+                        </div>
+                    </div>
+                `
+                messagesDiv.insertAdjacentHTML('beforeend', html)
+            } else {
+                // AI 응답 (좌측)
+                const html = `
+                    <div id="${messageId}" class="flex justify-start">
+                        <div class="bg-white rounded-lg px-4 py-2 shadow-sm max-w-[80%] border border-gray-200">
+                            ${isLoading ? '<i class="fas fa-spinner fa-spin text-blue-600"></i>' : `<p class="text-sm whitespace-pre-wrap text-gray-800">${content}</p>`}
+                        </div>
+                    </div>
+                `
+                messagesDiv.insertAdjacentHTML('beforeend', html)
+            }
+            
+            // 스크롤 맨 아래로
+            messagesDiv.scrollTop = messagesDiv.scrollHeight
+            
+            aiChatHistory.push({ role, content, messageId })
+        }
+        
+        // 마지막 AI 메시지 제거 (로딩 메시지 제거용)
+        function removeLastAiMessage() {
+            if (aiChatHistory.length > 0) {
+                const lastMsg = aiChatHistory[aiChatHistory.length - 1]
+                const msgEl = document.getElementById(lastMsg.messageId)
+                if (msgEl) msgEl.remove()
+                aiChatHistory.pop()
+            }
+        }
+        
+        // 댓글 위젯 토글 (하위 호환성)
+        function toggleCommentsWidget() {
+            toggleAssistantWidget()
+        }
+        
         // Quill 에디터 인스턴스
         let responseEditor = null
         
@@ -8169,7 +8373,7 @@ console.log('권한 관리 함수 로드 완료')
                 renderInternalComments(internalComments)
                 
                 // 댓글 배지 업데이트
-                const badge = document.getElementById('comments-badge')
+                const badge = document.getElementById('comments-badge-tab')
                 if (badge && internalComments.length > 0) {
                     badge.textContent = internalComments.length
                     badge.classList.remove('hidden')
@@ -8691,11 +8895,28 @@ console.log('권한 관리 함수 로드 완료')
             selectedMatches = []
             document.getElementById('ticket-detail-modal').classList.add('hidden')
             
-            // 댓글 위젯 초기화
-            const widget = document.getElementById('comments-widget')
-            const toggle = document.getElementById('comments-widget-toggle')
-            if (widget) widget.style.display = 'none'
-            if (toggle) toggle.style.display = 'flex'
+            // 위젯 초기화
+            const widget = document.getElementById('assistant-widget')
+            if (widget) {
+                widget.style.display = 'none'
+            }
+            
+            // AI 채팅 히스토리 초기화
+            aiChatHistory = []
+            const aiMessages = document.getElementById('ai-chat-messages')
+            if (aiMessages) {
+                aiMessages.innerHTML = `
+                    <div class="flex justify-center">
+                        <div class="bg-white rounded-lg p-4 shadow-sm max-w-[80%] text-center">
+                            <div class="text-blue-600 text-3xl mb-2">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <p class="text-sm text-gray-600">안녕하세요! 티켓 처리를 도와드릴 AI 어시스턴트입니다.</p>
+                            <p class="text-xs text-gray-500 mt-2">궁금하신 점을 입력해주세요.</p>
+                        </div>
+                    </div>
+                `
+            }
             
             // 에디터 초기화
             if (responseEditor) {
