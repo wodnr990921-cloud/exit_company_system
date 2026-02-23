@@ -3153,9 +3153,6 @@
                             <button onclick="showTicketTab('requests')" id="tab-requests" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
                                 <i class="fas fa-shopping-cart mr-1"></i>요청사항 <span id="cart-count" class="ml-1 px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">0</span>
                             </button>
-                            <button onclick="showTicketTab('comments')" id="tab-comments" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
-                                <i class="fas fa-comments mr-1"></i>댓글
-                            </button>
                         </div>
 
                         <!-- 탭 컨텐츠 영역 -->
@@ -7787,6 +7784,14 @@ console.log('권한 관리 함수 로드 완료')
                                             <span class="text-sm text-gray-800">${ticket.institution}</span>
                                         </div>
                                     ` : ''}
+                                    <div class="flex items-start pt-2 border-t">
+                                        <span class="text-sm text-gray-500 w-20">일반P</span>
+                                        <span class="text-sm text-green-600 font-semibold">${(ticket.member_points || 0).toLocaleString()}P</span>
+                                    </div>
+                                    <div class="flex items-start">
+                                        <span class="text-sm text-gray-500 w-20">배팅P</span>
+                                        <span class="text-sm text-blue-600 font-semibold">${(ticket.member_betting_points || 0).toLocaleString()}P</span>
+                                    </div>
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="openChangeMemberModal()" 
@@ -10995,15 +11000,38 @@ console.log('권한 관리 함수 로드 완료')
                     status: 'assigned'
                 })
                 
+                console.log('우편물 데이터 조회 시작')
+                // 3. 우편물 데이터 조회 (OCR 원문, 이미지 등)
+                const mailroomRes = await axios.get(`${API_BASE}/mailroom/${currentInspectionId}`)
+                const mailItem = mailroomRes.data.mailroom_item
+                
+                // OCR 결과 파싱
+                const ocrData = mailItem.ocr_result ? JSON.parse(mailItem.ocr_result) : {}
+                const ocrResults = ocrData.results || []
+                
+                // OCR 원문 추출
+                const ocrText = document.getElementById('inspection-ocr-text')?.value || 
+                                ocrResults.map(r => r.text).join('\n\n')
+                
+                // 편지 내용 추출
+                const letterContent = document.getElementById('inspection-letter-content')?.value ||
+                                     ocrResults.map(r => r.letter_content).filter(c => c).join('\n\n')
+                
+                // 이미지 키 추출
+                const imageKeys = mailItem.image_keys ? JSON.parse(mailItem.image_keys) : []
+                
                 console.log('티켓 생성 시작, 데이터:', { 
                     member_id: memberId, 
                     assigned_to: parseInt(staffId),
                     created_by: currentStaff.id,
                     ticket_type: 'mailroom',
-                    priority: 'normal'
+                    priority: 'normal',
+                    has_ocr: !!ocrText,
+                    has_letter: !!letterContent,
+                    image_count: imageKeys.length
                 })
                 
-                // 3. 티켓 생성 및 확정 (임시 티켓 → 정식 티켓)
+                // 4. 티켓 생성 및 확정 (임시 티켓 → 정식 티켓)
                 const ticketPayload = {
                     member_id: memberId,  // null 가능 (미지정)
                     assigned_to: parseInt(staffId),  // 담당자 배정
@@ -11013,7 +11041,10 @@ console.log('권한 관리 함수 로드 완료')
                     title: `우편물 처리: ${memberName}`,
                     description: memberId 
                         ? `우편물 검수 완료\n발신자: ${name}\n수용번호: ${number}\n기관: ${institution}`
-                        : `우편물 검수 완료\n회원: 미지정\n담당자가 추후 회원을 연결해주세요.`
+                        : `우편물 검수 완료\n회원: 미지정\n담당자가 추후 회원을 연결해주세요.`,
+                    original: ocrText || '원문 없음',  // OCR 원문 (검수에서 수정 가능)
+                    summary: letterContent || '요약 없음',  // 편지 내용 요약
+                    image_keys: imageKeys  // 우편물 이미지
                 }
                 
                 console.log('티켓 생성 요청 페이로드:', ticketPayload)
@@ -11045,7 +11076,7 @@ console.log('권한 관리 함수 로드 완료')
                 console.log('티켓 생성 성공:', { ticketNumber, ticketId })
                 
                 console.log('우편물-티켓 연결 시작')
-                // 4. 우편물에 티켓 연결
+                // 5. 우편물에 티켓 연결
                 await axios.patch(`${API_BASE}/mailroom/${currentInspectionId}/status`, {
                     status: 'assigned',
                     ticket_id: ticketId

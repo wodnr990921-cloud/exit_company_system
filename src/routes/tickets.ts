@@ -197,7 +197,7 @@ tickets.post('/', async (c) => {
   try {
     const body = await c.req.json()
     console.log('티켓 생성 요청 데이터:', body)
-    const { title, description, member_id, ticket_type, priority, assigned_to, created_by, betting_data, metadata, image_keys } = body
+    const { title, description, original, summary, member_id, ticket_type, priority, assigned_to, created_by, betting_data, metadata, image_keys } = body
 
     console.log('검증 필드:', { title, ticket_type, created_by })
     if (!title || !ticket_type || !created_by) {
@@ -217,10 +217,10 @@ tickets.post('/', async (c) => {
     const metadataJson = metadata ? JSON.stringify(metadata) : null
 
     const result = await c.env.DB.prepare(
-      `INSERT INTO tickets (ticket_number, title, description, member_id, ticket_type, priority, status, assigned_to, created_by, metadata, image_keys)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tickets (ticket_number, title, description, original, summary, member_id, ticket_type, priority, status, assigned_to, created_by, metadata, image_keys)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
-      ticket_number, title, description || '', member_id || null, 
+      ticket_number, title, description || '', original || null, summary || null, member_id || null, 
       ticket_type, priority || 'normal', status, assigned_to || null, created_by, metadataJson, imageKeysJson
     ).run()
 
