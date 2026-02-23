@@ -1594,6 +1594,50 @@
                         </div>
                     </div>
 
+                    <!-- AI 챗봇 메모리 관리 -->
+                    <div class="card mt-6">
+                        <h3 class="text-lg font-bold mb-4 flex items-center">
+                            <i class="fas fa-brain mr-2 text-purple-600"></i>
+                            AI 챗봇 메모리 관리
+                        </h3>
+                        <p class="text-sm text-gray-600 mb-4">
+                            AI 챗봇이 기억할 정보를 관리합니다. 가격표, 배당률, 업무 규정 등을 저장하면 챗봇이 이 정보를 우선적으로 사용합니다.
+                        </p>
+                        
+                        <!-- 메모리 추가 폼 -->
+                        <div class="bg-gray-50 p-4 rounded mb-4">
+                            <h4 class="font-semibold mb-3">새 정보 추가</h4>
+                            <div class="grid grid-cols-12 gap-3">
+                                <div class="col-span-3">
+                                    <select id="new-memory-category" class="w-full px-3 py-2 border rounded">
+                                        <option value="pricing">가격/수수료</option>
+                                        <option value="odds">배당률</option>
+                                        <option value="policy">업무 규정</option>
+                                        <option value="general">일반 정보</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-4">
+                                    <input type="text" id="new-memory-key" placeholder="정보 키 (예: 가격표_도서발주)" 
+                                           class="w-full px-3 py-2 border rounded">
+                                </div>
+                                <div class="col-span-4">
+                                    <input type="text" id="new-memory-value" placeholder="정보 값 (예: 실비 + 수수료 500P)" 
+                                           class="w-full px-3 py-2 border rounded">
+                                </div>
+                                <div class="col-span-1">
+                                    <button onclick="addAiMemory()" class="btn btn-success w-full">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 메모리 목록 -->
+                        <div id="ai-memory-list" class="space-y-2">
+                            <!-- JavaScript로 동적 렌더링 -->
+                        </div>
+                    </div>
+
                     <!-- 저장 버튼 -->
                     <div class="card mt-6">
                         <div class="flex justify-between items-center">
@@ -13018,13 +13062,31 @@ console.log('권한 관리 함수 로드 완료')
         async function loadMatchesForBetting() {
             try {
                 const response = await axios.get(`${API_BASE}/betting/matches?status=open`)
-                const matches = response.data.matches || []
+                let matches = response.data.matches || []
+                
+                // 당일+이후 경기만 필터링
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                matches = matches.filter(m => new Date(m.match_date) >= today)
                 
                 const container = document.getElementById('modal-betting-matches-list')
                 if (matches.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center">진행 중인 경기가 없습니다</p>'
+                    container.innerHTML = '<p class="text-gray-500 text-center">진행 가능한 경기가 없습니다 (당일+이후 경기만 표시)</p>'
                     return
                 }
+                
+                // 검색 입력 필드 추가
+                let searchHtml = `
+                    <div class="mb-4 sticky top-0 bg-white z-10 pb-2">
+                        <div class="relative">
+                            <input type="text" id="match-search-input" 
+                                   placeholder="경기 검색 (팀명, 리그명...)" 
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   oninput="filterMatches(this.value)">
+                            <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                        </div>
+                    </div>
+                `
                 
                 container.innerHTML = matches.map(m => {
                     let optionsHtml = ''
@@ -13125,19 +13187,79 @@ console.log('권한 관리 함수 로드 완료')
                         </div>
                     `
                     
+                    const matchDate = new Date(m.match_date)
+                    const leagueLabels = {
+                        'EPL': 'EPL', 'LA_LIGA': '라리가', 'SERIE_A': '세리에A',
+                        'BUNDESLIGA': '분데스', 'LIGUE_1': '리그앙', 'K_LEAGUE': 'K리그',
+                        'MLB': 'MLB', 'KBO': 'KBO', 'NBA': 'NBA', 'KBL': 'KBL', 'WKBL': 'WKBL', 'KOVO': 'KOVO'
+                    }
+                    const leagueLabel = leagueLabels[m.league] || m.league || 'ETC'
+                    
                     return `
-                        <div class="border rounded p-2 hover:bg-gray-50">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="font-medium">${m.home_team} vs ${m.away_team}</span>
-                                <span class="text-xs text-gray-500">${new Date(m.match_date).toLocaleDateString()}</span>
+                        <div class="match-item border rounded mb-2 overflow-hidden" data-match-teams="${m.home_team} ${m.away_team}" data-league="${m.league || ''}">
+                            <div class="flex justify-between items-center px-3 py-2 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                                 onclick="toggleMatchExpand('match-${m.id}')">
+                                <div class="flex-1">
+                                    <div class="font-semibold text-sm">${m.home_team} vs ${m.away_team}</div>
+                                    <div class="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                        <span class="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">${leagueLabel}</span>
+                                        <span>${matchDate.toLocaleDateString('ko-KR', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'})}</span>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-down transition-transform" id="match-${m.id}-icon"></i>
                             </div>
-                            ${optionsHtml}
+                            <div class="hidden px-3 py-2" id="match-${m.id}-content">
+                                ${optionsHtml}
+                            </div>
                         </div>
                     `
                 }).join('')
+                
+                // 검색 입력 필드와 함께 표시
+                container.innerHTML = searchHtml + '<div id="matches-container">' + container.innerHTML + '</div>'
+                
+                // 전역 변수로 모든 경기 저장 (검색용)
+                window.allMatches = matches
             } catch (error) {
                 console.error('경기 목록 로드 오류:', error)
             }
+        }
+
+        // 경기 펼치기/접기
+        function toggleMatchExpand(matchId) {
+            const content = document.getElementById(`${matchId}-content`)
+            const icon = document.getElementById(`${matchId}-icon`)
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden')
+                icon.classList.add('fa-rotate-180')
+            } else {
+                content.classList.add('hidden')
+                icon.classList.remove('fa-rotate-180')
+            }
+        }
+
+        // 경기 검색 필터
+        function filterMatches(searchQuery) {
+            const query = searchQuery.toLowerCase().trim()
+            const matchItems = document.querySelectorAll('.match-item')
+            
+            if (!query) {
+                // 검색어 없으면 모두 표시
+                matchItems.forEach(item => item.classList.remove('hidden'))
+                return
+            }
+            
+            matchItems.forEach(item => {
+                const teams = item.dataset.matchTeams?.toLowerCase() || ''
+                const league = item.dataset.league?.toLowerCase() || ''
+                
+                if (teams.includes(query) || league.includes(query)) {
+                    item.classList.remove('hidden')
+                } else {
+                    item.classList.add('hidden')
+                }
+            })
         }
 
 
@@ -14432,6 +14554,9 @@ console.log('권한 관리 함수 로드 완료')
                     document.getElementById('settings-last-saved').textContent = '저장 기록 없음'
                 }
                 
+                // AI 메모리 로드
+                await loadAiMemories()
+                
                 showToast('설정을 불러왔습니다', 'success')
             } catch (error) {
                 console.error('설정 로드 오류:', error)
@@ -14883,6 +15008,105 @@ console.log('권한 관리 함수 로드 완료')
 
         // ========================================
         // 직원 소통 위젯 (티켓 모달 전용)
+        // ========================================
+        
+        // ========================================
+        // AI 메모리 관리
+        // ========================================
+        
+        // AI 메모리 로드
+        async function loadAiMemories() {
+            try {
+                const response = await axios.get(`${API_BASE}/ai/memory`)
+                const memories = response.data.memories || []
+                
+                const container = document.getElementById('ai-memory-list')
+                if (memories.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center text-sm">저장된 메모리가 없습니다</p>'
+                    return
+                }
+                
+                const categoryLabels = {
+                    'pricing': '가격/수수료',
+                    'odds': '배당률',
+                    'policy': '업무 규정',
+                    'general': '일반 정보'
+                }
+                
+                const categoryColors = {
+                    'pricing': 'bg-green-100 text-green-800',
+                    'odds': 'bg-blue-100 text-blue-800',
+                    'policy': 'bg-yellow-100 text-yellow-800',
+                    'general': 'bg-gray-100 text-gray-800'
+                }
+                
+                container.innerHTML = memories.map(m => `
+                    <div class="flex items-center justify-between bg-white border rounded p-3 hover:bg-gray-50">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded ${categoryColors[m.category] || categoryColors.general}">
+                                    ${categoryLabels[m.category] || m.category}
+                                </span>
+                                <span class="text-sm font-medium text-gray-900">${m.memory_key}</span>
+                            </div>
+                            <p class="text-sm text-gray-700">${m.memory_value}</p>
+                            <p class="text-xs text-gray-400 mt-1">수정일: ${new Date(m.updated_at).toLocaleString('ko-KR')}</p>
+                        </div>
+                        <button onclick="deleteAiMemory(${m.id})" class="ml-3 px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `).join('')
+            } catch (error) {
+                console.error('AI 메모리 로드 오류:', error)
+                showToast('AI 메모리 로드 실패', 'error')
+            }
+        }
+        
+        // AI 메모리 추가
+        async function addAiMemory() {
+            try {
+                const category = document.getElementById('new-memory-category').value
+                const key = document.getElementById('new-memory-key').value.trim()
+                const value = document.getElementById('new-memory-value').value.trim()
+                
+                if (!key || !value) {
+                    showToast('정보 키와 값을 모두 입력해주세요', 'error')
+                    return
+                }
+                
+                await axios.post(`${API_BASE}/ai/memory`, {
+                    memory_key: key,
+                    memory_value: value,
+                    category
+                })
+                
+                // 입력 필드 초기화
+                document.getElementById('new-memory-key').value = ''
+                document.getElementById('new-memory-value').value = ''
+                
+                await loadAiMemories()
+                showToast('AI 메모리가 추가되었습니다', 'success')
+            } catch (error) {
+                console.error('AI 메모리 추가 오류:', error)
+                showToast('AI 메모리 추가 실패', 'error')
+            }
+        }
+        
+        // AI 메모리 삭제
+        async function deleteAiMemory(id) {
+            if (!confirm('이 메모리를 삭제하시겠습니까?')) return
+            
+            try {
+                await axios.delete(`${API_BASE}/ai/memory/${id}`)
+                await loadAiMemories()
+                showToast('AI 메모리가 삭제되었습니다', 'success')
+            } catch (error) {
+                console.error('AI 메모리 삭제 오류:', error)
+                showToast('AI 메모리 삭제 실패', 'error')
+            }
+        }
+
         // ========================================
         
         // 직원 소통 위젯 토글

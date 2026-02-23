@@ -280,7 +280,7 @@ const availableFunctions = {
 }
 
 // AI 챗봇 엔드포인트
-// AI 챗봇 엔드포인트 (OpenAI GPT-4o-mini)
+// AI 챗봇 엔드포인트 (OpenAI GPT-4o-mini with Memory)
 ai.post('/chat', async (c: Context) => {
   try {
     const { message, ticket_context, chat_history } = await c.req.json()
@@ -292,6 +292,18 @@ ai.post('/chat', async (c: Context) => {
     }
     
     console.log('🤖 사용자 메시지:', message)
+    
+    // AI 메모리 로드
+    const memories = await db.prepare(`
+      SELECT memory_key, memory_value, category 
+      FROM ai_memory 
+      ORDER BY updated_at DESC
+    `).all()
+    
+    const memoryContext = memories.results && memories.results.length > 0
+      ? '\n\n**저장된 정보 (메모리):**\n' + 
+        memories.results.map((m: any) => `- [${m.category}] ${m.memory_key}: ${m.memory_value}`).join('\n')
+      : ''
     
     // 시스템 프롬프트
     const systemPrompt = `당신은 EXIT COMPANY 교정시설 업무 대행 시스템의 AI 어시스턴트입니다.
@@ -310,12 +322,14 @@ ai.post('/chat', async (c: Context) => {
 - searchManual: 메뉴얼 검색
 
 현재 티켓 컨텍스트:
-${ticket_context ? JSON.stringify(ticket_context, null, 2) : '없음'}
+${ticket_context ? JSON.stringify(ticket_context, null, 2) : '없음'}${memoryContext}
 
 응답 시 유의사항:
 - 친절하고 전문적인 톤 유지
 - 구체적이고 실용적인 정보 제공
 - 필요 시 함수를 호출하여 정확한 데이터 제공
+- 저장된 메모리 정보를 우선적으로 활용
+- 새로운 가격표나 중요 정보를 알려주면 기억하겠다고 응답
 - 마크다운 형식으로 깔끔하게 구조화`
 
     // 대화 히스토리 구성
@@ -397,6 +411,69 @@ ${ticket_context ? JSON.stringify(ticket_context, null, 2) : '없음'}
       reply: `❌ 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}\n\n다시 시도해주세요.`,
       error: error instanceof Error ? error.message : '알 수 없는 오류'
     }, 500)
+  }
+})
+
+// AI 메모리 관리 API
+// 메모리 목록 조회
+ai.get('/memory', async (c: Context) => {
+  try {
+    const db = c.env.DB
+    const category = c.req.query('category')
+    
+    let query = 'SELECT * FROM ai_memory'
+    const params: any[] = []
+    
+    if (category) {
+      query += ' WHERE category = ?'
+      params.push(category)
+    }
+    
+    query += ' ORDER BY updated_at DESC'
+    
+    const result = await db.prepare(query).bind(...params).all()
+    
+    return c.json({ memories: result.results || [] })
+  } catch (error) {
+    console.error('메모리 조회 오류:', error)
+    return c.json({ error: '메모리 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 메모리 추가/수정
+ai.post('/memory', async (c: Context) => {
+  try {
+    const { memory_key, memory_value, category } = await c.req.json()
+    const db = c.env.DB
+    
+    if (!memory_key || !memory_value) {
+      return c.json({ error: '메모리 키와 값을 입력해주세요.' }, 400)
+    }
+    
+    await db.prepare(`
+      INSERT OR REPLACE INTO ai_memory (memory_key, memory_value, category, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    `).bind(memory_key, memory_value, category || 'general').run()
+    
+    return c.json({ success: true, message: '메모리가 저장되었습니다.' })
+  } catch (error) {
+    console.error('메모리 저장 오류:', error)
+    return c.json({ error: '메모리 저장 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 메모리 삭제
+ai.delete('/memory/:id', async (c: Context) => {
+  try {
+    const id = c.req.param('id')
+    const db = c.env.DB
+    
+    await db.prepare('DELETE FROM ai_memory WHERE id = ?').bind(id).run()
+    
+    return c.json({ success: true, message: '메모리가 삭제되었습니다.' })
+  } catch (error) {
+    console.error('메모리 삭제 오류:', error)
+    return c.json({ error: '메모리 삭제 중 오류가 발생했습니다.' }, 500)
   }
 })
 
