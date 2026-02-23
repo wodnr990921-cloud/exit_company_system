@@ -1102,6 +1102,9 @@
                         <button onclick="showAdminTab('settings')" id="admin-tab-settings" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
                             <i class="fas fa-cog mr-2"></i>시스템 설정
                         </button>
+                        <button onclick="showAdminTab('transactions')" id="admin-tab-transactions" class="px-4 py-3 border-b-2 border-transparent hover:border-gray-300">
+                            <i class="fas fa-exchange-alt mr-2"></i>입출금 관리 (<span id="pending-deposits-count">0</span>)
+                        </button>
                     </div>
                 </div>
 
@@ -1539,6 +1542,74 @@
                                     <i class="fas fa-save mr-2"></i>저장
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 입출금 관리 탭 -->
+                <div id="admin-transactions-tab" class="admin-tab-content hidden">
+                    <!-- 통계 위젯 -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+                            <p class="text-sm text-gray-600 mb-1">총 입금 (오늘)</p>
+                            <p class="text-2xl font-bold text-green-600" id="today-deposit-total">0원</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+                            <p class="text-sm text-gray-600 mb-1">총 출금 (오늘)</p>
+                            <p class="text-2xl font-bold text-red-600" id="today-withdrawal-total">0원</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
+                            <p class="text-sm text-gray-600 mb-1">미확인 입금</p>
+                            <p class="text-2xl font-bold text-yellow-600" id="pending-deposits-total">0건</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+                            <p class="text-sm text-gray-600 mb-1">승인 대기</p>
+                            <p class="text-2xl font-bold text-blue-600" id="pending-approvals-total">0건</p>
+                        </div>
+                    </div>
+
+                    <!-- 미확인 입금 섹션 -->
+                    <div class="card mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold"><i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>미확인 입금</h3>
+                            <button onclick="refreshPendingDeposits()" class="text-blue-600 hover:text-blue-700">
+                                <i class="fas fa-sync mr-1"></i>새로고침
+                            </button>
+                        </div>
+                        <div id="pending-deposits-list" class="space-y-3">
+                            <p class="text-gray-500 text-center py-8">미확인 입금이 없습니다</p>
+                        </div>
+                    </div>
+
+                    <!-- 거래 내역 -->
+                    <div class="card">
+                        <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                            <h3 class="text-lg font-bold"><i class="fas fa-list mr-2"></i>거래 내역</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <select id="trans-type-filter" class="px-3 py-1 border rounded text-sm">
+                                    <option value="">전체 거래</option>
+                                    <option value="deposit">입금</option>
+                                    <option value="withdrawal">출금</option>
+                                    <option value="expense">경비</option>
+                                </select>
+                                <select id="trans-status-filter" class="px-3 py-1 border rounded text-sm">
+                                    <option value="">전체 상태</option>
+                                    <option value="pending">대기중</option>
+                                    <option value="approved">승인됨</option>
+                                    <option value="rejected">거부됨</option>
+                                </select>
+                                <input type="date" id="trans-start-date" class="px-3 py-1 border rounded text-sm">
+                                <input type="date" id="trans-end-date" class="px-3 py-1 border rounded text-sm">
+                                <button onclick="loadTransactions()" class="btn btn-primary text-sm">
+                                    <i class="fas fa-search mr-1"></i>조회
+                                </button>
+                                <button onclick="showAddTransactionModal()" class="btn btn-success text-sm">
+                                    <i class="fas fa-plus mr-1"></i>수동 등록
+                                </button>
+                            </div>
+                        </div>
+                        <div id="transactions-list" class="space-y-2 max-h-[600px] overflow-y-auto">
+                            <p class="text-gray-500 text-center py-8">조회 버튼을 눌러 거래 내역을 확인하세요</p>
                         </div>
                     </div>
                 </div>
@@ -4720,6 +4791,8 @@ console.log('권한 관리 함수 로드 완료')
                 initActivityLogDates()
             } else if (tabName === 'settings') {
                 loadSettings()
+            } else if (tabName === 'transactions') {
+                loadTransactionsTab()
             }
         }
 
@@ -9265,7 +9338,6 @@ console.log('권한 관리 함수 로드 완료')
         async function cancelCommentEdit(commentId, originalContent) {
             editingCommentId = null
             cancelResponseEdit(commentId)
-        }
             await loadTicketComments(currentTicketId)
         }
 
@@ -14396,6 +14468,281 @@ console.log('권한 관리 함수 로드 완료')
                 console.error('설정 저장 오류:', error)
                 showToast('설정 저장에 실패했습니다', 'error')
             }
+        }
+
+        // ========================================
+        // 입출금 관리
+        // ========================================
+        
+        // 입출금 관리 탭 로드
+        async function loadTransactionsTab() {
+            await Promise.all([
+                loadTransactionStats(),
+                loadPendingDeposits(),
+                loadTransactions()
+            ])
+        }
+        
+        // 입출금 통계 로드
+        async function loadTransactionStats() {
+            try {
+                const today = new Date().toISOString().split('T')[0]
+                const response = await axios.get(`${API_BASE}/transactions/stats?start_date=${today}&end_date=${today}`)
+                
+                const stats = response.data.stats || []
+                let depositTotal = 0
+                let withdrawalTotal = 0
+                let pendingCount = 0
+                
+                stats.forEach(stat => {
+                    if (stat.transaction_type === 'deposit' && stat.approval_status === 'approved') {
+                        depositTotal += stat.total_amount || 0
+                    } else if (stat.transaction_type === 'withdrawal' && stat.approval_status === 'approved') {
+                        withdrawalTotal += stat.total_amount || 0
+                    }
+                    if (stat.approval_status === 'pending') {
+                        pendingCount += stat.count || 0
+                    }
+                })
+                
+                document.getElementById('today-deposit-total').textContent = depositTotal.toLocaleString() + '원'
+                document.getElementById('today-withdrawal-total').textContent = withdrawalTotal.toLocaleString() + '원'
+                document.getElementById('pending-deposits-total').textContent = response.data.pending_deposits + '건'
+                document.getElementById('pending-approvals-total').textContent = pendingCount + '건'
+                document.getElementById('pending-deposits-count').textContent = response.data.pending_deposits
+            } catch (error) {
+                console.error('입출금 통계 로드 오류:', error)
+            }
+        }
+        
+        // 미확인 입금 목록 로드
+        async function loadPendingDeposits() {
+            try {
+                const response = await axios.get(`${API_BASE}/transactions/pending`)
+                const deposits = response.data || []
+                
+                const container = document.getElementById('pending-deposits-list')
+                if (deposits.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">미확인 입금이 없습니다</p>'
+                    return
+                }
+                
+                const html = deposits.map(d => {
+                    const date = new Date(d.transaction_date).toLocaleString('ko-KR')
+                    const confidence = (d.match_score * 100).toFixed(0)
+                    
+                    return `
+                        <div class="border rounded-lg p-4 hover:bg-gray-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="text-lg font-bold text-green-600">${d.amount.toLocaleString()}원</span>
+                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">미확인</span>
+                                    </div>
+                                    <div class="text-sm text-gray-600 space-y-1">
+                                        <p><i class="fas fa-user mr-2"></i>입금자: <strong>${d.depositor_name}</strong></p>
+                                        <p><i class="fas fa-building mr-2"></i>${d.bank_name || '-'} ${d.account_number || ''}</p>
+                                        <p><i class="fas fa-clock mr-2"></i>${date}</p>
+                                        ${d.suggested_member_name ? `
+                                            <p class="mt-2 p-2 bg-blue-50 rounded">
+                                                <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+                                                <strong>매칭 제안 (${confidence}%):</strong> ${d.suggested_member_name} (${d.suggested_inmate_number})
+                                                <br><span class="text-xs text-gray-600">${d.suggestion_reason}</span>
+                                            </p>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    ${d.suggested_member_id ? `
+                                        <button onclick="confirmPendingDeposit(${d.id}, ${d.suggested_member_id})" class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                                            <i class="fas fa-check mr-1"></i>제안 확인
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="showMatchMemberModal(${d.id})" class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                                        <i class="fas fa-search mr-1"></i>회원 찾기
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                }).join('')
+                
+                container.innerHTML = html
+            } catch (error) {
+                console.error('미확인 입금 로드 오류:', error)
+            }
+        }
+        
+        // 미확인 입금 새로고침
+        async function refreshPendingDeposits() {
+            await loadPendingDeposits()
+            await loadTransactionStats()
+        }
+        
+        // 미확인 입금 확인 (제안된 회원으로)
+        async function confirmPendingDeposit(pendingId, memberId) {
+            try {
+                if (!confirm('이 회원으로 입금을 확인하시겠습니까?')) return
+                
+                await axios.post(`${API_BASE}/transactions/pending/${pendingId}/match`, {
+                    member_id: memberId,
+                    staff_id: currentStaff.id
+                })
+                
+                showToast('입금이 확인되었습니다', 'success')
+                await refreshPendingDeposits()
+            } catch (error) {
+                console.error('입금 확인 오류:', error)
+                showToast('입금 확인에 실패했습니다', 'error')
+            }
+        }
+        
+        // 거래 내역 로드
+        async function loadTransactions() {
+            try {
+                const type = document.getElementById('trans-type-filter').value
+                const status = document.getElementById('trans-status-filter').value
+                const startDate = document.getElementById('trans-start-date').value
+                const endDate = document.getElementById('trans-end-date').value
+                
+                let url = `${API_BASE}/transactions?`
+                if (type) url += `type=${type}&`
+                if (status) url += `status=${status}&`
+                if (startDate) url += `start_date=${startDate}&`
+                if (endDate) url += `end_date=${endDate}&`
+                
+                const response = await axios.get(url)
+                const transactions = response.data || []
+                
+                const container = document.getElementById('transactions-list')
+                if (transactions.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">거래 내역이 없습니다</p>'
+                    return
+                }
+                
+                const html = transactions.map(t => {
+                    const typeIcon = t.transaction_type === 'deposit' ? 'arrow-down' : t.transaction_type === 'withdrawal' ? 'arrow-up' : 'file-invoice-dollar'
+                    const typeColor = t.transaction_type === 'deposit' ? 'text-green-600' : t.transaction_type === 'withdrawal' ? 'text-red-600' : 'text-gray-600'
+                    const typeText = t.transaction_type === 'deposit' ? '입금' : t.transaction_type === 'withdrawal' ? '출금' : '경비'
+                    
+                    const statusBadge = 
+                        t.approval_status === 'approved' ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">승인됨</span>' :
+                        t.approval_status === 'rejected' ? '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">거부됨</span>' :
+                        '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">대기중</span>'
+                    
+                    const date = new Date(t.transaction_date).toLocaleString('ko-KR')
+                    
+                    return `
+                        <div class="border rounded p-3 hover:bg-gray-50">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <i class="fas fa-${typeIcon} ${typeColor}"></i>
+                                        <strong class="${typeColor}">${t.amount.toLocaleString()}원</strong>
+                                        <span class="text-gray-600 text-sm">${typeText}</span>
+                                        ${statusBadge}
+                                    </div>
+                                    <div class="text-sm text-gray-600 space-y-1">
+                                        ${t.depositor_name ? `<p><i class="fas fa-user mr-2"></i>${t.depositor_name}</p>` : ''}
+                                        ${t.member_name ? `<p><i class="fas fa-id-card mr-2"></i>회원: ${t.member_name} (${t.inmate_number})</p>` : ''}
+                                        ${t.bank_name ? `<p><i class="fas fa-building mr-2"></i>${t.bank_name} ${t.account_number || ''}</p>` : ''}
+                                        <p><i class="fas fa-clock mr-2"></i>${date}</p>
+                                        ${t.memo ? `<p><i class="fas fa-comment mr-2"></i>${t.memo}</p>` : ''}
+                                        ${t.rejection_reason ? `<p class="text-red-600"><i class="fas fa-exclamation-circle mr-2"></i>${t.rejection_reason}</p>` : ''}
+                                    </div>
+                                </div>
+                                ${t.approval_status === 'pending' ? `
+                                    <div class="flex flex-col gap-2">
+                                        <button onclick="approveTransaction(${t.id})" class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                                            <i class="fas fa-check mr-1"></i>승인
+                                        </button>
+                                        <button onclick="rejectTransaction(${t.id})" class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+                                            <i class="fas fa-times mr-1"></i>거부
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `
+                }).join('')
+                
+                container.innerHTML = html
+            } catch (error) {
+                console.error('거래 내역 로드 오류:', error)
+                showToast('거래 내역을 불러오지 못했습니다', 'error')
+            }
+        }
+        
+        // 거래 승인
+        async function approveTransaction(transactionId) {
+            try {
+                const memo = prompt('승인 메모 (선택사항):')
+                
+                await axios.post(`${API_BASE}/transactions/${transactionId}/approve`, {
+                    staff_id: currentStaff.id,
+                    memo
+                })
+                
+                showToast('거래가 승인되었습니다', 'success')
+                await loadTransactions()
+                await loadTransactionStats()
+            } catch (error) {
+                console.error('거래 승인 오류:', error)
+                showToast('거래 승인에 실패했습니다', 'error')
+            }
+        }
+        
+        // 거래 거부
+        async function rejectTransaction(transactionId) {
+            try {
+                const reason = prompt('거부 사유를 입력하세요:')
+                if (!reason) return
+                
+                await axios.post(`${API_BASE}/transactions/${transactionId}/reject`, {
+                    staff_id: currentStaff.id,
+                    reason
+                })
+                
+                showToast('거래가 거부되었습니다', 'success')
+                await loadTransactions()
+                await loadTransactionStats()
+            } catch (error) {
+                console.error('거래 거부 오류:', error)
+                showToast('거래 거부에 실패했습니다', 'error')
+            }
+        }
+        
+        // 회원 찾기 모달 표시 (간단한 구현)
+        async function showMatchMemberModal(pendingId) {
+            const memberName = prompt('회원 이름 또는 수용번호를 입력하세요:')
+            if (!memberName) return
+            
+            try {
+                // 회원 검색
+                const response = await axios.get(`${API_BASE}/members?search=${encodeURIComponent(memberName)}`)
+                const members = response.data || []
+                
+                if (members.length === 0) {
+                    showToast('회원을 찾을 수 없습니다', 'error')
+                    return
+                }
+                
+                // 첫 번째 회원으로 매칭 (TODO: 더 나은 UI 필요)
+                const member = members[0]
+                const confirmed = confirm(`${member.name} (${member.inmate_number})로 입금을 확인하시겠습니까?`)
+                
+                if (confirmed) {
+                    await confirmPendingDeposit(pendingId, member.id)
+                }
+            } catch (error) {
+                console.error('회원 검색 오류:', error)
+                showToast('회원 검색에 실패했습니다', 'error')
+            }
+        }
+        
+        // 수동 거래 등록 (TODO: 모달 UI 개선 필요)
+        function showAddTransactionModal() {
+            alert('수동 거래 등록 기능은 추후 구현 예정입니다.')
         }
     </script>
 </body>
