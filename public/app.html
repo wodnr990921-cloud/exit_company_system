@@ -2838,7 +2838,10 @@
                                 <!-- 날짜 필터 버튼 -->
                                 <div class="flex gap-2 items-center">
                                     <span class="text-sm text-gray-600 font-medium">기간:</span>
-                                    <button onclick="setMatchDateFilter(2)" id="date-filter-2" class="px-3 py-1 text-sm rounded bg-blue-600 text-white font-medium">2일</button>
+                                    <button onclick="setMatchDateFilter(-1)" id="date-filter--1" class="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300">어제</button>
+                                    <button onclick="setMatchDateFilter(0)" id="date-filter-0" class="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300">오늘</button>
+                                    <button onclick="setMatchDateFilter(1)" id="date-filter-1" class="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300">내일</button>
+                                    <button onclick="setMatchDateFilter(3)" id="date-filter-3" class="px-3 py-1 text-sm rounded bg-blue-600 text-white font-medium">3일</button>
                                     <button onclick="setMatchDateFilter(7)" id="date-filter-7" class="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300">7일</button>
                                     <button onclick="setMatchDateFilter(30)" id="date-filter-30" class="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300">30일</button>
                                     <button onclick="setMatchDateFilter(null)" id="date-filter-all" class="px-3 py-1 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300">전체</button>
@@ -7654,7 +7657,7 @@ console.log('권한 관리 함수 로드 완료')
 
         // 경기 관리 목록 로드
         let allMatchesForManagement = []
-        let managementDateFilter = 2  // 기본 2일
+        let managementDateFilter = 3  // 기본 3일
         
         async function loadMatchManagement() {
             try {
@@ -7686,19 +7689,60 @@ console.log('권한 관리 함수 로드 완료')
         function filterMatchManagement() {
             const search = document.getElementById('match-management-search').value
             const now = new Date()
+            now.setHours(0, 0, 0, 0)  // 오늘 00:00:00
             
             let filtered = allMatchesForManagement
             
             // 날짜 필터 적용
             if (managementDateFilter !== null) {
-                const cutoffDate = new Date(now)
-                cutoffDate.setDate(cutoffDate.getDate() + managementDateFilter)
-                
-                filtered = filtered.filter(m => {
-                    if (!m.match_date) return false
-                    const matchDate = new Date(m.match_date)
-                    return matchDate <= cutoffDate && matchDate >= now
-                })
+                if (managementDateFilter === -1) {
+                    // 어제
+                    const yesterday = new Date(now)
+                    yesterday.setDate(yesterday.getDate() - 1)
+                    const tomorrow = new Date(now)
+                    
+                    filtered = filtered.filter(m => {
+                        if (!m.match_date) return false
+                        const matchDate = new Date(m.match_date)
+                        matchDate.setHours(0, 0, 0, 0)
+                        return matchDate >= yesterday && matchDate < tomorrow
+                    })
+                } else if (managementDateFilter === 0) {
+                    // 오늘
+                    const tomorrow = new Date(now)
+                    tomorrow.setDate(tomorrow.getDate() + 1)
+                    
+                    filtered = filtered.filter(m => {
+                        if (!m.match_date) return false
+                        const matchDate = new Date(m.match_date)
+                        matchDate.setHours(0, 0, 0, 0)
+                        return matchDate >= now && matchDate < tomorrow
+                    })
+                } else if (managementDateFilter === 1) {
+                    // 내일
+                    const tomorrow = new Date(now)
+                    tomorrow.setDate(tomorrow.getDate() + 1)
+                    const dayAfter = new Date(now)
+                    dayAfter.setDate(dayAfter.getDate() + 2)
+                    
+                    filtered = filtered.filter(m => {
+                        if (!m.match_date) return false
+                        const matchDate = new Date(m.match_date)
+                        matchDate.setHours(0, 0, 0, 0)
+                        return matchDate >= tomorrow && matchDate < dayAfter
+                    })
+                } else {
+                    // N일 (오늘부터 N일 후까지)
+                    const cutoffDate = new Date(now)
+                    cutoffDate.setDate(cutoffDate.getDate() + managementDateFilter)
+                    
+                    filtered = filtered.filter(m => {
+                        if (!m.match_date) return false
+                        const matchDate = new Date(m.match_date)
+                        matchDate.setHours(0, 0, 0, 0)
+                        return matchDate >= now && matchDate <= cutoffDate
+                    })
+                }
             }
             
             // 검색어 필터 적용

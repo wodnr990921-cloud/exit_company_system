@@ -104,7 +104,7 @@ betting.post('/matches', async (c) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       match_number, match_name, match_date, home_team, away_team, league || 'ETC',
-      home_odds || 1.0, away_odds || 1.0, draw_odds || null,
+      home_odds || null, away_odds || null, draw_odds || null,
       over_line || null, over_odds || null, under_odds || null,
       handicap_line || null, handicap_home_odds || null, handicap_away_odds || null,
       'open'
@@ -146,7 +146,7 @@ betting.post('/matches/bulk', async (c) => {
            WHERE id = ?`
         ).bind(
           match_name, match_date, home_team, away_team, league || 'ETC',
-          home_odds || 1.0, draw_odds || null, away_odds || 1.0,
+          home_odds || null, draw_odds || null, away_odds || null,
           id
         ).run()
       } else {
@@ -162,7 +162,7 @@ betting.post('/matches/bulk', async (c) => {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           match_number, match_name, match_date, home_team, away_team, league || 'ETC',
-          home_odds || 1.0, away_odds || 1.0, draw_odds || null,
+          home_odds || null, away_odds || null, draw_odds || null,
           match.over_line || null, match.over_odds || null, match.under_odds || null,
           match.handicap_line || null, match.handicap_home_odds || null, match.handicap_away_odds || null,
           'open'
@@ -2267,5 +2267,27 @@ async function processMatchBets(
     }
   }
 }
+
+// 60일 경과 경기 자동 삭제
+betting.post('/matches/cleanup', async (c) => {
+  try {
+    const sixtyDaysAgo = new Date()
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
+    const cutoffDate = sixtyDaysAgo.toISOString()
+
+    const result = await c.env.DB.prepare(
+      `DELETE FROM matches WHERE match_date < ? AND status IN ('completed', 'cancelled')`
+    ).bind(cutoffDate).run()
+
+    return c.json({
+      success: true,
+      deleted_count: result.meta.changes || 0,
+      cutoff_date: cutoffDate
+    })
+  } catch (error) {
+    console.error('경기 자동 삭제 오류:', error)
+    return c.json({ error: '경기 삭제 중 오류가 발생했습니다.' }, 500)
+  }
+})
 
 export default betting
