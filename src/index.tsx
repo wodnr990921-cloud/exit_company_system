@@ -21,6 +21,7 @@ import ai from './routes/ai'
 import telegram from './routes/telegram'
 import settings from './routes/settings'
 import transactions from './routes/transactions'
+import activityLogs from './routes/activity-logs'
 
 type Bindings = {
   DB: D1Database
@@ -64,6 +65,7 @@ app.route('/api/ai', ai)
 app.route('/api/telegram', telegram)
 app.route('/api/settings', settings)
 app.route('/api/transactions', transactions)
+app.route('/api/activity-logs', activityLogs)
 
 // 메인 페이지
 
