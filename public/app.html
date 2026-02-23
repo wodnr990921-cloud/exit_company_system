@@ -4777,6 +4777,7 @@ console.log('권한 관리 함수 로드 완료')
 
         // 뷰 전환
         function showView(view) {
+            console.log(`🔄 뷰 전환: ${view}`)
             currentView = view
             document.querySelectorAll('.view-content').forEach(el => el.classList.add('hidden'))
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
@@ -4822,6 +4823,7 @@ console.log('권한 관리 함수 로드 완료')
 
         // 관리자 페이지 탭 전환
         function showAdminTab(tabName) {
+            console.log(`📑 관리자 탭 전환: ${tabName}`)
             // 모든 탭 버튼 비활성화
             document.querySelectorAll('[id^="admin-tab-"]').forEach(btn => {
                 btn.classList.remove('border-blue-500', 'text-blue-600')
@@ -4919,14 +4921,18 @@ console.log('권한 관리 함수 로드 완료')
 
         // 활동 로그 로드
         async function loadActivityLogs() {
+            console.log('📜 활동 로그 로드 중...')
             try {
                 const startDate = document.getElementById('activity-log-start-date').value
                 const endDate = document.getElementById('activity-log-end-date').value
                 const staffFilter = document.getElementById('activity-log-staff-filter').value
                 const actionFilter = document.getElementById('activity-log-action-filter').value
                 
+                console.log('  🔍 필터:', { startDate, endDate, staffFilter, actionFilter })
+                
                 if (!startDate || !endDate) {
                     alert('시작일과 종료일을 선택해주세요')
+                    console.warn('  ⚠️ 날짜 미선택')
                     return
                 }
                 
@@ -4934,8 +4940,10 @@ console.log('권한 관리 함수 로드 완료')
                 if (staffFilter) url += `&staff_id=${staffFilter}`
                 if (actionFilter) url += `&action=${actionFilter}`
                 
+                console.log('  🌐 API 호출:', url)
                 const response = await axios.get(url)
                 const logs = response.data.logs || []
+                console.log('  📦 활동 로그:', logs.length + '건', logs)
                 
                 const html = logs.length > 0 ? logs.map(log => `
                     <div class="border-l-4 ${getActionColor(log.action)} bg-gray-50 p-3 rounded">
@@ -4955,8 +4963,10 @@ console.log('권한 관리 함수 로드 완료')
                 `).join('') : '<p class="text-gray-500 text-center py-8">활동 로그가 없습니다</p>'
                 
                 document.getElementById('activity-log-list').innerHTML = html
+                console.log('  ✅ 활동 로그 렌더링 완료')
             } catch (error) {
-                console.error('활동 로그 로드 오류:', error)
+                console.error('❌ 활동 로그 로드 오류:', error)
+                console.error('  상세:', error.response?.data || error.message)
                 document.getElementById('activity-log-list').innerHTML = '<p class="text-red-500 text-center py-8">로그를 불러오는데 실패했습니다</p>'
             }
         }
@@ -14868,9 +14878,12 @@ console.log('권한 관리 함수 로드 완료')
         
         // 설정 로드
         async function loadSettings() {
+            console.log('⚙️ 설정 로드 중...')
             try {
+                console.log('  🌐 API 호출:', `${API_BASE}/settings`)
                 const response = await axios.get(`${API_BASE}/settings`)
                 const settings = response.data
+                console.log('  📦 설정 데이터:', settings)
                 
                 // API 키 설정
                 document.getElementById('setting-openai-key').value = settings.openai_key || ''
@@ -14906,8 +14919,10 @@ console.log('권한 관리 함수 로드 완료')
                 await loadAiMemories()
                 
                 showToast('설정을 불러왔습니다', 'success')
+                console.log('  ✅ 설정 로드 완료')
             } catch (error) {
-                console.error('설정 로드 오류:', error)
+                console.error('❌ 설정 로드 오류:', error)
+                console.error('  상세:', error.response?.data || error.message)
                 // 오류 시 기본값 설정
                 document.getElementById('setting-commission-rate').value = 10
                 document.getElementById('setting-min-settlement').value = 10000
@@ -14985,18 +15000,27 @@ console.log('권한 관리 함수 로드 완료')
         
         // 입출금 관리 탭 로드
         async function loadTransactionsTab() {
-            await Promise.all([
-                loadTransactionStats(),
-                loadPendingDeposits(),
-                loadTransactions()
-            ])
+            console.log('🔄 입출금 관리 탭 로드 시작...')
+            try {
+                await Promise.all([
+                    loadTransactionStats(),
+                    loadPendingDeposits(),
+                    loadTransactions()
+                ])
+                console.log('✅ 입출금 관리 탭 로드 완료')
+            } catch (error) {
+                console.error('❌ 입출금 관리 탭 로드 실패:', error)
+            }
         }
         
         // 입출금 통계 로드
         async function loadTransactionStats() {
+            console.log('📊 입출금 통계 로드 중...')
             try {
                 const today = new Date().toISOString().split('T')[0]
+                console.log('  📅 조회 날짜:', today)
                 const response = await axios.get(`${API_BASE}/transactions/stats?start_date=${today}&end_date=${today}`)
+                console.log('  📦 통계 응답:', response.data)
                 
                 const stats = response.data.stats || []
                 let depositTotal = 0
@@ -15019,20 +15043,25 @@ console.log('권한 관리 함수 로드 완료')
                 document.getElementById('pending-deposits-total').textContent = response.data.pending_deposits + '건'
                 document.getElementById('pending-approvals-total').textContent = pendingCount + '건'
                 document.getElementById('pending-deposits-count').textContent = response.data.pending_deposits
+                console.log('  ✅ 통계 업데이트 완료:', { depositTotal, withdrawalTotal, pendingCount })
             } catch (error) {
-                console.error('입출금 통계 로드 오류:', error)
+                console.error('❌ 입출금 통계 로드 오류:', error)
+                console.error('  상세:', error.response?.data || error.message)
             }
         }
         
         // 미확인 입금 목록 로드
         async function loadPendingDeposits() {
+            console.log('💰 미확인 입금 로드 중...')
             try {
                 const response = await axios.get(`${API_BASE}/transactions/pending`)
                 const deposits = response.data || []
+                console.log('  📦 미확인 입금:', deposits.length + '건', deposits)
                 
                 const container = document.getElementById('pending-deposits-list')
                 if (deposits.length === 0) {
                     container.innerHTML = '<p class="text-gray-500 text-center py-8">미확인 입금이 없습니다</p>'
+                    console.log('  ℹ️ 미확인 입금 없음')
                     return
                 }
                 
@@ -15077,8 +15106,10 @@ console.log('권한 관리 함수 로드 완료')
                 }).join('')
                 
                 container.innerHTML = html
+                console.log('  ✅ 미확인 입금 렌더링 완료')
             } catch (error) {
-                console.error('미확인 입금 로드 오류:', error)
+                console.error('❌ 미확인 입금 로드 오류:', error)
+                console.error('  상세:', error.response?.data || error.message)
             }
         }
         
@@ -15108,11 +15139,14 @@ console.log('권한 관리 함수 로드 완료')
         
         // 거래 내역 로드
         async function loadTransactions() {
+            console.log('📋 거래 내역 로드 중...')
             try {
                 const type = document.getElementById('trans-type-filter').value
                 const status = document.getElementById('trans-status-filter').value
                 const startDate = document.getElementById('trans-start-date').value
                 const endDate = document.getElementById('trans-end-date').value
+                
+                console.log('  🔍 필터:', { type, status, startDate, endDate })
                 
                 let url = `${API_BASE}/transactions?`
                 if (type) url += `type=${type}&`
@@ -15120,12 +15154,15 @@ console.log('권한 관리 함수 로드 완료')
                 if (startDate) url += `start_date=${startDate}&`
                 if (endDate) url += `end_date=${endDate}&`
                 
+                console.log('  🌐 API 호출:', url)
                 const response = await axios.get(url)
                 const transactions = response.data || []
+                console.log('  📦 거래 내역:', transactions.length + '건', transactions)
                 
                 const container = document.getElementById('transactions-list')
                 if (transactions.length === 0) {
                     container.innerHTML = '<p class="text-gray-500 text-center py-8">거래 내역이 없습니다</p>'
+                    console.log('  ℹ️ 거래 내역 없음')
                     return
                 }
                 
