@@ -15161,6 +15161,35 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
             
+            const currentStaffId = currentStaff?.id
+            
+            const html = comments.map(c => {
+                const isMyComment = c.created_by === currentStaffId || c.staff_id === currentStaffId
+                const alignClass = isMyComment ? 'justify-end' : 'justify-start'
+                const bgClass = isMyComment ? 'bg-blue-600' : 'bg-white border'
+                const textClass = isMyComment ? 'text-white' : 'text-gray-900'
+                
+                return `
+                    <div class="flex ${alignClass}">
+                        <div class="max-w-[80%]">
+                            ${!isMyComment ? `<div class="text-xs text-gray-600 mb-1 px-2">${c.created_by_name || c.staff_name || '직원'}</div>` : ''}
+                            <div class="${bgClass} ${textClass} rounded-lg px-4 py-2 shadow-sm">
+                                <p class="text-sm font-medium whitespace-pre-wrap">${c.content || c.comment}</p>
+                                <div class="text-xs ${isMyComment ? 'text-blue-100 font-semibold' : 'text-gray-500'} mt-1">
+                                    ${new Date(c.created_at).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            }).join('')
+            
+            container.innerHTML = html
+            container.scrollTop = container.scrollHeight
+        }
+                return
+            }
+            
             const html = comments.map(c => {
                 const isMyComment = c.staff_id === currentStaff.id
                 const alignClass = isMyComment ? 'justify-end' : 'justify-start'
@@ -15219,7 +15248,7 @@ console.log('권한 관리 함수 로드 완료')
                 })
                 
                 input.value = ''
-                await loadTicketComments(currentTicketId)
+                await loadStaffComments()
                 showToast('지시사항이 추가되었습니다', 'success')
             } catch (error) {
                 console.error('댓글 추가 오류:', error)
