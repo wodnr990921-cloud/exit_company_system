@@ -1,0 +1,46 @@
+name: Auto Update Match Results
+
+on:
+  schedule:
+    # 매 30분마다 실행 (경기 종료 후 빠른 업데이트)
+    - cron: '*/30 * * * *'
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  update-results:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Update Match Results
+        env:
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL || 'https://exit-company-system-5je.pages.dev' }}
+        run: |
+          echo "🏆 경기 결과 자동 업데이트 시작..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "${API_BASE_URL}/api/betting/matches/auto-update-results" \
+            -H "Authorization: Bearer ${API_TOKEN}" \
+            -H "Content-Type: application/json")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ 경기 결과 업데이트 실패"
+            exit 1
+          fi
+          
+          echo "✅ 경기 결과 업데이트 완료"
+          echo "$BODY" | jq '.'
+      
+      - name: Send Notification (Optional)
+        if: success()
+        run: |
+          echo "📢 경기 결과가 성공적으로 업데이트되었습니다."
