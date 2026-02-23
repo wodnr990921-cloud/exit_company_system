@@ -1,6 +1,68 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v60.0
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v60.3
 
-## ✅ 최신 업데이트 (v60.0 - 2026-02-23)
+## ✅ 최신 업데이트 (v60.3 - 2026-02-23)
+
+### 📱 텔레그램 2봇 1채널 시스템 구현 (v60.3)
+- **🎯 Admin Bot (관리자 전용)**:
+  - 봇: @ExitSystem_bot (8482830575:AAGsth2J04_...)
+  - 승인 기능: 인라인 키보드 (✅ 승인 / ❌ 거절 버튼)
+  - 명령어: `/status`, `/pending`, `/transactions`, `/help`
+  - 권한 검증: TELEGRAM_ADMIN_USER_ID로 관리자만 승인 가능
+  - Webhook: `/api/telegram/webhook/admin`
+  
+- **👥 Staff Bot (직원용)**:
+  - 정보 조회 전용 (승인 권한 없음)
+  - 명령어: `/mytickets`, `/price`, `/help`
+  - 가격표 조회: AI 메모리에서 가격 정보 자동 조회
+  - Webhook: `/api/telegram/webhook/staff`
+  
+- **📢 공유 채널 (브로드캐스트)**:
+  - Private 채널에 모든 알림 집중
+  - 두 봇 모두 채널 관리자로 추가
+  - 승인 요청 시 관리자만 버튼 사용 가능
+  - 채널 ID는 `-100`으로 시작 (예: `-1001234567890`)
+
+### 🔧 기술적 구현
+- **Callback Query 처리**:
+  - 인라인 버튼 클릭 → Callback query 수신
+  - 사용자 ID 검증 → 관리자만 승인/거절
+  - 메시지 업데이트: 승인/거절 상태 표시
+  - answerCallbackQuery로 즉시 피드백
+  
+- **환경 변수 (4개)**:
+  - `TELEGRAM_ADMIN_BOT_TOKEN`: Admin Bot 토큰
+  - `TELEGRAM_STAFF_BOT_TOKEN`: Staff Bot 토큰 (새로 생성 필요)
+  - `TELEGRAM_CHANNEL_ID`: 채널 ID (-100으로 시작)
+  - `TELEGRAM_ADMIN_USER_ID`: 관리자 사용자 ID
+  
+- **API 엔드포인트**:
+  - `POST /api/telegram/webhook/admin` - Admin Bot
+  - `POST /api/telegram/webhook/staff` - Staff Bot
+  - `POST /api/telegram/notify` - 채널 알림 전송
+
+### 📋 설정 가이드
+- **TELEGRAM_2BOT_SETUP.md** 참조
+- Staff Bot 생성 방법
+- 채널 생성 및 봇 추가 방법
+- Chat ID 확인 방법 (3가지)
+- Webhook 설정 명령어
+- 테스트 curl 명령어
+
+### 🛠️ 파일 변경사항
+- `src/routes/telegram.ts`: 2봇 webhook 분리 (+489 lines)
+- `src/index.tsx`: Bindings 업데이트 (4개 변수)
+- `.dev.vars`: 환경 변수 추가
+- `TELEGRAM_2BOT_SETUP.md`: 상세 설정 가이드 (새 파일)
+
+### 📦 빌드 정보
+- **배포 URL**: https://3b379ab8.exit-company-system-5je.pages.dev
+- **Git 커밋**: b02ffcf
+- **빌드 크기**: 210.97 kB (+4.64 kB from v60.0)
+- **최종 업데이트**: 2026-02-23 15:25 KST
+
+---
+
+## ✅ 이전 업데이트 (v60.0 - 2026-02-23)
 
 ### 🎯 배팅 관리 대폭 개선 (v60.0)
 - **⚽ 스마트 경기 필터링**:
