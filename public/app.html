@@ -10923,7 +10923,7 @@ console.log('권한 관리 함수 로드 완료')
                 })
                 
                 // 3. 티켓 생성 및 확정 (임시 티켓 → 정식 티켓)
-                const ticketRes = await axios.post(`${API_BASE}/tickets`, {
+                const ticketPayload = {
                     member_id: memberId,  // null 가능 (미지정)
                     assigned_to: parseInt(staffId),  // 담당자 배정
                     created_by: currentStaff.id,  // 생성자 (필수)
@@ -10933,16 +10933,35 @@ console.log('권한 관리 함수 로드 완료')
                     description: memberId 
                         ? `우편물 검수 완료\n발신자: ${name}\n수용번호: ${number}\n기관: ${institution}`
                         : `우편물 검수 완료\n회원: 미지정\n담당자가 추후 회원을 연결해주세요.`
-                })
+                }
+                
+                console.log('티켓 생성 요청 페이로드:', ticketPayload)
+                const ticketRes = await axios.post(`${API_BASE}/tickets`, ticketPayload)
                 
                 console.log('티켓 생성 응답:', ticketRes.data)
+                console.log('응답 상태:', ticketRes.status)
+                console.log('응답 헤더:', ticketRes.headers)
                 
-                if (!ticketRes.data || !ticketRes.data.ticket_number) {
-                    throw new Error('티켓 생성 응답이 올바르지 않습니다.')
+                // 응답 검증
+                if (!ticketRes || !ticketRes.data) {
+                    console.error('티켓 응답이 없습니다:', ticketRes)
+                    throw new Error('서버로부터 응답을 받지 못했습니다.')
+                }
+                
+                if (!ticketRes.data.success) {
+                    console.error('티켓 생성 실패:', ticketRes.data)
+                    throw new Error(ticketRes.data.error || '티켓 생성에 실패했습니다.')
+                }
+                
+                if (!ticketRes.data.ticket_number || !ticketRes.data.ticket_id) {
+                    console.error('티켓 정보 누락:', ticketRes.data)
+                    throw new Error('티켓 번호 또는 ID를 받지 못했습니다.')
                 }
                 
                 const ticketNumber = ticketRes.data.ticket_number
                 const ticketId = ticketRes.data.ticket_id
+                
+                console.log('티켓 생성 성공:', { ticketNumber, ticketId })
                 
                 console.log('우편물-티켓 연결 시작')
                 // 4. 우편물에 티켓 연결
