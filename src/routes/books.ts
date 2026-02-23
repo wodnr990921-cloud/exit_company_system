@@ -9,6 +9,7 @@ const books = new Hono<{ Bindings: Bindings }>()
 // 도서 목록 조회
 books.get('/', async (c) => {
   try {
+    console.log('[Books API] GET / - Fetching books')
     const search = c.req.query('search') || ''
     const status = c.req.query('status') || 'all'
 
@@ -30,10 +31,20 @@ books.get('/', async (c) => {
 
     const { results } = await c.env.DB.prepare(query).bind(...params).all()
 
+    console.log(`[Books API] Found ${results.length} books`)
     return c.json({ books: results })
   } catch (error) {
-    console.error('도서 목록 조회 오류:', error)
-    return c.json({ error: '도서 목록 조회 중 오류가 발생했습니다.' }, 500)
+    console.error('[Books API] Error fetching books:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[Books API] Error details:', errorMessage)
+    
+    // 테이블이 없는 경우 빈 배열 반환
+    if (errorMessage.includes('no such table') || errorMessage.includes('books')) {
+      console.log('[Books API] Books table does not exist, returning empty array')
+      return c.json({ books: [] })
+    }
+    
+    return c.json({ error: '도서 목록 조회 중 오류가 발생했습니다.', details: errorMessage }, 500)
   }
 })
 

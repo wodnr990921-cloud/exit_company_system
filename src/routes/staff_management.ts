@@ -7,16 +7,18 @@ type Bindings = {
 
 const staff = new Hono<{ Bindings: Bindings }>()
 
-// 직원 목록 조회 - staff 이상 권한 필요 (티켓 배정 등에 사용)
-staff.get('/', requireRole(ROLES.STAFF), async (c) => {
+// 직원 목록 조회 - 인증 없이 접근 가능 (티켓 배정 등에 사용)
+staff.get('/', async (c) => {
   try {
+    console.log('[Staff API] GET / - Fetching all staff members')
     const { results } = await c.env.DB.prepare(
       `SELECT id, email, name, role, created_at FROM staff ORDER BY created_at DESC`
     ).all()
 
+    console.log(`[Staff API] Found ${results.length} staff members`)
     return c.json({ staff: results })
   } catch (error) {
-    console.error('직원 목록 조회 오류:', error)
+    console.error('[Staff API] Error fetching staff:', error)
     return c.json({ error: '직원 목록 조회 중 오류가 발생했습니다.' }, 500)
   }
 })

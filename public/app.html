@@ -2384,11 +2384,23 @@
 
                         <!-- 회원 선택 (주문, 포인트 조정, 회원 관리 유형일 때) -->
                         <div id="ticket-member-field" class="hidden">
-                            <label class="block text-sm font-medium mb-1">회원 선택 *</label>
+                            <label class="block text-sm font-medium mb-1">
+                                회원 검색 *
+                                <span class="text-xs text-gray-500 ml-1">(이름 또는 번호로 검색)</span>
+                            </label>
                             <div class="flex gap-2">
-                                <select id="ticket-member" class="flex-1 px-3 py-2 border rounded">
-                                    <option value="">선택하세요</option>
-                                </select>
+                                <div class="flex-1 relative">
+                                    <input 
+                                        type="text" 
+                                        id="ticket-member-search" 
+                                        class="w-full px-3 py-2 border rounded"
+                                        placeholder="회원 이름 또는 번호 입력..."
+                                        oninput="handleTicketMemberSearch(event)"
+                                        autocomplete="off"
+                                    >
+                                    <input type="hidden" id="ticket-member" value="">
+                                    <div id="ticket-member-dropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-60 overflow-y-auto mt-1"></div>
+                                </div>
                                 <button type="button" onclick="showNewMemberModalFromTicket()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 whitespace-nowrap">
                                     <i class="fas fa-user-plus mr-1"></i>신규 회원
                                 </button>
@@ -3886,6 +3898,10 @@ console.log('권한 관리 함수 로드 완료')
         // 회원 변경 모달용 변수
         let memberSearchResults2 = []
         let memberSearchTimeout2 = null
+        
+        // 티켓 생성 모달 회원 검색용 변수
+        let ticketMemberSearchTimeout = null
+        let ticketMemberSearchResults = []
         
         // 페이지네이션 상태 관리
         const pagination = {
@@ -8739,6 +8755,68 @@ console.log('권한 관리 함수 로드 완료')
             showNewMemberModal()
             // 티켓 모달은 뒤에 유지
         }
+        
+        // 티켓 생성 모달에서 회원 검색
+        async function handleTicketMemberSearch(event) {
+            const query = event.target.value.trim()
+            
+            clearTimeout(ticketMemberSearchTimeout)
+            
+            if (query.length < 1) {
+                document.getElementById('ticket-member-dropdown').classList.add('hidden')
+                document.getElementById('ticket-member').value = ''
+                return
+            }
+            
+            ticketMemberSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await axios.get(`${API_BASE}/members?search=${encodeURIComponent(query)}`)
+                    ticketMemberSearchResults = res.data.members || []
+                    
+                    const dropdown = document.getElementById('ticket-member-dropdown')
+                    
+                    if (ticketMemberSearchResults.length === 0) {
+                        dropdown.innerHTML = `
+                            <div class="px-4 py-3 text-sm text-gray-500 text-center">
+                                검색 결과가 없습니다.
+                            </div>
+                        `
+                        dropdown.classList.remove('hidden')
+                        return
+                    }
+                    
+                    dropdown.innerHTML = ticketMemberSearchResults.map(m => `
+                        <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b" 
+                             onclick="selectTicketMember(${m.id}, '${m.name}', '${m.inmate_number || '-'}', '${m.institution || '-'}')">
+                            <p class="font-medium text-sm">${m.name}</p>
+                            <p class="text-xs text-gray-600">수용번호: ${m.inmate_number || '-'} | ${m.institution || '-'}</p>
+                        </div>
+                    `).join('')
+                    
+                    dropdown.classList.remove('hidden')
+                } catch (error) {
+                    console.error('회원 검색 오류:', error)
+                    const dropdown = document.getElementById('ticket-member-dropdown')
+                    dropdown.innerHTML = `
+                        <div class="px-4 py-3 text-sm text-red-600 text-center">
+                            검색 중 오류가 발생했습니다.
+                        </div>
+                    `
+                    dropdown.classList.remove('hidden')
+                }
+            }, 300)
+        }
+        
+        // 티켓 생성 모달에서 회원 선택
+        function selectTicketMember(id, name, inmateNumber, institution) {
+            const searchInput = document.getElementById('ticket-member-search')
+            const hiddenInput = document.getElementById('ticket-member')
+            const dropdown = document.getElementById('ticket-member-dropdown')
+            
+            searchInput.value = `${name} (${inmateNumber})`
+            hiddenInput.value = id
+            dropdown.classList.add('hidden')
+        }
 
         function closeNewMemberModal() {
             document.getElementById('new-member-modal').classList.add('hidden')
@@ -8787,17 +8865,22 @@ console.log('권한 관리 함수 로드 완료')
                 alert('회원이 등록되었습니다.')
                 closeNewMemberModal()
                 
-                // 티켓 모달이 열려있으면 회원 목록 새로고침 및 자동 선택
+                // 티켓 모달이 열려있으면 회원 검색 필드에 자동 설정
                 const ticketModal = document.getElementById('new-ticket-modal')
                 if (ticketModal && !ticketModal.classList.contains('hidden')) {
-                    const membersRes = await axios.get(`${API_BASE}/members`)
-                    const members = membersRes.data.members || []
-                    const memberOptions = members.map(m => 
-                        `<option value="${m.id}">${m.name} (${m.institution})</option>`
-                    ).join('')
-                    document.getElementById('ticket-member').innerHTML = '<option value="">선택하세요</option>' + memberOptions
-                    // 방금 생성한 회원 자동 선택
+                    // 방금 생성한 회원 정보 가져오기
+                    const newMember = await axios.get(`${API_BASE}/members/${newMemberId}`)
+                    const member = newMember.data.member
+                    
+                    // 검색 입력 필드에 회원 이름 표시
+                    const searchInput = document.getElementById('ticket-member-search')
+                    searchInput.value = member.name
+                    
+                    // hidden 필드에 회원 ID 저장
                     document.getElementById('ticket-member').value = newMemberId
+                    
+                    // 드롭다운 숨기기
+                    document.getElementById('ticket-member-dropdown').classList.add('hidden')
                 }
                 
                 if (currentView === 'members') await loadMembers()
