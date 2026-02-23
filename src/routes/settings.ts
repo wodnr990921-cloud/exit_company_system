@@ -9,29 +9,6 @@ const settings = new Hono<{ Bindings: Bindings }>()
 // 설정 조회
 settings.get('/', async (c) => {
   try {
-    // 설정 테이블 생성 (없을 경우)
-    await c.env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS settings (
-        id INTEGER PRIMARY KEY,
-        openai_key TEXT,
-        telegram_token TEXT,
-        telegram_chat_id TEXT,
-        commission_rate REAL DEFAULT 10,
-        min_settlement INTEGER DEFAULT 10000,
-        max_settlement INTEGER DEFAULT 5000000,
-        point_conversion_rate REAL DEFAULT 1.0,
-        notify_ticket_created INTEGER DEFAULT 1,
-        notify_ticket_assigned INTEGER DEFAULT 1,
-        notify_approval_request INTEGER DEFAULT 1,
-        notify_betting_result INTEGER DEFAULT 1,
-        auto_closing_time TEXT DEFAULT '23:59',
-        ticket_retention INTEGER DEFAULT 365,
-        session_timeout INTEGER DEFAULT 60,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run()
-
     const result = await c.env.DB.prepare(`
       SELECT * FROM settings WHERE id = 1
     `).first()
@@ -60,7 +37,24 @@ settings.get('/', async (c) => {
     return c.json(result)
   } catch (error: any) {
     console.error('설정 조회 오류:', error)
-    return c.json({ error: '설정 조회 실패', details: error.message }, 500)
+    // 테이블이 없는 경우 기본값 반환
+    return c.json({
+      openai_key: '',
+      telegram_token: '',
+      telegram_chat_id: '',
+      commission_rate: 10,
+      min_settlement: 10000,
+      max_settlement: 5000000,
+      point_conversion_rate: 1.0,
+      notify_ticket_created: true,
+      notify_ticket_assigned: true,
+      notify_approval_request: true,
+      notify_betting_result: true,
+      auto_closing_time: '23:59',
+      ticket_retention: 365,
+      session_timeout: 60,
+      updated_at: null
+    })
   }
 })
 

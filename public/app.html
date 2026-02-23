@@ -384,6 +384,72 @@
         </div>
     </div>
 
+    <!-- AI 챗봇 위젯 (전역 고정) -->
+    <div id="global-ai-widget" class="fixed bottom-4 right-4 w-96 bg-white shadow-2xl rounded-lg border flex flex-col" style="display: none; max-height: 600px; z-index: 9999;">
+        <!-- 위젯 헤더 -->
+        <div class="bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-t-lg flex items-center justify-between px-4 py-3">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-robot text-xl"></i>
+                <span class="font-bold">AI 어시스턴트</span>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="minimizeAiWidget()" class="px-2 py-1 hover:bg-white/20 rounded transition">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button onclick="closeAiWidget()" class="px-2 py-1 hover:bg-white/20 rounded transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- AI 챗봇 메시지 영역 (고정 높이) -->
+        <div id="global-ai-messages" class="overflow-y-auto p-4 space-y-3 bg-gradient-to-br from-gray-50 to-blue-50" style="height: 400px;">
+            <div class="flex justify-center">
+                <div class="bg-white rounded-lg p-4 shadow-sm max-w-[80%] text-center">
+                    <div class="text-blue-600 text-3xl mb-2">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <p class="text-sm text-gray-800 font-medium">안녕하세요! AI 어시스턴트입니다.</p>
+                    <p class="text-xs text-gray-600 mt-2">궁금하신 점을 입력해주세요.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 빠른 액션 버튼 -->
+        <div class="px-3 py-2 bg-gray-50 border-t border-b flex gap-2 flex-wrap">
+            <button onclick="quickGlobalAiPrompt('오늘 티켓 현황')" class="text-xs px-2 py-1 bg-white hover:bg-gray-100 rounded border">
+                📊 현황
+            </button>
+            <button onclick="quickGlobalAiPrompt('도서 발주 방법')" class="text-xs px-2 py-1 bg-white hover:bg-gray-100 rounded border">
+                📖 메뉴얼
+            </button>
+            <button onclick="quickGlobalAiPrompt('가격표 보여줘')" class="text-xs px-2 py-1 bg-white hover:bg-gray-100 rounded border">
+                💰 가격
+            </button>
+        </div>
+        
+        <!-- 입력 영역 -->
+        <div class="p-3 bg-white rounded-b-lg border-t">
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="global-ai-input" 
+                    placeholder="AI에게 질문하기..." 
+                    class="flex-1 px-3 py-2 border rounded text-sm"
+                    onkeypress="if(event.key==='Enter') sendGlobalAiMessage()"
+                >
+                <button onclick="sendGlobalAiMessage()" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded hover:from-purple-700 hover:to-blue-700">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 챗봇 최소화 버튼 -->
+    <button id="global-ai-toggle" onclick="toggleAiWidget()" class="fixed bottom-4 right-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:from-purple-700 hover:to-blue-700 transition" style="z-index: 9998;">
+        <i class="fas fa-robot text-xl"></i>
+    </button>
+
     <!-- 로그인 화면 -->
     <div id="login-screen" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
         <div class="bg-white p-8 rounded-lg shadow-2xl w-96">
@@ -3699,73 +3765,6 @@
 
                     <!-- 우측: 기존 티켓 정보 (60%) -->
                     <div class="w-3/5 flex flex-col overflow-hidden relative">
-                        <!-- 통합 위젯 (우측 하단 고정, 자동 표시) -->
-                        <!-- AI 챗봇 위젯 (전역 고정) -->
-                        <div id="global-ai-widget" class="fixed bottom-4 right-4 w-96 bg-white shadow-2xl rounded-lg border z-50 flex flex-col" style="display: none; max-height: 600px;">
-                            <!-- 위젯 헤더 -->
-                            <div class="bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-t-lg flex items-center justify-between px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-robot text-xl"></i>
-                                    <span class="font-bold">AI 어시스턴트</span>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="minimizeAiWidget()" class="px-2 py-1 hover:bg-white/20 rounded transition">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <button onclick="closeAiWidget()" class="px-2 py-1 hover:bg-white/20 rounded transition">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- AI 챗봇 메시지 영역 (고정 높이) -->
-                            <div id="global-ai-messages" class="overflow-y-auto p-4 space-y-3 bg-gradient-to-br from-gray-50 to-blue-50" style="height: 400px;">
-                                <div class="flex justify-center">
-                                    <div class="bg-white rounded-lg p-4 shadow-sm max-w-[80%] text-center">
-                                        <div class="text-blue-600 text-3xl mb-2">
-                                            <i class="fas fa-robot"></i>
-                                        </div>
-                                        <p class="text-sm text-gray-800 font-medium">안녕하세요! AI 어시스턴트입니다.</p>
-                                        <p class="text-xs text-gray-600 mt-2">궁금하신 점을 입력해주세요.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- 빠른 액션 버튼 -->
-                            <div class="px-3 py-2 bg-gray-50 border-t border-b flex gap-2 flex-wrap">
-                                <button onclick="quickGlobalAiPrompt('오늘 티켓 현황')" class="text-xs px-2 py-1 bg-white hover:bg-gray-100 rounded border">
-                                    📊 현황
-                                </button>
-                                <button onclick="quickGlobalAiPrompt('도서 발주 방법')" class="text-xs px-2 py-1 bg-white hover:bg-gray-100 rounded border">
-                                    📖 메뉴얼
-                                </button>
-                                <button onclick="quickGlobalAiPrompt('가격표 보여줘')" class="text-xs px-2 py-1 bg-white hover:bg-gray-100 rounded border">
-                                    💰 가격
-                                </button>
-                            </div>
-                            
-                            <!-- 입력 영역 -->
-                            <div class="p-3 bg-white rounded-b-lg border-t">
-                                <div class="flex gap-2">
-                                    <input 
-                                        type="text" 
-                                        id="global-ai-input" 
-                                        placeholder="AI에게 질문하기..." 
-                                        class="flex-1 px-3 py-2 border rounded text-sm"
-                                        onkeypress="if(event.key==='Enter') sendGlobalAiMessage()"
-                                    >
-                                    <button onclick="sendGlobalAiMessage()" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded hover:from-purple-700 hover:to-blue-700">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- AI 챗봇 최소화 버튼 -->
-                        <button id="global-ai-toggle" onclick="toggleAiWidget()" class="fixed bottom-4 right-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:from-purple-700 hover:to-blue-700 transition z-40">
-                            <i class="fas fa-robot text-xl"></i>
-                        </button>
-
                         <!-- 직원 소통 위젯 (티켓 모달 전용) -->
                         <div id="staff-chat-widget" class="absolute bottom-4 right-4 w-96 bg-white shadow-2xl rounded-lg border z-30 flex flex-col" style="display: none; max-height: 500px;">
                             <!-- 위젯 헤더 -->
@@ -3807,6 +3806,9 @@
                             <button onclick="showTicketTab('info')" id="tab-info" class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-500">
                                 <i class="fas fa-info-circle mr-1"></i>티켓 정보
                             </button>
+                            <button onclick="showTicketTab('comments')" id="tab-comments" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
+                                <i class="fas fa-comments mr-1"></i>댓글/답변
+                            </button>
                             <button onclick="showTicketTab('requests')" id="tab-requests" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
                                 <i class="fas fa-shopping-cart mr-1"></i>요청사항 <span id="cart-count" class="ml-1 px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">0</span>
                             </button>
@@ -3816,81 +3818,80 @@
                         <div class="flex-1 overflow-y-auto p-6">
                             <!-- 티켓 정보 탭 -->
                             <div id="ticket-tab-info" class="tab-content">
-                                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                                    <!-- 좌측 60%: 기본 정보 + 원문 + 요약 (3칸) -->
-                                    <div class="lg:col-span-3 space-y-4">
-                                        <!-- 기본 정보 -->
-                                        <div class="card">
-                                            <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
-                                            <div class="grid grid-cols-2 gap-3 text-sm">
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">티켓 번호:</span>
-                                                    <span class="font-mono" id="detail-ticket-number"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">제목:</span>
-                                                    <span id="detail-ticket-title"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">유형:</span>
-                                                    <span id="detail-ticket-type"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">상태:</span>
-                                                    <span id="detail-ticket-status"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">우선순위:</span>
-                                                    <span id="detail-ticket-priority"></span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">담당자:</span>
-                                                    <span id="detail-ticket-assigned"></span>
-                                                </div>
-                                                <div class="flex justify-between col-span-2">
-                                                    <span class="text-gray-600">생성일:</span>
-                                                    <span id="detail-ticket-created"></span>
-                                                </div>
+                                <!-- 회원 정보 (상단 전체 너비) -->
+                                <div class="mb-6">
+                                    <div id="member-management-card">
+                                        <!-- JavaScript로 동적 렌더링됩니다 -->
+                                    </div>
+                                </div>
+
+                                <!-- 기본 정보 + 원문 + 요약 (중간, 전체 너비) -->
+                                <div class="space-y-4 mb-6">
+                                    <!-- 기본 정보 -->
+                                    <div class="card">
+                                        <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">티켓 번호:</span>
+                                                <span class="font-mono" id="detail-ticket-number"></span>
                                             </div>
-                                        </div>
-                                        
-                                        <!-- OCR 원문 -->
-                                        <div class="card">
-                                            <h4 class="font-bold mb-3"><i class="fas fa-file-text mr-2"></i>OCR 원문 (검수에서 수정 가능)</h4>
-                                            <div id="ticket-original-text" class="text-sm text-gray-800 whitespace-pre-wrap max-h-96 overflow-y-auto p-3 bg-gray-50 rounded border">
-                                                <p id="detail-ticket-description" class="text-gray-800"></p>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">제목:</span>
+                                                <span id="detail-ticket-title"></span>
                                             </div>
-                                        </div>
-                                        
-                                        <!-- 요약 -->
-                                        <div class="card">
-                                            <h4 class="font-bold mb-3"><i class="fas fa-clipboard-list mr-2"></i>요약 (AI 추출 편지 내용)</h4>
-                                            <div id="ticket-summary" class="text-sm text-gray-700 whitespace-pre-wrap p-3 bg-blue-50 rounded border border-blue-200">
-                                                <!-- JavaScript로 요약 정보 표시 -->
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">유형:</span>
+                                                <span id="detail-ticket-type"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">상태:</span>
+                                                <span id="detail-ticket-status"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">우선순위:</span>
+                                                <span id="detail-ticket-priority"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">담당자:</span>
+                                                <span id="detail-ticket-assigned"></span>
+                                            </div>
+                                            <div class="flex justify-between col-span-2">
+                                                <span class="text-gray-600">생성일:</span>
+                                                <span id="detail-ticket-created"></span>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <!-- 우측 40%: 회원 정보 + 상태 변경 (2칸) -->
-                                    <div class="lg:col-span-2 space-y-4">
-                                        <!-- 회원 관리 -->
-                                        <div id="member-management-card">
-                                            <!-- JavaScript로 동적 렌더링됩니다 -->
+                                    <!-- OCR 원문 -->
+                                    <div class="card">
+                                        <h4 class="font-bold mb-3"><i class="fas fa-file-text mr-2"></i>OCR 원문 (검수에서 수정 가능)</h4>
+                                        <div id="ticket-original-text" class="text-sm text-gray-800 whitespace-pre-wrap max-h-96 overflow-y-auto p-3 bg-gray-50 rounded border">
+                                            <p id="detail-ticket-description" class="text-gray-800"></p>
                                         </div>
+                                    </div>
+                                    
+                                    <!-- 요약 -->
+                                    <div class="card">
+                                        <h4 class="font-bold mb-3"><i class="fas fa-clipboard-list mr-2"></i>요약 (AI 추출 편지 내용)</h4>
+                                        <div id="ticket-summary" class="text-sm text-gray-700 whitespace-pre-wrap p-3 bg-blue-50 rounded border border-blue-200">
+                                            <!-- JavaScript로 요약 정보 표시 -->
+                                        </div>
+                                    </div>
+                                </div>
 
-                                        <!-- 상태 변경 -->
-                                        <div class="card">
-                                            <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>상태 변경</h4>
-                                            <div class="space-y-3">
-                                                <div>
-                                                    <label class="block text-sm font-medium mb-1">티켓 상태</label>
-                                                    <select id="update-ticket-status" class="w-full px-3 py-2 border rounded">
-                                                        <option value="open">미배정</option>
-                                                        <option value="assigned">배정됨</option>
-                                                        <option value="in_progress">처리중</option>
-                                                        <option value="completed">완료</option>
-                                                        <option value="closed">종료</option>
-                                                    </select>
+                                <!-- 상태 변경 (하단, 가로 배치) -->
+                                <div class="card">
+                                    <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>상태 변경</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">티켓 상태</label>
+                                            <select id="update-ticket-status" class="w-full px-3 py-2 border rounded">
+                                                <option value="open">미배정</option>
+                                                <option value="assigned">배정됨</option>
+                                                <option value="in_progress">처리중</option>
+                                                <option value="completed">완료</option>
+                                                <option value="closed">종료</option>
+                                            </select>
                                                 </div>
                                                 <div>
                                                     <label class="block text-sm font-medium mb-1">우선순위</label>
@@ -3915,50 +3916,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- 답변 섹션 (회원 응답, 출력용) -->
-                                <div class="mt-6" id="response-section">
-                                    <div class="card">
-                                        <h4 class="font-bold mb-4 text-blue-600">
-                                            <i class="fas fa-reply mr-2"></i>회원 답변 (출력용)
-                                        </h4>
-                                        
-                                        <!-- 저장된 답변 목록 -->
-                                        <div id="response-list" class="mb-4 space-y-2">
-                                            <!-- JavaScript로 답변 목록 렌더링 -->
-                                        </div>
-                                        
-                                        <!-- 답변 템플릿 선택 -->
-                                        <div class="mb-3">
-                                            <label class="block text-sm font-medium mb-1">빠른 답변 템플릿</label>
-                                            <select id="response-template" onchange="insertResponseTemplate()" class="w-full px-3 py-2 border rounded">
-                                                <option value="">-- 템플릿 선택 --</option>
-                                                <option value="order_received">주문 접수 완료</option>
-                                                <option value="order_processing">주문 처리 중</option>
-                                                <option value="order_shipped">발송 완료</option>
-                                                <option value="point_adjusted">포인트 조정 완료</option>
-                                                <option value="inquiry_answer">문의 답변</option>
-                                                <option value="need_more_info">추가 정보 필요</option>
-                                                <option value="completed">처리 완료</option>
-                                            </select>
-                                        </div>
-                                        
-                                        <!-- 리치 텍스트 에디터 -->
-                                        <div class="mb-3">
-                                            <label class="block text-sm font-medium mb-1">답변 내용</label>
-                                            <div id="response-editor" style="min-height: 200px; background: white;"></div>
-                                        </div>
-                                        
-                                        <div class="flex gap-2">
-                                            <button onclick="addResponse()" class="btn btn-primary flex-1">
-                                                <i class="fas fa-paper-plane mr-2"></i>답변 저장
-                                            </button>
-                                            <button onclick="addResponseAndNotify()" class="btn btn-success flex-1">
-                                                <i class="fas fa-bell mr-2"></i>답변 저장 + 알림 발송
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
                             </div><!-- /티켓 정보 탭 -->
                                                 <div>
                                                     <label class="block text-sm font-medium mb-1">담당자</label>
@@ -3977,13 +3934,28 @@
 
                             <!-- 댓글 탭 -->
                             <div id="ticket-tab-comments" class="tab-content hidden">
-                                <!-- 댓글 탭은 더 이상 사용하지 않음 - 티켓 정보 탭 하단으로 이동됨 -->
-                            </div>
-
                                 <div class="card">
                                     <h4 class="font-bold mb-3"><i class="fas fa-comments mr-2"></i>댓글/답변 목록</h4>
-                                    <div id="comments-list" class="space-y-3 max-h-[400px] overflow-y-auto">
+                                    <div id="comments-list" class="space-y-3 max-h-[600px] overflow-y-auto">
                                         로딩중...
+                                    </div>
+                                </div>
+
+                                <!-- 답변 작성 영역 -->
+                                <div class="card mt-4">
+                                    <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>답변 작성</h4>
+                                    <div id="response-editor-container">
+                                        <div id="response-editor" style="height: 200px;"></div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="flex gap-2">
+                                            <button onclick="addResponse()" class="btn btn-primary flex-1">
+                                                <i class="fas fa-paper-plane mr-2"></i>답변 저장
+                                            </button>
+                                            <button onclick="addResponseAndNotify()" class="btn btn-success flex-1">
+                                                <i class="fas fa-bell mr-2"></i>답변 저장 + 알림 발송
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
