@@ -908,15 +908,45 @@
                     <div class="card mb-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-bold"><i class="fas fa-calendar mr-2"></i>경기 일정</h3>
-                            <button onclick="showMatchManagementModal()" class="btn btn-primary btn-sm">
-                                <i class="fas fa-cog mr-2"></i>경기 관리
-                            </button>
+                            <div class="flex gap-2">
+                                <button onclick="toggleMatchDaysFilter()" id="days-filter-btn" class="btn btn-sm bg-green-500 text-white hover:bg-green-600">
+                                    <i class="fas fa-filter mr-1"></i>1일 필터 ON
+                                </button>
+                                <button onclick="showMatchManagementModal()" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-cog mr-1"></i>경기 관리
+                                </button>
+                            </div>
                         </div>
-                        <p class="text-sm text-gray-600 mb-4">경기 종료 후 하루까지 표시됩니다</p>
-                        <div class="mb-4">
-                            <p class="text-xs font-medium text-gray-700 mb-2">리그 필터</p>
-                            <div id="league-filter-buttons" class="flex flex-wrap gap-2"></div>
+                        
+                        <!-- 검색 및 필터 -->
+                        <div class="mb-4 space-y-3">
+                            <div class="flex gap-2">
+                                <div class="flex-1 relative">
+                                    <input 
+                                        type="text" 
+                                        id="match-search-input" 
+                                        placeholder="팀명, 리그명으로 검색..." 
+                                        class="w-full px-4 py-2 border rounded-lg pl-10"
+                                        onkeyup="searchMatches()"
+                                    >
+                                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                                </div>
+                                <button onclick="clearMatchSearch()" class="btn btn-sm bg-gray-200 hover:bg-gray-300">
+                                    <i class="fas fa-times mr-1"></i>초기화
+                                </button>
+                            </div>
+                            
+                            <div>
+                                <p class="text-xs font-medium text-gray-700 mb-2">리그 필터</p>
+                                <div id="league-filter-buttons" class="flex flex-wrap gap-2"></div>
+                            </div>
+                            
+                            <p class="text-xs text-gray-500">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                <span id="match-filter-desc">경기 종료 후 1일까지만 표시됩니다</span>
+                            </p>
                         </div>
+                        
                         <div id="match-schedule-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
                     </div>
 
@@ -15375,6 +15405,187 @@ console.log('권한 관리 함수 로드 완료')
                 console.error('댓글 추가 오류:', error)
                 showToast('댓글 추가에 실패했습니다', 'error')
             }
+        }
+        
+        // ==========================================
+        // 경기 검색 및 필터 기능
+        // ==========================================
+        
+        let matchDaysFilter = true // 1일 필터 활성화 여부
+        let allMatchesCache = [] // 전체 경기 캐시
+        
+        // 경기 일정 로드 with 검색/필터 지원
+        async function loadUpcomingMatches() {
+            try {
+                const search = document.getElementById('match-search-input')?.value || ''
+                const params = new URLSearchParams({
+                    status: 'open',
+                    days_filter: matchDaysFilter.toString()
+                })
+                
+                if (search) {
+                    params.append('search', search)
+                }
+                
+                const response = await axios.get(`${API_BASE}/betting/matches?${params}`)
+                let matches = response.data.matches || []
+                
+                // 캐시 저장
+                allMatchesCache = matches
+                
+                // 리그 필터 적용
+                if (selectedLeague && selectedLeague !== 'all') {
+                    matches = matches.filter(m => {
+                        const normalizedLeague = m.league?.replace(/KOVO[남여]/, 'KOVO')
+                        return normalizedLeague === selectedLeague
+                    })
+                }
+
+                renderMatchSchedule(matches)
+            } catch (error) {
+                console.error('경기 목록 로드 오류:', error)
+                document.getElementById('match-schedule-list').innerHTML = '<p class="text-red-500 text-center py-8">경기 목록을 불러오는데 실패했습니다</p>'
+            }
+        }
+        
+        // 경기 스케줄 렌더링
+        function renderMatchSchedule(matches) {
+            const html = matches.length > 0 ? `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-medium">상태</th>
+                                <th class="px-3 py-2 text-left font-medium">리그</th>
+                                <th class="px-3 py-2 text-left font-medium">경기일시</th>
+                                <th class="px-3 py-2 text-left font-medium">경기</th>
+                                <th class="px-3 py-2 text-center font-medium">결과</th>
+                                <th class="px-3 py-2 text-center font-medium">승무패</th>
+                                <th class="px-3 py-2 text-center font-medium">언오버</th>
+                                <th class="px-3 py-2 text-center font-medium">핸디캡</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            ${matches.map(m => {
+                                const matchDate = new Date(m.match_date)
+                                const normalizedLeague = m.league?.replace(/KOVO[남여]/, 'KOVO')
+                                const leagueLabels = {
+                                    'EPL': 'EPL', 'LA_LIGA': '라리가', 'SERIE_A': '세리에A',
+                                    'BUNDESLIGA': '분데스', 'LIGUE_1': '리그앙', 'K_LEAGUE': 'K리그',
+                                    'MLB': 'MLB', 'KBO': 'KBO', 'NBA': 'NBA', 'KBL': 'KBL', 'WKBL': 'WKBL', 'KOVO': 'KOVO'
+                                }
+                                
+                                const hasWinDrawLoss = m.home_odds && m.draw_odds && m.away_odds
+                                const hasOverUnder = m.over_line && m.over_odds && m.under_odds
+                                const hasHandicap = m.handicap_line !== null && m.handicap_line !== undefined && m.handicap_home_odds && m.handicap_away_odds
+                                
+                                // 상태 표시
+                                const statusLabels = {
+                                    'open': { text: '진행중', class: 'bg-green-100 text-green-800' },
+                                    'in_progress': { text: '경기중', class: 'bg-yellow-100 text-yellow-800' },
+                                    'closed': { text: '마감', class: 'bg-yellow-100 text-yellow-800' },
+                                    'completed': { text: '완료', class: 'bg-gray-100 text-gray-800' },
+                                    'cancelled': { text: '취소', class: 'bg-red-100 text-red-800' }
+                                }
+                                const statusInfo = statusLabels[m.status] || { text: m.status, class: 'bg-gray-100 text-gray-600' }
+                                
+                                // 경기 결과 표시
+                                const hasResult = m.home_score !== null && m.away_score !== null
+                                const resultText = hasResult ? `${m.home_score} - ${m.away_score}` : '-'
+                                
+                                return `
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2">
+                                            <span class="inline-block px-2 py-1 text-xs font-semibold rounded ${statusInfo.class}">
+                                                ${statusInfo.text}
+                                            </span>
+                                        </td>
+                                        <td class="px-3 py-2">
+                                            <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
+                                                ${leagueLabels[normalizedLeague] || normalizedLeague}
+                                            </span>
+                                        </td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600">
+                                            ${matchDate.toLocaleDateString('ko-KR', {month: '2-digit', day: '2-digit'})} ${matchDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                        </td>
+                                        <td class="px-3 py-2">
+                                            <div class="font-semibold">${m.match_name || `${m.home_team} vs ${m.away_team}`}</div>
+                                            <div class="text-xs text-gray-500">${m.home_team} vs ${m.away_team}</div>
+                                        </td>
+                                        <td class="px-3 py-2 text-center">
+                                            <span class="font-bold ${hasResult ? 'text-blue-600' : 'text-gray-400'}">${resultText}</span>
+                                        </td>
+                                        <td class="px-3 py-2 text-center text-xs">
+                                            ${hasWinDrawLoss ? `
+                                                <div class="flex gap-1 justify-center">
+                                                    <span class="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">${m.home_odds}</span>
+                                                    <span class="px-1.5 py-0.5 bg-gray-50 text-gray-700 rounded font-medium">${m.draw_odds || '-'}</span>
+                                                    <span class="px-1.5 py-0.5 bg-red-50 text-red-700 rounded font-medium">${m.away_odds}</span>
+                                                </div>
+                                            ` : '<span class="text-gray-400">-</span>'}
+                                        </td>
+                                        <td class="px-3 py-2 text-center text-xs">
+                                            ${hasOverUnder ? `
+                                                <div>${m.over_line}</div>
+                                                <div class="flex gap-1 justify-center mt-0.5">
+                                                    <span class="px-1.5 py-0.5 bg-green-50 text-green-700 rounded font-medium">O ${m.over_odds}</span>
+                                                    <span class="px-1.5 py-0.5 bg-green-50 text-green-700 rounded font-medium">U ${m.under_odds}</span>
+                                                </div>
+                                            ` : '<span class="text-gray-400">-</span>'}
+                                        </td>
+                                        <td class="px-3 py-2 text-center text-xs">
+                                            ${hasHandicap ? `
+                                                <div>${m.handicap_line > 0 ? '+' : ''}${m.handicap_line}</div>
+                                                <div class="flex gap-1 justify-center mt-0.5">
+                                                    <span class="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-medium">${m.handicap_home_odds}</span>
+                                                    <span class="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-medium">${m.handicap_away_odds}</span>
+                                                </div>
+                                            ` : '<span class="text-gray-400">-</span>'}
+                                        </td>
+                                    </tr>
+                                `
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            ` : '<p class="text-gray-500 text-center py-8">진행 중인 경기가 없습니다</p>'
+            
+            document.getElementById('match-schedule-list').innerHTML = html
+        }
+        
+        // 경기 검색
+        function searchMatches() {
+            loadUpcomingMatches()
+        }
+        
+        // 검색 초기화
+        function clearMatchSearch() {
+            const input = document.getElementById('match-search-input')
+            if (input) {
+                input.value = ''
+            }
+            loadUpcomingMatches()
+        }
+        
+        // 1일 필터 토글
+        function toggleMatchDaysFilter() {
+            matchDaysFilter = !matchDaysFilter
+            const btn = document.getElementById('days-filter-btn')
+            const desc = document.getElementById('match-filter-desc')
+            
+            if (matchDaysFilter) {
+                btn.textContent = '1일 필터 ON'
+                btn.className = 'btn btn-sm bg-green-500 text-white hover:bg-green-600'
+                btn.innerHTML = '<i class="fas fa-filter mr-1"></i>1일 필터 ON'
+                desc.textContent = '경기 종료 후 1일까지만 표시됩니다'
+            } else {
+                btn.textContent = '1일 필터 OFF'
+                btn.className = 'btn btn-sm bg-gray-400 text-white hover:bg-gray-500'
+                btn.innerHTML = '<i class="fas fa-filter-circle-xmark mr-1"></i>1일 필터 OFF'
+                desc.textContent = '모든 경기를 표시합니다'
+            }
+            
+            loadUpcomingMatches()
         }
     </script>
 </body>

@@ -3,6 +3,7 @@ import { verifyToken } from './auth'
 
 type Bindings = {
   DB: D1Database
+  API_SPORT_KEY?: string
 }
 
 const betting = new Hono<{ Bindings: Bindings }>()
@@ -18,13 +19,33 @@ betting.use('/matches/bulk', verifyToken)
 betting.get('/matches', async (c) => {
   try {
     const status = c.req.query('status') || 'all'
+    const search = c.req.query('search') || ''
+    const days_filter = c.req.query('days_filter') !== 'false' // 기본값: true
 
     let query = 'SELECT * FROM matches WHERE 1=1'
     const params: any[] = []
 
+    // 상태 필터
     if (status && status !== 'all') {
       query += ` AND status = ?`
       params.push(status)
+    }
+
+    // 날짜 필터: 종료 후 1일까지만 표시 (days_filter가 true일 때만)
+    if (days_filter) {
+      query += ` AND datetime(match_date) >= datetime('now', '-1 day')`
+    }
+
+    // 검색 필터 (팀명, 리그명, 경기명)
+    if (search) {
+      query += ` AND (
+        home_team LIKE ? OR 
+        away_team LIKE ? OR 
+        league LIKE ? OR 
+        match_name LIKE ?
+      )`
+      const searchPattern = `%${search}%`
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern)
     }
 
     query += ` ORDER BY match_date DESC`
@@ -1962,5 +1983,242 @@ betting.get('/settlements/approved', async (c) => {
     return c.json({ error: '정산 목록을 불러오는데 실패했습니다.' }, 500)
   }
 })
+
+// ==========================================
+// 경기 결과 자동 크롤링 및 정산
+// ==========================================
+
+// 경기 결과 자동 업데이트 (GitHub Actions에서 호출)
+betting.post('/matches/auto-update-results', verifyToken, async (c) => {
+  try {
+    // 진행 중 또는 오픈 상태인 경기 중 경기 시간이 지난 것들 조회
+    const { results: matches } = await c.env.DB.prepare(
+      `SELECT * FROM matches 
+       WHERE status IN ('open', 'in_progress') 
+       AND datetime(match_date) < datetime('now')
+       ORDER BY match_date DESC
+       LIMIT 50`
+    ).all()
+
+    if (!matches || matches.length === 0) {
+      return c.json({ message: '업데이트할 경기가 없습니다.', updated: 0 })
+    }
+
+    let updated = 0
+    let failed = 0
+    const results = []
+
+    // API-SPORT.IO에서 경기 결과 가져오기
+    const API_KEY = c.env.API_SPORT_KEY || 'your-api-key'
+    
+    for (const match of matches) {
+      try {
+        // external_id가 있는 경우에만 크롤링 시도
+        if (!match.external_id) {
+          continue
+        }
+
+        // API-SPORT.IO 호출
+        const apiUrl = `https://v3.football.api-sports.io/fixtures?id=${match.external_id}`
+        const response = await fetch(apiUrl, {
+          headers: {
+            'x-apisports-key': API_KEY
+          }
+        })
+
+        if (!response.ok) {
+          failed++
+          results.push({ 
+            match_id: match.id, 
+            match_name: match.match_name,
+            status: 'failed', 
+            error: 'API 호출 실패' 
+          })
+          continue
+        }
+
+        const data = await response.json()
+        const fixture = data.response?.[0]
+
+        if (!fixture) {
+          failed++
+          results.push({ 
+            match_id: match.id, 
+            match_name: match.match_name,
+            status: 'failed', 
+            error: '경기 데이터 없음' 
+          })
+          continue
+        }
+
+        // 경기 상태 확인
+        const fixtureStatus = fixture.fixture.status.short
+        const isFinished = ['FT', 'AET', 'PEN'].includes(fixtureStatus)
+
+        if (!isFinished) {
+          // 아직 종료되지 않음
+          if (fixtureStatus === 'LIVE' || fixtureStatus === '1H' || fixtureStatus === '2H' || fixtureStatus === 'HT') {
+            // 진행 중으로 상태 업데이트
+            await c.env.DB.prepare(
+              `UPDATE matches SET status = 'in_progress', updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+            ).bind(match.id).run()
+          }
+          continue
+        }
+
+        // 경기 결과 가져오기
+        const homeScore = fixture.goals.home
+        const awayScore = fixture.goals.away
+        const totalScore = homeScore + awayScore
+
+        let result = 'draw'
+        if (homeScore > awayScore) {
+          result = 'home_win'
+        } else if (awayScore > homeScore) {
+          result = 'away_win'
+        }
+
+        // 경기 결과 업데이트
+        await c.env.DB.prepare(
+          `UPDATE matches 
+           SET result = ?, home_score = ?, away_score = ?, total_score = ?, 
+               status = 'completed', updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`
+        ).bind(result, homeScore, awayScore, totalScore, match.id).run()
+
+        // 배팅 결과 처리
+        await processMatchBets(c.env.DB, match.id, result, homeScore, awayScore, totalScore)
+
+        updated++
+        results.push({ 
+          match_id: match.id, 
+          match_name: match.match_name,
+          status: 'success', 
+          result,
+          score: `${homeScore}-${awayScore}` 
+        })
+
+      } catch (error) {
+        failed++
+        results.push({ 
+          match_id: match.id, 
+          match_name: match.match_name,
+          status: 'failed', 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        })
+      }
+    }
+
+    return c.json({ 
+      message: '경기 결과 자동 업데이트 완료',
+      total: matches.length,
+      updated,
+      failed,
+      results 
+    })
+  } catch (error) {
+    console.error('경기 결과 자동 업데이트 오류:', error)
+    return c.json({ error: '경기 결과 자동 업데이트 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 배팅 결과 처리 헬퍼 함수
+async function processMatchBets(
+  db: D1Database, 
+  matchId: number, 
+  result: string, 
+  homeScore: number, 
+  awayScore: number, 
+  totalScore: number
+) {
+  // 이 경기와 관련된 모든 배팅 찾기
+  const { results: bets } = await db.prepare(
+    `SELECT b.*, bf.id as folder_id, bf.member_id, bf.folder_type
+     FROM bets b
+     JOIN bet_folders bf ON b.folder_id = bf.id
+     WHERE b.match_id = ? AND b.status = 'pending'`
+  ).bind(matchId).all()
+
+  // 각 배팅의 승패 판정
+  for (const bet of bets || []) {
+    let betStatus = 'lose'
+
+    // 승무패 배팅
+    if (bet.bet_type === 'win_draw_lose') {
+      if (bet.selection === 'home' && result === 'home_win') betStatus = 'win'
+      else if (bet.selection === 'away' && result === 'away_win') betStatus = 'win'
+      else if (bet.selection === 'draw' && result === 'draw') betStatus = 'win'
+    }
+    // 오버/언더 배팅
+    else if (bet.bet_type === 'over_under') {
+      const line = parseFloat(bet.line || '0')
+      if (bet.selection === 'over' && totalScore > line) betStatus = 'win'
+      else if (bet.selection === 'under' && totalScore < line) betStatus = 'win'
+    }
+    // 핸디캡 배팅
+    else if (bet.bet_type === 'handicap') {
+      const handicap = parseFloat(bet.line || '0')
+      const adjustedHomeScore = homeScore + handicap
+      if (bet.selection === 'home' && adjustedHomeScore > awayScore) betStatus = 'win'
+      else if (bet.selection === 'away' && awayScore > adjustedHomeScore) betStatus = 'win'
+    }
+
+    // 배팅 상태 업데이트
+    await db.prepare(
+      'UPDATE bets SET status = ? WHERE id = ?'
+    ).bind(betStatus, bet.id).run()
+
+    // 폴더 전체 상태 확인 및 업데이트
+    const folderId = bet.folder_id
+    const { results: folderBets } = await db.prepare(
+      'SELECT * FROM bets WHERE folder_id = ?'
+    ).bind(folderId).all()
+
+    if (folderBets && folderBets.length > 0) {
+      const allCompleted = folderBets.every((b: any) => b.status !== 'pending')
+      
+      if (allCompleted) {
+        const allWin = folderBets.every((b: any) => b.status === 'win')
+        const anyLose = folderBets.some((b: any) => b.status === 'lose')
+
+        // 폴더 타입에 따라 정산
+        const folderInfo = await db.prepare(
+          'SELECT * FROM bet_folders WHERE id = ?'
+        ).bind(folderId).first()
+
+        if (!folderInfo) continue
+
+        if (folderInfo.folder_type === 'single' && anyLose) {
+          // 단폴더: 하나라도 실패하면 환불
+          await db.prepare(
+            `UPDATE bet_folders 
+             SET status = 'refund', result_status = 'partial_win', settlement_amount = total_bet_amount
+             WHERE id = ?`
+          ).bind(folderId).run()
+
+          // 포인트 환불
+          await db.prepare(
+            `UPDATE members SET betting_points = betting_points + ? WHERE id = ?`
+          ).bind(folderInfo.total_bet_amount, folderInfo.member_id).run()
+        } else if (allWin) {
+          // 전체 승리: 정산 대기 상태로 변경
+          await db.prepare(
+            `UPDATE bet_folders 
+             SET status = 'win', result_status = 'all_win', 
+                 settlement_amount = potential_win, settlement_status = 'pending'
+             WHERE id = ?`
+          ).bind(folderId).run()
+        } else {
+          // 하나라도 실패하면 패배
+          await db.prepare(
+            `UPDATE bet_folders 
+             SET status = 'lose', result_status = 'all_lose', settlement_amount = 0
+             WHERE id = ?`
+          ).bind(folderId).run()
+        }
+      }
+    }
+  }
+}
 
 export default betting
