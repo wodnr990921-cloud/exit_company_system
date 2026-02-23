@@ -1194,7 +1194,7 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer, customPrompt?:
       'Authorization': 'Bearer ' + apiKey
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'user',

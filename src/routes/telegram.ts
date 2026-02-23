@@ -62,6 +62,20 @@ telegram.post('/webhook/admin', async (c: Context) => {
     const db = c.env.DB
     const adminBotToken = c.env.TELEGRAM_ADMIN_BOT_TOKEN
     const adminUserId = c.env.TELEGRAM_ADMIN_USER_ID
+    const channelId = c.env.TELEGRAM_CHANNEL_ID
+    
+    // Channel post 처리 (채널에서 온 메시지)
+    if (update.channel_post) {
+      const message = update.channel_post
+      const text = message.text
+      
+      if (text) {
+        // 채널 명령어 처리
+        await handleChannelCommand(db, adminBotToken, channelId, text, adminUserId)
+      }
+      
+      return c.json({ ok: true })
+    }
     
     // Callback query 처리 (인라인 버튼 클릭)
     if (update.callback_query) {
@@ -227,6 +241,68 @@ async function handleAdminCommand(botToken: string, chatId: string, command: str
       
     default:
       await sendTelegramMessage(botToken, chatId, '알 수 없는 명령어입니다. /help를 입력하세요.')
+  }
+}
+
+// 채널 명령어 처리 (채널에서 모든 기능 실행 가능)
+async function handleChannelCommand(
+  db: D1Database,
+  botToken: string,
+  channelId: string,
+  text: string,
+  adminUserId: string
+) {
+  const [cmd, ...args] = text.split(' ')
+  
+  switch (cmd) {
+    case '/status':
+      const stats = await getTicketStats(db)
+      const statsMessage = formatStatsMessage(stats)
+      await sendTelegramMessage(botToken, channelId, statsMessage)
+      break
+      
+    case '/pending':
+      const pending = await getPendingApprovals(db)
+      const pendingMessage = formatPendingMessage(pending)
+      await sendTelegramMessage(botToken, channelId, pendingMessage)
+      break
+      
+    case '/transactions':
+      const transactions = await getTodayTransactions(db)
+      const transMessage = formatTransactionsMessage(transactions)
+      await sendTelegramMessage(botToken, channelId, transMessage)
+      break
+      
+    case '/unconfirmed':
+      const unconfirmed = await getUnconfirmedDeposits(db)
+      const unconfirmedMsg = formatUnconfirmedDeposits(unconfirmed)
+      await sendTelegramMessage(botToken, channelId, unconfirmedMsg)
+      break
+      
+    case '/settle':
+      // 자동 정산 실행
+      const settleResult = await runAutoSettlement(db, botToken, channelId)
+      break
+      
+    case '/bookkeep':
+      // 자동 장부 정리 실행
+      const bookkeepResult = await runAutoBookkeeping(db, botToken, channelId)
+      break
+      
+    case '/help':
+      await sendTelegramMessage(botToken, channelId, 
+        `📱 *채널 명령어*\n\n` +
+        `📊 조회:\n` +
+        `/status - 전체 현황\n` +
+        `/pending - 대기중인 승인\n` +
+        `/transactions - 오늘 입출금\n` +
+        `/unconfirmed - 미확인 입금\n\n` +
+        `⚙️ 자동화:\n` +
+        `/settle - 배팅 자동 정산\n` +
+        `/bookkeep - 장부 자동 정리\n\n` +
+        `💡 채널에서 직접 명령어를 입력하세요!`
+      )
+      break
   }
 }
 
@@ -840,6 +916,133 @@ async function saveTransaction(db: D1Database, data: any) {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     }
+  }
+}
+
+// 자동 정산 실행 (채널에서 호출 가능)
+async function runAutoSettlement(db: D1Database, botToken: string, channelId: string) {
+  try {
+    // 오늘 정산 대상 배팅 조회
+    const bettings = await db.prepare(`
+      SELECT b.*, m.name as member_name
+      FROM betting_folders b
+      LEFT JOIN members m ON b.member_id = m.id
+      WHERE DATE(b.created_at) = DATE('now')
+      AND b.status IN ('win', 'lose')
+      AND b.settled = 0
+    `).all()
+    
+    let totalWin = 0
+    let totalLose = 0
+    let settledCount = 0
+    
+    for (const bet of (bettings.results || [])) {
+      const amount = Number(bet.bet_amount)
+      
+      if (bet.status === 'win') {
+        const winAmount = amount * (bet.total_odds || 1)
+        totalWin += winAmount
+        
+        // 포인트 지급
+        await db.prepare(`
+          UPDATE members 
+          SET points = points + ?
+          WHERE id = ?
+        `).bind(winAmount, bet.member_id).run()
+      } else {
+        totalLose += amount
+      }
+      
+      // 정산 완료 표시
+      await db.prepare(`
+        UPDATE betting_folders 
+        SET settled = 1, settled_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(bet.id).run()
+      
+      settledCount++
+    }
+    
+    // 채널에 정산 결과 알림
+    let message = `💰 *자동 정산 완료*\n\n`
+    message += `📊 정산 건수: ${settledCount}건\n`
+    message += `✅ 당첨금 지급: ${totalWin.toLocaleString()}P\n`
+    message += `📉 낙첨 회수: ${totalLose.toLocaleString()}P\n`
+    message += `📈 순수익: ${(totalLose - totalWin).toLocaleString()}P\n`
+    message += `\n⏰ ${new Date().toLocaleString('ko-KR')}`
+    
+    await sendTelegramMessage(botToken, channelId, message)
+    
+    return {
+      success: true,
+      settled_count: settledCount,
+      total_win: totalWin,
+      total_lose: totalLose
+    }
+  } catch (error) {
+    console.error('자동 정산 오류:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+// 자동 장부 정리 실행 (채널에서 호출 가능)
+async function runAutoBookkeeping(db: D1Database, botToken: string, channelId: string) {
+  try {
+    // 오늘 입출금 내역 정리
+    const transactions = await db.prepare(`
+      SELECT * FROM transactions
+      WHERE DATE(created_at) = DATE('now')
+      ORDER BY created_at DESC
+    `).all()
+    
+    let totalDeposit = 0
+    let totalWithdraw = 0
+    let unconfirmedDeposit = 0
+    let expenseByCategory: any = {}
+    
+    for (const trans of (transactions.results || [])) {
+      const amount = Number(trans.amount)
+      
+      if (trans.type === 'deposit') {
+        totalDeposit += amount
+        if (trans.status === 'pending' || !trans.member_id) {
+          unconfirmedDeposit += amount
+        }
+      } else if (trans.type === 'withdraw') {
+        totalWithdraw += amount
+        const category = trans.source || '미분류'
+        expenseByCategory[category] = (expenseByCategory[category] || 0) + amount
+      }
+    }
+    
+    // 장부 정리 리포트
+    let message = `📚 *일일 장부 정리*\n\n`
+    message += `📅 ${new Date().toLocaleDateString('ko-KR')}\n\n`
+    message += `💵 총 입금: ${totalDeposit.toLocaleString()}원\n`
+    message += `💸 총 출금: ${totalWithdraw.toLocaleString()}원\n`
+    message += `📊 순 현금흐름: ${(totalDeposit - totalWithdraw).toLocaleString()}원\n`
+    
+    if (unconfirmedDeposit > 0) {
+      message += `\n⚠️ 미확인 입금: ${unconfirmedDeposit.toLocaleString()}원\n`
+    }
+    
+    if (Object.keys(expenseByCategory).length > 0) {
+      message += `\n💼 *경비 내역*:\n`
+      for (const [category, amount] of Object.entries(expenseByCategory)) {
+        message += `  • ${category}: ${(amount as number).toLocaleString()}원\n`
+      }
+    }
+    
+    await sendTelegramMessage(botToken, channelId, message)
+    
+    return {
+      success: true,
+      total_deposit: totalDeposit,
+      total_withdraw: totalWithdraw
+    }
+  } catch (error) {
+    console.error('장부 정리 오류:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
