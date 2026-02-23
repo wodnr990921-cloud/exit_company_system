@@ -17,6 +17,7 @@ import modifications from './routes/modifications'
 import ticketItems from './routes/ticket-items'
 import responses from './routes/responses'
 import pointConversions from './routes/point-conversions'
+import ai from './routes/ai'
 
 type Bindings = {
   DB: D1Database
@@ -49,6 +50,7 @@ app.route('/api/modifications', modifications)
 app.route('/api/ticket-items', ticketItems)
 app.route('/api/responses', responses)
 app.route('/api/point-conversions', pointConversions)
+app.route('/api/ai', ai)
 
 // 메인 페이지
 
