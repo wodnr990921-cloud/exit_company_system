@@ -2268,21 +2268,27 @@ async function processMatchBets(
   }
 }
 
-// 60일 경과 경기 자동 삭제
+// 60일 경과 경기 자동 삭제 (60일 지난 경기만)
 betting.post('/matches/cleanup', async (c) => {
   try {
+    // 현재 날짜에서 정확히 60일 전
     const sixtyDaysAgo = new Date()
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
+    sixtyDaysAgo.setHours(23, 59, 59, 999)  // 60일 전 마지막 시각
     const cutoffDate = sixtyDaysAgo.toISOString()
 
+    // 60일 이전 경기만 삭제 (< 조건 사용)
     const result = await c.env.DB.prepare(
       `DELETE FROM matches WHERE match_date < ? AND status IN ('completed', 'cancelled')`
     ).bind(cutoffDate).run()
 
+    console.log(`경기 자동 삭제: ${result.meta.changes || 0}건 삭제됨 (기준일: ${cutoffDate})`)
+
     return c.json({
       success: true,
       deleted_count: result.meta.changes || 0,
-      cutoff_date: cutoffDate
+      cutoff_date: cutoffDate,
+      message: `60일 이전 경기 ${result.meta.changes || 0}건 삭제됨`
     })
   } catch (error) {
     console.error('경기 자동 삭제 오류:', error)
