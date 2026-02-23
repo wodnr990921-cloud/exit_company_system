@@ -1900,7 +1900,7 @@
                             id="change-member-search" 
                             class="w-full px-3 py-2 border rounded"
                             placeholder="이름 또는 수용번호로 검색..."
-                            oninput="searchMembersForChange(event)"
+                            oninput="handleChangeMemberSearch(event)"
                             autocomplete="off"
                         >
                         <div id="change-member-dropdown" class="hidden absolute z-[110] w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-60 overflow-y-auto mt-1"></div>
@@ -3882,6 +3882,10 @@ console.log('권한 관리 함수 로드 완료')
         let currentView = 'dashboard'
         let currentAttendanceId = null
         let selectedProcessedMails = []  // 검수 탭 체크박스 선택된 우편물 ID 배열
+        
+        // 회원 변경 모달용 변수
+        let memberSearchResults2 = []
+        let memberSearchTimeout2 = null
         
         // 페이지네이션 상태 관리
         const pagination = {
