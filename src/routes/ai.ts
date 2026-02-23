@@ -3,9 +3,36 @@ import type { Context } from 'hono'
 
 type Bindings = {
   DB: D1Database
+  OPENAI_API_KEY: string
 }
 
 const ai = new Hono<{ Bindings: Bindings }>()
+
+// OpenAI API 호출
+async function callOpenAI(apiKey: string, messages: any[], functions?: any[]) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages,
+      functions: functions || undefined,
+      function_call: functions ? 'auto' : undefined,
+      temperature: 0.7,
+      max_tokens: 1000
+    })
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(`OpenAI API Error: ${error.error?.message || 'Unknown error'}`)
+  }
+  
+  return await response.json()
+}
 
 // 메뉴얼/FAQ 데이터 (나중에 DB로 이동 가능)
 const manualData = {
@@ -74,6 +101,74 @@ const manualData = {
     notes: '실시간 배당률은 경기 상황에 따라 변동됩니다.'
   }
 }
+
+// OpenAI Function Calling 스키마
+const openAIFunctions = [
+  {
+    name: 'searchMember',
+    description: '회원을 이름이나 수용번호로 검색합니다',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: '검색할 회원의 이름 또는 수용번호'
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'searchTickets',
+    description: '티켓을 검색합니다',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: '검색할 티켓 번호, 제목 또는 회원 이름'
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'getTicketStats',
+    description: '티켓 통계 정보를 조회합니다 (오늘 생성 건수, 상태별/유형별 통계)',
+    parameters: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'searchBooks',
+    description: '도서를 검색합니다',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: '검색할 도서명 또는 저자명'
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'searchManual',
+    description: '메뉴얼이나 가이드를 검색합니다',
+    parameters: {
+      type: 'object',
+      properties: {
+        keyword: {
+          type: 'string',
+          description: '검색할 키워드 (예: 도서발주, 포인트조정, 배팅처리, 가격 등)'
+        }
+      },
+      required: ['keyword']
+    }
+  }
+]
 
 // Function Calling 정의
 const availableFunctions = {
@@ -185,74 +280,121 @@ const availableFunctions = {
 }
 
 // AI 챗봇 엔드포인트
+// AI 챗봇 엔드포인트 (OpenAI GPT-4o-mini)
 ai.post('/chat', async (c: Context) => {
   try {
     const { message, ticket_context, chat_history } = await c.req.json()
     const db = c.env.DB
+    const apiKey = c.env.OPENAI_API_KEY
     
-    // 의도 파악 (간단한 키워드 기반)
-    const intent = detectIntent(message)
-    console.log('🤖 감지된 의도:', intent)
-    
-    let response = ''
-    let data: any = null
-    
-    // 의도에 따른 처리
-    switch (intent.type) {
-      case 'search_member':
-        data = await availableFunctions.searchMember(db, intent.query)
-        response = formatMemberSearchResponse(data)
-        break
-        
-      case 'search_ticket':
-        data = await availableFunctions.searchTickets(db, intent.query)
-        response = formatTicketSearchResponse(data)
-        break
-        
-      case 'ticket_stats':
-        data = await availableFunctions.getTicketStats(db)
-        response = formatTicketStatsResponse(data)
-        break
-        
-      case 'search_book':
-        data = await availableFunctions.searchBooks(db, intent.query)
-        response = formatBookSearchResponse(data)
-        break
-        
-      case 'manual':
-        data = availableFunctions.searchManual(intent.query)
-        response = formatManualResponse(data)
-        break
-        
-      case 'price':
-        response = formatPriceResponse()
-        break
-        
-      case 'current_ticket':
-        if (ticket_context) {
-          response = formatTicketContextResponse(ticket_context)
-        } else {
-          response = '현재 열려있는 티켓이 없습니다.'
-        }
-        break
-        
-      case 'greeting':
-        response = '안녕하세요! 무엇을 도와드릴까요?\n\n💡 다음과 같은 질문을 할 수 있어요:\n• "홍길동 회원 찾아줘"\n• "오늘 티켓 현황"\n• "도서 발주 방법"\n• "가격표 보여줘"\n• "배당률 알려줘"'
-        break
-        
-      default:
-        response = '죄송합니다. 질문을 이해하지 못했습니다.\n\n다음과 같이 물어보세요:\n• 회원 검색: "홍길동 찾아줘"\n• 티켓 조회: "티켓 T-2024-001 보여줘"\n• 통계: "오늘 티켓 현황"\n• 도서: "해리포터 검색"\n• 메뉴얼: "도서 발주 방법"\n• 가격: "가격표"'
+    if (!apiKey) {
+      throw new Error('OpenAI API Key가 설정되지 않았습니다.')
     }
     
-    return c.json({ 
-      reply: response,
-      intent: intent.type,
-      data
+    console.log('🤖 사용자 메시지:', message)
+    
+    // 시스템 프롬프트
+    const systemPrompt = `당신은 EXIT COMPANY 교정시설 업무 대행 시스템의 AI 어시스턴트입니다.
+
+주요 역할:
+- 회원, 티켓, 도서 검색
+- 업무 절차 안내 (도서 발주, 포인트 조정, 배팅 처리 등)
+- 가격 및 수수료 안내
+- 티켓 통계 및 현황 제공
+
+사용 가능한 함수:
+- searchMember: 회원 검색
+- searchTickets: 티켓 검색
+- getTicketStats: 티켓 통계
+- searchBooks: 도서 검색
+- searchManual: 메뉴얼 검색
+
+현재 티켓 컨텍스트:
+${ticket_context ? JSON.stringify(ticket_context, null, 2) : '없음'}
+
+응답 시 유의사항:
+- 친절하고 전문적인 톤 유지
+- 구체적이고 실용적인 정보 제공
+- 필요 시 함수를 호출하여 정확한 데이터 제공
+- 마크다운 형식으로 깔끔하게 구조화`
+
+    // 대화 히스토리 구성
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...(chat_history || []).slice(-5), // 최근 5개만
+      { role: 'user', content: message }
+    ]
+    
+    // OpenAI API 호출
+    const aiResponse = await callOpenAI(apiKey, messages, openAIFunctions)
+    
+    console.log('✅ OpenAI 응답:', aiResponse)
+    
+    const choice = aiResponse.choices[0]
+    const responseMessage = choice.message
+    
+    // Function Calling 처리
+    if (responseMessage.function_call) {
+      const functionName = responseMessage.function_call.name
+      const functionArgs = JSON.parse(responseMessage.function_call.arguments)
+      
+      console.log('🔧 함수 호출:', functionName, functionArgs)
+      
+      let functionResult: any
+      
+      // 함수 실행
+      switch (functionName) {
+        case 'searchMember':
+          functionResult = await availableFunctions.searchMember(db, functionArgs.query)
+          break
+        case 'searchTickets':
+          functionResult = await availableFunctions.searchTickets(db, functionArgs.query)
+          break
+        case 'getTicketStats':
+          functionResult = await availableFunctions.getTicketStats(db)
+          break
+        case 'searchBooks':
+          functionResult = await availableFunctions.searchBooks(db, functionArgs.query)
+          break
+        case 'searchManual':
+          functionResult = availableFunctions.searchManual(functionArgs.keyword)
+          break
+        default:
+          functionResult = { error: 'Unknown function' }
+      }
+      
+      console.log('📊 함수 결과:', functionResult)
+      
+      // 함수 결과를 포함하여 다시 AI에게 질문
+      const secondMessages = [
+        ...messages,
+        responseMessage,
+        {
+          role: 'function',
+          name: functionName,
+          content: JSON.stringify(functionResult)
+        }
+      ]
+      
+      const finalResponse = await callOpenAI(apiKey, secondMessages)
+      const finalMessage = finalResponse.choices[0].message
+      
+      return c.json({
+        reply: finalMessage.content,
+        function_called: functionName,
+        function_result: functionResult
+      })
+    }
+    
+    // 일반 응답
+    return c.json({
+      reply: responseMessage.content,
+      function_called: null
     })
   } catch (error) {
     console.error('AI 챗봇 오류:', error)
-    return c.json({ 
-      reply: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+    return c.json({
+      reply: `❌ 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}\n\n다시 시도해주세요.`,
       error: error instanceof Error ? error.message : '알 수 없는 오류'
     }, 500)
   }

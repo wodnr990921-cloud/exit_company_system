@@ -1,4 +1,85 @@
-# EXIT COMPANY - 교정시설 업무 대행 시스템 v57.1
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v58.0
+
+## ✅ 최근 업데이트 (v58.0 - 2026-02-23)
+
+### 🚀 새로운 기능 (v58.0)
+- **🤖 OpenAI GPT-4o-mini 통합 AI 챗봇**:
+  - Function Calling을 활용한 실시간 데이터 조회
+  - 회원 검색, 티켓 통계, 도서 검색, 메뉴얼 검색
+  - 자연어 기반 질의응답
+  - 티켓 상세 모달 내 우측 하단 위젯
+  
+- **📱 텔레그램 봇 자동화 시스템**:
+  - Webhook 기반 실시간 알림
+  - 명령어: `/start`, `/status`, `/mytickets`, `/help`
+  - 알림 종류:
+    - 신규 티켓 생성 알림
+    - 티켓 배정 알림
+    - 승인 요청 알림
+    - 배팅 결과 알림
+    - 정산 완료 알림
+  
+- **💬 직원 소통 채널**:
+  - 메신저 스타일 내부 댓글 시스템
+  - 자신의 댓글 우측 정렬 (파란색)
+  - 다른 직원 댓글 좌측 정렬 (흰색)
+  
+- **✍️ 회원 답변 리치 텍스트 에디터**:
+  - Quill 에디터 통합
+  - 굵게, 밑줄, 이탤릭, 목록 지원
+  - 답변 템플릿 (주문, 포인트, 배팅 등)
+  - 저장된 답변 카드 형태로 표시
+
+### 🔧 환경 설정
+
+#### OpenAI API Key 설정
+```bash
+# 로컬 개발
+cp .dev.vars.example .dev.vars
+# .dev.vars 파일에 OPENAI_API_KEY 입력
+
+# 프로덕션
+wrangler secret put OPENAI_API_KEY
+# API Key 입력
+```
+
+#### 텔레그램 봇 설정
+1. **봇 생성**: @BotFather에게 `/newbot` 명령
+2. **토큰 받기**: Bot Token 저장
+3. **Chat ID 확인**: 봇에게 메시지 전송 후 `https://api.telegram.org/bot<TOKEN>/getUpdates`에서 확인
+
+```bash
+# 로컬 개발
+# .dev.vars 파일에 추가
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+
+# 프로덕션
+wrangler secret put TELEGRAM_BOT_TOKEN
+wrangler secret put TELEGRAM_CHAT_ID
+```
+
+4. **Webhook 설정**:
+```bash
+curl -X POST https://your-domain.pages.dev/api/telegram/setup-webhook \
+  -H "Content-Type: application/json" \
+  -d '{"webhook_url": "https://your-domain.pages.dev/api/telegram/webhook"}'
+```
+
+#### 알림 전송 예시
+```bash
+curl -X POST https://your-domain.pages.dev/api/telegram/notify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "ticket_created",
+    "data": {
+      "ticket_number": "T-2024-001",
+      "title": "도서 발주",
+      "member_name": "홍길동",
+      "ticket_type": "ORDER"
+    }
+  }'
+```
 
 ## ✅ 최근 업데이트 (v57.1 - 2026-02-20)
 

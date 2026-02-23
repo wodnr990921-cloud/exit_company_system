@@ -18,10 +18,14 @@ import ticketItems from './routes/ticket-items'
 import responses from './routes/responses'
 import pointConversions from './routes/point-conversions'
 import ai from './routes/ai'
+import telegram from './routes/telegram'
 
 type Bindings = {
   DB: D1Database
   R2: R2Bucket
+  OPENAI_API_KEY: string
+  TELEGRAM_BOT_TOKEN: string
+  TELEGRAM_CHAT_ID: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -51,6 +55,7 @@ app.route('/api/ticket-items', ticketItems)
 app.route('/api/responses', responses)
 app.route('/api/point-conversions', pointConversions)
 app.route('/api/ai', ai)
+app.route('/api/telegram', telegram)
 
 // 메인 페이지
 
