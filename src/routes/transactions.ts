@@ -8,6 +8,63 @@ type Bindings = {
 
 const transactions = new Hono<{ Bindings: Bindings }>()
 
+// 테이블 초기화 함수
+async function initTables(db: D1Database) {
+  try {
+    // transactions 테이블
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_type TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        depositor_name TEXT,
+        account_number TEXT,
+        bank_name TEXT,
+        transaction_date DATETIME NOT NULL,
+        member_id INTEGER,
+        match_confidence REAL DEFAULT 0,
+        telegram_message_id INTEGER,
+        source TEXT DEFAULT 'manual',
+        approval_status TEXT DEFAULT 'pending',
+        approved_by INTEGER,
+        approved_at DATETIME,
+        rejection_reason TEXT,
+        matched_by INTEGER,
+        matched_at DATETIME,
+        memo TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run()
+
+    // pending_deposits 테이블
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS pending_deposits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_id INTEGER NOT NULL,
+        depositor_name TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        transaction_date DATETIME NOT NULL,
+        suggested_member_id INTEGER,
+        suggestion_reason TEXT,
+        match_score REAL DEFAULT 0,
+        status TEXT DEFAULT 'pending',
+        processed_by INTEGER,
+        processed_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run()
+
+    // 인덱스 생성
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(transaction_type)').run()
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(transaction_date)').run()
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(approval_status)').run()
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_pending_deposits_status ON pending_deposits(status)').run()
+  } catch (error) {
+    console.error('테이블 초기화 오류:', error)
+  }
+}
+
 // 텔레그램 입출금 메시지 파싱
 function parseBankNotification(message: string): {
   type: 'deposit' | 'withdrawal' | 'unknown'
@@ -274,6 +331,9 @@ ${matchResult.memberId
 // 미확인 입금 목록 조회
 transactions.get('/pending', async (c) => {
   try {
+    // 테이블 초기화 (첫 요청 시)
+    await initTables(c.env.DB)
+    
     const result = await c.env.DB.prepare(`
       SELECT 
         pd.*,
@@ -462,6 +522,9 @@ transactions.post('/:id/expense', async (c) => {
 // 통계 조회
 transactions.get('/stats', async (c) => {
   try {
+    // 테이블 초기화 (첫 요청 시)
+    await initTables(c.env.DB)
+    
     const startDate = c.req.query('start_date')
     const endDate = c.req.query('end_date')
     
