@@ -4787,6 +4787,10 @@ console.log('권한 관리 함수 로드 완료')
                 loadAdmin()
                 showAdminTab('approvals')
             }
+            else if (view === 'settings') {
+                loadSettings()
+                showSettingsTab('api')
+            }
             else if (view === 'staff') loadStaff()
             else if (view === 'closing') loadClosing()
             else if (view === 'modifications') loadPendingModifications()
@@ -4849,6 +4853,33 @@ console.log('권한 관리 함수 로드 완료')
                 await loadPendingApprovals()
             } catch (error) {
                 console.error('관리자 페이지 로드 오류:', error)
+            }
+        }
+
+        // 환경설정 탭 전환
+        function showSettingsTab(tabName) {
+            // 모든 탭 버튼 비활성화
+            document.querySelectorAll('[id^="settings-tab-"]').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-blue-600')
+                btn.classList.add('border-transparent')
+            })
+            
+            // 선택된 탭 버튼 활성화
+            const activeBtn = document.getElementById(`settings-tab-${tabName}`)
+            if (activeBtn) {
+                activeBtn.classList.add('border-blue-500', 'text-blue-600')
+                activeBtn.classList.remove('border-transparent')
+            }
+            
+            // 모든 탭 컨텐츠 숨기기
+            document.querySelectorAll('.settings-tab-content').forEach(tab => {
+                tab.classList.add('hidden')
+            })
+            
+            // 선택된 탭 컨텐츠 표시
+            const activeTab = document.getElementById(`settings-${tabName}-tab`)
+            if (activeTab) {
+                activeTab.classList.remove('hidden')
             }
         }
 
