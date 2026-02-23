@@ -8723,6 +8723,30 @@ console.log('권한 관리 함수 로드 완료')
             const status = document.getElementById('update-ticket-status').value
             const priority = document.getElementById('update-ticket-priority').value
             const assigned_to = document.getElementById('update-ticket-assigned').value || null
+            
+            // 현재 티켓 정보 가져오기
+            const currentStatus = document.getElementById('detail-ticket-status').textContent
+            const currentPriority = document.getElementById('detail-ticket-priority').textContent
+            
+            // 변경 사항 확인
+            let changes = []
+            if (status !== currentStatus) {
+                changes.push(`상태: ${currentStatus} → ${getStatusText(status)}`)
+            }
+            if (priority !== currentPriority) {
+                changes.push(`우선순위: ${currentPriority} → ${getPriorityText(priority)}`)
+            }
+            
+            if (changes.length === 0) {
+                alert('변경된 사항이 없습니다.')
+                return
+            }
+            
+            // 변경 사항 확인 다이얼로그
+            const confirmMsg = `다음 항목을 변경하시겠습니까?\n\n${changes.join('\n')}\n\n※ 티켓 상태 변경은 승인 후 적용됩니다.`
+            if (!confirm(confirmMsg)) {
+                return
+            }
 
             try {
                 await axios.patch(`${API_BASE}/tickets/${currentTicketId}`, {
@@ -8730,12 +8754,37 @@ console.log('권한 관리 함수 로드 완료')
                     priority,
                     assigned_to
                 })
-                alert('티켓 정보가 업데이트되었습니다.')
+                
+                showToast('티켓 정보가 업데이트되었습니다.', 'success')
                 await showTicketDetail(currentTicketId)
                 if (currentView === 'tickets') await loadTickets()
             } catch (error) {
-                alert('업데이트 실패: ' + (error.response?.data?.error || error.message))
+                console.error('티켓 업데이트 오류:', error)
+                showToast('업데이트 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
+        }
+        
+        // 상태 텍스트 변환
+        function getStatusText(status) {
+            const statusMap = {
+                'open': '미배정',
+                'assigned': '배정됨',
+                'in_progress': '처리중',
+                'completed': '완료',
+                'closed': '종료'
+            }
+            return statusMap[status] || status
+        }
+        
+        // 우선순위 텍스트 변환
+        function getPriorityText(priority) {
+            const priorityMap = {
+                'low': '낮음',
+                'normal': '보통',
+                'high': '높음',
+                'urgent': '긴급'
+            }
+            return priorityMap[priority] || priority
         }
 
         // 위젯 상태 관리
