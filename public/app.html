@@ -3806,9 +3806,6 @@
                             <button onclick="showTicketTab('info')" id="tab-info" class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-500">
                                 <i class="fas fa-info-circle mr-1"></i>티켓 정보
                             </button>
-                            <button onclick="showTicketTab('comments')" id="tab-comments" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
-                                <i class="fas fa-comments mr-1"></i>댓글/답변
-                            </button>
                             <button onclick="showTicketTab('requests')" id="tab-requests" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-500">
                                 <i class="fas fa-shopping-cart mr-1"></i>요청사항 <span id="cart-count" class="ml-1 px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">0</span>
                             </button>
@@ -3878,35 +3875,36 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div><!-- /티켓 정보 탭 -->
-
-                            <!-- 댓글 탭 -->
-                            <div id="ticket-tab-comments" class="tab-content hidden">
-                                <div class="card">
-                                    <h4 class="font-bold mb-3"><i class="fas fa-comments mr-2"></i>댓글/답변 목록</h4>
-                                    <div id="comments-list" class="space-y-3 max-h-[600px] overflow-y-auto">
-                                        로딩중...
+                                
+                                <!-- 답변 섹션 -->
+                                <div class="space-y-4 mb-6">
+                                    <!-- 답변 목록 -->
+                                    <div class="card">
+                                        <h4 class="font-bold mb-3"><i class="fas fa-reply mr-2"></i>답변 목록</h4>
+                                        <div id="response-list" class="space-y-3 max-h-[400px] overflow-y-auto">
+                                            <!-- JavaScript로 답변 목록 표시 -->
+                                        </div>
                                     </div>
-                                </div>
 
-                                <!-- 답변 작성 영역 -->
-                                <div class="card mt-4">
-                                    <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>답변 작성</h4>
-                                    <div id="response-editor-container">
-                                        <div id="response-editor" style="height: 200px;"></div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <div class="flex gap-2">
-                                            <button onclick="addResponse()" class="btn btn-primary flex-1">
-                                                <i class="fas fa-paper-plane mr-2"></i>답변 저장
-                                            </button>
-                                            <button onclick="addResponseAndNotify()" class="btn btn-success flex-1">
-                                                <i class="fas fa-bell mr-2"></i>답변 저장 + 알림 발송
-                                            </button>
+                                    <!-- 답변 작성 -->
+                                    <div class="card">
+                                        <h4 class="font-bold mb-3"><i class="fas fa-edit mr-2"></i>답변 작성</h4>
+                                        <div id="response-editor-container">
+                                            <div id="response-editor" style="height: 200px;"></div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <div class="flex gap-2">
+                                                <button onclick="addResponse()" class="btn btn-primary flex-1">
+                                                    <i class="fas fa-paper-plane mr-2"></i>답변 저장
+                                                </button>
+                                                <button onclick="addResponseAndNotify()" class="btn btn-success flex-1">
+                                                    <i class="fas fa-bell mr-2"></i>답변 저장 + 알림 발송
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </div><!-- /티켓 정보 탭 -->
 
                             <!-- 요청사항 탭 (장바구니) -->
                             <div id="ticket-tab-requests" class="tab-content hidden">
@@ -8987,7 +8985,7 @@ console.log('권한 관리 함수 로드 완료')
         
         // 답변 목록 렌더링
         function renderResponses(responses) {
-            const responseList = document.getElementById('response-list')
+            const responseList = document.getElementById('responses-list')
             if (!responseList) return
             
             if (responses.length === 0) {
@@ -14997,7 +14995,7 @@ console.log('권한 관리 함수 로드 완료')
                 })
                 
                 input.value = ''
-                await loadStaffComments()
+                await loadTicketComments(currentTicketId)
                 showToast('지시사항이 추가되었습니다', 'success')
             } catch (error) {
                 console.error('댓글 추가 오류:', error)
