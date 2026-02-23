@@ -26,8 +26,10 @@ type Bindings = {
   DB: D1Database
   R2: R2Bucket
   OPENAI_API_KEY: string
-  TELEGRAM_BOT_TOKEN: string
-  TELEGRAM_CHAT_ID: string
+  TELEGRAM_ADMIN_BOT_TOKEN: string
+  TELEGRAM_STAFF_BOT_TOKEN: string
+  TELEGRAM_CHANNEL_ID: string
+  TELEGRAM_ADMIN_USER_ID: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
