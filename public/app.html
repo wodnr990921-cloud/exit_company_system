@@ -8108,19 +8108,26 @@ console.log('권한 관리 함수 로드 완료')
 
                 const commentsHtml = comments.map(c => {
                     const isResponse = c.comment_type === 'response'
-                    const bgColor = isResponse ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-gray-50'
-                    const typeLabel = isResponse ? '<span class="text-xs bg-blue-600 text-white px-2 py-1 rounded">회원 답변</span>' : '<span class="text-xs bg-gray-500 text-white px-2 py-1 rounded">내부 메모</span>'
+                    const typeIcon = isResponse ? '<i class="fas fa-reply text-blue-600"></i>' : '<i class="fas fa-sticky-note text-gray-600"></i>'
                     
                     return `
-                    <div class="${bgColor} p-3 rounded">
+                    <div class="border-b pb-3 mb-3 last:border-b-0">
                         <div class="flex justify-between items-start mb-2">
-                            <div class="flex items-center gap-2">
-                                <span class="font-bold">${c.created_by_name}</span>
-                                ${typeLabel}
-                                <span class="text-xs text-gray-500">${new Date(c.created_at).toLocaleString()}</span>
+                            <div class="flex items-center gap-2 text-sm">
+                                ${typeIcon}
+                                <span class="text-gray-500">${new Date(c.created_at).toLocaleString('ko-KR')}</span>
+                                <span class="font-medium text-gray-700">${c.created_by_name || c.staff_name}</span>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="editComment(${c.id})" class="text-xs text-blue-600 hover:text-blue-800 px-2 py-1" title="수정">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteComment(${c.id})" class="text-xs text-red-600 hover:text-red-800 px-2 py-1" title="삭제">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </div>
                         </div>
-                        <p class="text-gray-800 whitespace-pre-wrap">${c.content || c.comment}</p>
+                        <p class="text-gray-800 text-sm whitespace-pre-wrap pl-6" id="comment-content-${c.id}">${c.content || c.comment}</p>
                     </div>
                 `
                 }).join('')
@@ -8181,6 +8188,77 @@ console.log('권한 관리 함수 로드 완료')
             } catch (error) {
                 alert('저장 실패: ' + (error.response?.data?.error || error.message))
             }
+        }
+
+        // 댓글 삭제
+        async function deleteComment(commentId) {
+            if (!currentTicketId) return
+            
+            if (!confirm('이 댓글/답변을 삭제하시겠습니까?')) {
+                return
+            }
+            
+            try {
+                await axios.delete(`${API_BASE}/tickets/${currentTicketId}/comments/${commentId}`)
+                await loadTicketComments(currentTicketId)
+                showToast('삭제되었습니다.', 'success')
+            } catch (error) {
+                alert('삭제 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        // 댓글 수정
+        let editingCommentId = null
+        
+        async function editComment(commentId) {
+            if (editingCommentId) {
+                alert('이미 수정 중인 댓글이 있습니다. 먼저 완료해주세요.')
+                return
+            }
+            
+            editingCommentId = commentId
+            const contentEl = document.getElementById(`comment-content-${commentId}`)
+            const currentContent = contentEl.textContent
+            
+            // 수정 UI로 변경
+            contentEl.innerHTML = `
+                <textarea id="edit-textarea-${commentId}" class="w-full px-2 py-1 border rounded text-sm" rows="3">${currentContent}</textarea>
+                <div class="flex gap-2 mt-2">
+                    <button onclick="saveCommentEdit(${commentId})" class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        <i class="fas fa-check mr-1"></i>저장
+                    </button>
+                    <button onclick="cancelCommentEdit(${commentId}, \`${currentContent.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)" class="text-xs px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600">
+                        <i class="fas fa-times mr-1"></i>취소
+                    </button>
+                </div>
+            `
+        }
+        
+        async function saveCommentEdit(commentId) {
+            const textarea = document.getElementById(`edit-textarea-${commentId}`)
+            const newContent = textarea.value.trim()
+            
+            if (!newContent) {
+                alert('내용을 입력해주세요.')
+                return
+            }
+            
+            try {
+                await axios.put(`${API_BASE}/tickets/${currentTicketId}/comments/${commentId}`, {
+                    content: newContent
+                })
+                editingCommentId = null
+                await loadTicketComments(currentTicketId)
+                showToast('수정되었습니다.', 'success')
+            } catch (error) {
+                alert('수정 실패: ' + (error.response?.data?.error || error.message))
+            }
+        }
+        
+        function cancelCommentEdit(commentId, originalContent) {
+            editingCommentId = null
+            const contentEl = document.getElementById(`comment-content-${commentId}`)
+            contentEl.innerHTML = originalContent
         }
 
         async function addAndNotify() {

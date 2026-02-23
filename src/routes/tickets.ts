@@ -591,7 +591,7 @@ tickets.get('/:id/comments', async (c) => {
     const ticket_id = c.req.param('id')
 
     const { results } = await c.env.DB.prepare(
-      `SELECT tc.*, s.name as created_by_name
+      `SELECT tc.*, s.name as created_by_name, s.name as staff_name
        FROM ticket_comments tc
        LEFT JOIN staff s ON tc.staff_id = s.id
        WHERE tc.ticket_id = ?
@@ -602,6 +602,87 @@ tickets.get('/:id/comments', async (c) => {
   } catch (error) {
     console.error('댓글 조회 오류:', error)
     return c.json({ error: '댓글 조회 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 댓글 삭제
+tickets.delete('/:ticketId/comments/:commentId', async (c) => {
+  try {
+    const ticketId = c.req.param('ticketId')
+    const commentId = c.req.param('commentId')
+
+    // 댓글이 response 타입인지 확인
+    const comment = await c.env.DB.prepare(
+      'SELECT comment_type FROM ticket_comments WHERE id = ?'
+    ).bind(commentId).first()
+
+    if (!comment) {
+      return c.json({ error: '댓글을 찾을 수 없습니다.' }, 404)
+    }
+
+    // response 타입이면 responses 테이블에서도 삭제
+    if ((comment as any).comment_type === 'response') {
+      // ticket_id로 연결된 response 찾아서 삭제
+      await c.env.DB.prepare(
+        'DELETE FROM responses WHERE ticket_id = ? AND content = (SELECT comment FROM ticket_comments WHERE id = ?)'
+      ).bind(ticketId, commentId).run()
+    }
+
+    // 댓글 삭제
+    await c.env.DB.prepare(
+      'DELETE FROM ticket_comments WHERE id = ?'
+    ).bind(commentId).run()
+
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('댓글 삭제 오류:', error)
+    return c.json({ error: '댓글 삭제 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 댓글 수정
+tickets.put('/:ticketId/comments/:commentId', async (c) => {
+  try {
+    const ticketId = c.req.param('ticketId')
+    const commentId = c.req.param('commentId')
+    const { content } = await c.req.json()
+
+    if (!content || !content.trim()) {
+      return c.json({ error: '내용을 입력해주세요.' }, 400)
+    }
+
+    // 댓글이 response 타입인지 확인
+    const comment = await c.env.DB.prepare(
+      'SELECT comment_type, comment FROM ticket_comments WHERE id = ?'
+    ).bind(commentId).first()
+
+    if (!comment) {
+      return c.json({ error: '댓글을 찾을 수 없습니다.' }, 404)
+    }
+
+    const oldContent = (comment as any).comment
+
+    // 댓글 수정
+    await c.env.DB.prepare(
+      'UPDATE ticket_comments SET comment = ?, content = ? WHERE id = ?'
+    ).bind(content, content, commentId).run()
+
+    // response 타입이면 responses 테이블도 수정
+    if ((comment as any).comment_type === 'response') {
+      await c.env.DB.prepare(
+        'UPDATE responses SET content = ? WHERE ticket_id = ? AND content = ?'
+      ).bind(content, ticketId, oldContent).run()
+    }
+
+    // 티켓 업데이트 시간 갱신
+    await c.env.DB.prepare(
+      'UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(ticketId).run()
+
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('댓글 수정 오류:', error)
+    return c.json({ error: '댓글 수정 중 오류가 발생했습니다.' }, 500)
   }
 })
 
