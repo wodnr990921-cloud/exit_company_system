@@ -1,6 +1,80 @@
 # EXIT COMPANY - 교정시설 업무 대행 시스템 v61.1
 
-## ✅ 최신 업데이트 (v61.2 - 2026-02-23)
+# EXIT COMPANY - 교정시설 업무 대행 시스템 v62.0
+
+## ✅ 최신 업데이트 (v62.0 - 2026-02-23)
+
+### 🎰 배팅 관리 자동화 시스템 구축 (v62.0)
+**경기 결과 자동 크롤링 및 정산 자동화!**
+
+- **🤖 경기 결과 자동 업데이트**:
+  - API-SPORT.IO 연동으로 실시간 경기 결과 수집
+  - 경기 상태 자동 변경: `open` → `in_progress` → `completed`
+  - 자동 정산: 경기 종료 시 배팅 결과 자동 처리
+  - API 엔드포인트: `POST /api/betting/matches/auto-update-results`
+  
+- **🔍 경기 검색 및 필터링**:
+  - 팀명, 리그명으로 실시간 검색
+  - 1일 필터: 경기 종료 후 1일까지만 표시 (토글 가능)
+  - 리그별 필터링 지원
+  - 검색어 초기화 버튼
+  
+- **📊 배당 표시 개선**:
+  - 승무패, 오버/언더, 핸디캡 배당 한눈에 표시
+  - 배당 없는 경우 "(배당 없음)" 표시
+  - 경기 결과 자동 표시 (스코어)
+  
+- **⚙️ 자동 정산 프로세스**:
+  - 단폴더: 하나라도 실패 시 환불
+  - 조합폴더: 전체 승리 시 당첨금 지급
+  - 배팅 상태 자동 업데이트
+  - 회원 포인트 자동 처리
+
+### 🛠️ 기술적 구현 (v62.0)
+- **Backend API**:
+  - `GET /api/betting/matches?search=검색어&days_filter=true`
+  - `POST /api/betting/matches/auto-update-results` (requires auth)
+  - `processMatchBets()` 헬퍼 함수로 배팅 결과 처리
+  
+- **Frontend 기능**:
+  - 실시간 검색 입력 (`onkeyup` 이벤트)
+  - 1일 필터 토글 버튼 (ON/OFF 상태 표시)
+  - 경기 스케줄 테이블 렌더링
+  - 배당 표시 포맷팅
+
+### 📦 배포 정보 (v62.0)
+- **Production URL**: https://exit-company-system-5je.pages.dev
+- **Latest Deploy**: https://2cd3ae9e.exit-company-system-5je.pages.dev
+- **Git 커밋**: 6cea8a3 (Betting automation)
+- **빌드 크기**: 225.38 kB (+4.15 kB from v61.2.1)
+- **최종 업데이트**: 2026-02-23 17:45 KST
+
+### 🎯 자동화 설정 방법
+
+#### 1. Cloudflare Pages 환경 변수 추가
+```
+API_SPORT_KEY=your-api-sport-io-key
+```
+
+#### 2. 외부 Cron 서비스 설정 (예: cron-job.org)
+```bash
+URL: https://exit-company-system-5je.pages.dev/api/betting/matches/auto-update-results
+Method: POST
+Headers: 
+  - Authorization: Bearer YOUR_API_TOKEN
+  - Content-Type: application/json
+Schedule: */30 * * * * (매 30분마다)
+```
+
+#### 3. API 토큰 생성
+관리자 계정으로 로그인 후:
+```bash
+POST /api/auth/generate-api-token
+```
+
+---
+
+## ✅ 이전 업데이트 (v61.2.1 - 2026-02-23)
 
 ### 🎨 티켓 상세 모달 레이아웃 재설계 (v61.2)
 **더 직관적이고 효율적인 2열 레이아웃으로 변경!**
