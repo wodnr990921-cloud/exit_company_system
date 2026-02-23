@@ -3862,63 +3862,69 @@
                         <div class="flex-1 overflow-y-auto p-6">
                             <!-- 티켓 정보 탭 -->
                             <div id="ticket-tab-info" class="tab-content">
-                                <!-- 회원 정보 (상단 전체 너비) -->
-                                <div class="mb-6">
-                                    <div id="member-management-card">
-                                        <!-- JavaScript로 동적 렌더링됩니다 -->
-                                    </div>
-                                </div>
 
-                                <!-- 기본 정보 + 원문 + 요약 (중간, 전체 너비) -->
-                                <div class="space-y-4 mb-6">
-                                    <!-- 기본 정보 -->
-                                    <div class="card">
-                                        <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
-                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">티켓 번호:</span>
-                                                <span class="font-mono" id="detail-ticket-number"></span>
+
+                                <!-- 2열 레이아웃: 좌측(티켓 정보, OCR, 요약) | 우측(회원 정보, 기본 정보) -->
+                                <div class="grid grid-cols-2 gap-6 mb-6">
+                                    <!-- 좌측 영역 -->
+                                    <div class="space-y-4">
+                                        <!-- OCR 원문 -->
+                                        <div class="card">
+                                            <h4 class="font-bold mb-3"><i class="fas fa-file-text mr-2"></i>OCR 원문</h4>
+                                            <div id="ticket-original-text" class="text-sm text-gray-800 whitespace-pre-wrap max-h-64 overflow-y-auto p-3 bg-gray-50 rounded border">
+                                                <p id="detail-ticket-description" class="text-gray-800"></p>
                                             </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">제목:</span>
-                                                <span id="detail-ticket-title"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">유형:</span>
-                                                <span id="detail-ticket-type"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">상태:</span>
-                                                <span id="detail-ticket-status"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">우선순위:</span>
-                                                <span id="detail-ticket-priority"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">담당자:</span>
-                                                <span id="detail-ticket-assigned"></span>
-                                            </div>
-                                            <div class="flex justify-between col-span-2">
-                                                <span class="text-gray-600">생성일:</span>
-                                                <span id="detail-ticket-created"></span>
+                                        </div>
+                                        
+                                        <!-- 요약 -->
+                                        <div class="card">
+                                            <h4 class="font-bold mb-3"><i class="fas fa-clipboard-list mr-2"></i>요약</h4>
+                                            <div id="ticket-summary" class="text-sm text-gray-700 whitespace-pre-wrap p-3 bg-blue-50 rounded border border-blue-200">
+                                                <!-- JavaScript로 요약 정보 표시 -->
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <!-- OCR 원문 -->
-                                    <div class="card">
-                                        <h4 class="font-bold mb-3"><i class="fas fa-file-text mr-2"></i>OCR 원문 (검수에서 수정 가능)</h4>
-                                        <div id="ticket-original-text" class="text-sm text-gray-800 whitespace-pre-wrap max-h-96 overflow-y-auto p-3 bg-gray-50 rounded border">
-                                            <p id="detail-ticket-description" class="text-gray-800"></p>
+                                    <!-- 우측 영역 -->
+                                    <div class="space-y-4">
+                                        <!-- 회원 정보 -->
+                                        <div id="member-management-card">
+                                            <!-- JavaScript로 동적 렌더링됩니다 -->
                                         </div>
-                                    </div>
-                                    
-                                    <!-- 요약 -->
-                                    <div class="card">
-                                        <h4 class="font-bold mb-3"><i class="fas fa-clipboard-list mr-2"></i>요약 (AI 추출 편지 내용)</h4>
-                                        <div id="ticket-summary" class="text-sm text-gray-700 whitespace-pre-wrap p-3 bg-blue-50 rounded border border-blue-200">
-                                            <!-- JavaScript로 요약 정보 표시 -->
+                                        
+                                        <!-- 기본 정보 -->
+                                        <div class="card">
+                                            <h4 class="font-bold mb-3"><i class="fas fa-file-alt mr-2"></i>기본 정보</h4>
+                                            <div class="space-y-2 text-sm">
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">티켓 번호:</span>
+                                                    <span class="font-mono" id="detail-ticket-number"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">제목:</span>
+                                                    <span id="detail-ticket-title"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">유형:</span>
+                                                    <span id="detail-ticket-type"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">상태:</span>
+                                                    <span id="detail-ticket-status"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">우선순위:</span>
+                                                    <span id="detail-ticket-priority"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">담당자:</span>
+                                                    <span id="detail-ticket-assigned"></span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">생성일:</span>
+                                                    <span id="detail-ticket-created"></span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -15264,8 +15270,12 @@ console.log('권한 관리 함수 로드 완료')
             if (!currentTicketId) return
             
             try {
-                const response = await axios.get(`${API_BASE}/tickets/${currentTicketId}/comments?comment_type=internal`)
-                const comments = response.data || []
+                const response = await axios.get(`${API_BASE}/tickets/${currentTicketId}/comments`)
+                const allComments = response.data.comments || []
+                // internal 타입만 필터링
+                const comments = allComments.filter(c => c.comment_type === 'internal')
+                
+                console.log('📝 직원 댓글 로드:', comments.length, '개', comments)
                 
                 renderStaffComments(comments)
                 updateUnreadBadge(comments)
@@ -15278,7 +15288,7 @@ console.log('권한 관리 함수 로드 완료')
         function renderStaffComments(comments) {
             const container = document.getElementById('staff-chat-messages')
             
-            if (comments.length === 0) {
+            if (!comments || comments.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-sm text-center py-8">아직 지시사항이 없습니다.</p>'
                 return
             }
@@ -15288,7 +15298,7 @@ console.log('권한 관리 함수 로드 완료')
             const html = comments.map(c => {
                 const isMyComment = c.created_by === currentStaffId || c.staff_id === currentStaffId
                 const alignClass = isMyComment ? 'justify-end' : 'justify-start'
-                const bgClass = isMyComment ? 'bg-blue-600' : 'bg-white border'
+                const bgClass = isMyComment ? 'bg-blue-600' : 'bg-white border border-gray-300'
                 const textClass = isMyComment ? 'text-white' : 'text-gray-900'
                 
                 return `
@@ -15297,7 +15307,7 @@ console.log('권한 관리 함수 로드 완료')
                             ${!isMyComment ? `<div class="text-xs text-gray-600 mb-1 px-2">${c.created_by_name || c.staff_name || '직원'}</div>` : ''}
                             <div class="${bgClass} ${textClass} rounded-lg px-4 py-2 shadow-sm">
                                 <p class="text-sm font-medium whitespace-pre-wrap">${c.content || c.comment}</p>
-                                <div class="text-xs ${isMyComment ? 'text-blue-100 font-semibold' : 'text-gray-500'} mt-1">
+                                <div class="text-xs ${isMyComment ? 'text-blue-100' : 'text-gray-500'} mt-1">
                                     ${new Date(c.created_at).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}
                                 </div>
                             </div>
@@ -15307,7 +15317,10 @@ console.log('권한 관리 함수 로드 완료')
             }).join('')
             
             container.innerHTML = html
-            container.scrollTop = container.scrollHeight
+            // 스크롤을 맨 아래로
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight
+            }, 100)
         }
         
         // 미확인 댓글 수 업데이트
