@@ -7868,6 +7868,9 @@ console.log('권한 관리 함수 로드 완료')
                 showToast('배당 업데이트에 실패했습니다', 'error')
             }
         }
+        
+        // 모든 경기 일괄 저장 (중복 제거)
+        async function saveAllMatchesBulk() {
             try {
                 const matchDivs = document.querySelectorAll('#match-management-list > div')
                 const matches = []
