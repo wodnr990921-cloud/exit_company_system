@@ -4663,12 +4663,23 @@ console.log('권한 관리 함수 로드 완료')
             try {
                 const response = await axios.post(`${API_BASE}/auth/login`, { email, password })
                 currentStaff = response.data.staff
+                const token = response.data.token
 
-                // localStorage에 세션 정보 저장
+                console.log('✅ 로그인 성공:', currentStaff)
+                console.log('🔑 토큰:', token ? '있음' : '없음')
+
+                // localStorage에 세션 정보 저장 (토큰 포함)
                 localStorage.setItem('exit_system_session', JSON.stringify({
                     staff: currentStaff,
+                    token: token,
                     timestamp: Date.now()
                 }))
+
+                // axios 기본 헤더에 토큰 설정
+                if (token) {
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+                    console.log('🔐 axios 헤더에 토큰 설정됨')
+                }
 
                 document.getElementById('login-screen').classList.add('hidden')
                 document.getElementById('app-screen').classList.remove('hidden')
@@ -4739,6 +4750,14 @@ console.log('권한 관리 함수 로드 완료')
 
                 // 세션 복구
                 currentStaff = session.staff
+                
+                // axios 기본 헤더에 토큰 설정
+                if (session.token) {
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${session.token}`
+                    console.log('🔐 세션 복원: 토큰 설정됨')
+                } else {
+                    console.warn('⚠️ 세션 복원: 토큰 없음')
+                }
 
                 document.getElementById('login-screen').classList.add('hidden')
                 document.getElementById('app-screen').classList.remove('hidden')

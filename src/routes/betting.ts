@@ -521,11 +521,15 @@ betting.post('/matches/:id/result', async (c) => {
 // 배팅 폴더 생성 (단폴더 또는 다폴더)
 betting.post('/folders', async (c) => {
   try {
+    console.log('📥 폴더 생성 요청 받음')
     const { 
       ticket_id, member_id, folder_type, total_bet_amount, bets, created_by 
     } = await c.req.json()
+    
+    console.log('데이터:', { ticket_id, member_id, folder_type, total_bet_amount, bets_count: bets?.length, created_by })
 
     if (!ticket_id || !member_id || !folder_type || !total_bet_amount || !bets || bets.length === 0 || !created_by) {
+      console.error('❌ 필수 항목 누락')
       return c.json({ error: '필수 항목을 입력해주세요.' }, 400)
     }
 
@@ -549,6 +553,7 @@ betting.post('/folders', async (c) => {
     ).bind(member_id).first()
 
     if (!member) {
+      console.error('❌ 회원 없음:', member_id)
       return c.json({ error: '회원을 찾을 수 없습니다.' }, 404)
     }
 
@@ -556,17 +561,19 @@ betting.post('/folders', async (c) => {
       return c.json({ error: '배팅 포인트가 부족합니다.' }, 400)
     }
 
-    // 모든 경기가 scheduled 상태인지 확인
+    // 모든 경기가 open 상태인지 확인 (scheduled → open으로 변경)
     for (const bet of bets) {
       const match = await c.env.DB.prepare(
         'SELECT status FROM matches WHERE id = ?'
       ).bind(bet.match_id).first()
 
       if (!match) {
+        console.error('❌ 경기 없음:', bet.match_id)
         return c.json({ error: `경기(ID: ${bet.match_id})를 찾을 수 없습니다.` }, 404)
       }
 
-      if ((match as any).status !== 'scheduled') {
+      if ((match as any).status !== 'open') {
+        console.error('❌ 경기 상태 오류:', bet.match_id, (match as any).status)
         return c.json({ error: `이미 시작되었거나 종료된 경기가 포함되어 있습니다.` }, 400)
       }
     }
@@ -632,8 +639,10 @@ betting.post('/folders', async (c) => {
       potential_win: potentialWin
     })
   } catch (error) {
-    console.error('배팅 폴더 생성 오류:', error)
-    return c.json({ error: '배팅 폴더 생성 중 오류가 발생했습니다.' }, 500)
+    console.error('❌ 배팅 폴더 생성 오류:', error)
+    console.error('에러 상세:', (error as Error).message)
+    console.error('스택:', (error as Error).stack)
+    return c.json({ error: '배팅 폴더 생성 중 오류가 발생했습니다.', details: (error as Error).message }, 500)
   }
 })
 
