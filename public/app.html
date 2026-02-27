@@ -2784,8 +2784,13 @@
                 
                 <div class="p-6">
                     <!-- 미리보기 -->
-                    <div class="mb-6 bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300 min-h-[200px] flex items-center justify-center overflow-hidden">
-                        <img id="resize-preview-image" src="" alt="Preview" class="max-w-full max-h-[400px] object-contain">
+                    <div class="mb-6 bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300 min-h-[200px] flex items-center justify-center overflow-hidden relative">
+                        <img id="resize-preview-image" src="" alt="Preview" class="max-w-full max-h-[400px] object-contain cursor-ew-resize" 
+                             draggable="false"
+                             onmousedown="startImageResize(event)">
+                        <div class="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
+                            <i class="fas fa-arrows-alt-h mr-1"></i>이미지를 좌우로 드래그하여 크기 조절
+                        </div>
                     </div>
                     
                     <!-- 크기 조정 옵션 -->
@@ -12257,6 +12262,7 @@ console.log('권한 관리 함수 로드 완료')
             } else if (tabName === 'responses') {
                 loadResponseSettings()
                 loadMembersForResponseFilter()
+                loadResponses()  // 답변 목록 로드 추가
             } else if (tabName === 'history') {
                 loadMailHistory()
             }
@@ -12827,7 +12833,7 @@ console.log('권한 관리 함수 로드 완료')
         
         // 신규 회원 등록 버튼 클릭
         async function openNewMemberRegistration() {
-            if (!currentTicketForMemberChange) {
+            if (!currentTicket || !currentTicketId) {
                 alert('오류: 티켓 정보가 없습니다.')
                 return
             }
@@ -12848,8 +12854,8 @@ console.log('권한 관리 함수 로드 완료')
             }
             
             try {
-                const ticketId = currentTicketForMemberChange.id
-                const oldMemberName = currentTicketForMemberChange.currentMemberName || '미지정'
+                const ticketId = currentTicketId
+                const oldMemberName = currentTicket.member_name || '미지정'
                 
                 // 1. 신규 회원 등록
                 const memberRes = await axios.post(`${API_BASE}/members`, {
@@ -15399,6 +15405,39 @@ console.log('권한 관리 함수 로드 완료')
             document.getElementById('image-width-slider').value = width
             document.getElementById('image-width-input').value = width
             updateImagePreview()
+        }
+        
+        // 마우스 드래그로 이미지 크기 조절
+        let isResizingImage = false
+        let resizeStartX = 0
+        let resizeStartWidth = 0
+        
+        function startImageResize(e) {
+            isResizingImage = true
+            resizeStartX = e.clientX
+            resizeStartWidth = parseInt(document.getElementById('image-width-input').value) || 300
+            
+            document.addEventListener('mousemove', handleImageResize)
+            document.addEventListener('mouseup', stopImageResize)
+            
+            e.preventDefault()
+        }
+        
+        function handleImageResize(e) {
+            if (!isResizingImage) return
+            
+            const deltaX = e.clientX - resizeStartX
+            const newWidth = Math.max(50, Math.min(800, resizeStartWidth + deltaX))
+            
+            document.getElementById('image-width-slider').value = newWidth
+            document.getElementById('image-width-input').value = newWidth
+            updateImagePreview()
+        }
+        
+        function stopImageResize() {
+            isResizingImage = false
+            document.removeEventListener('mousemove', handleImageResize)
+            document.removeEventListener('mouseup', stopImageResize)
         }
         
         // 크기 조정된 이미지 삽입
