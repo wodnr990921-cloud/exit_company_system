@@ -2536,7 +2536,7 @@
                                 • <code>{{institution}}</code> - 수용기관<br>
                                 • <code>{{depositor_name}}</code> - 입금자명<br>
                                 • <code>{{phone}}</code> - 전화번호<br>
-                                • <code>{{address}}</code> - 주소<br>
+                                • <code>{{po_box}}</code> - 사서함 주소<br>
                                 • <code>{{points}}</code> - 일반 포인트<br>
                                 • <code>{{betting_points}}</code> - 배팅 포인트 (내부용)<br>
                                 • <code>{{total_points}}</code> - 전체 포인트 (일반+배팅)<br>
@@ -9677,7 +9677,7 @@ console.log('권한 관리 함수 로드 완료')
             const institution = currentTicket?.institution || '수용기관'
             const depositorName = currentTicket?.depositor_name || '입금자명'
             const phone = currentTicket?.member_phone || currentTicket?.depositor_phone || '전화번호'
-            const address = currentTicket?.address || '주소'
+            const poBox = currentTicket?.po_box || currentTicket?.address || '사서함 주소'
             
             // 포인트 정보 (임시 - 실제 API에서 가져와야 함)
             const points = currentTicket?.points || 0
@@ -9696,7 +9696,8 @@ console.log('권한 관리 함수 로드 완료')
                 .replace(/\{\{institution\}\}/g, institution)
                 .replace(/\{\{depositor_name\}\}/g, depositorName)
                 .replace(/\{\{phone\}\}/g, phone)
-                .replace(/\{\{address\}\}/g, address)
+                .replace(/\{\{po_box\}\}/g, poBox)
+                .replace(/\{\{address\}\}/g, poBox)  // 하위 호환성
                 .replace(/\{\{points\}\}/g, points.toLocaleString())
                 .replace(/\{\{betting_points\}\}/g, bettingPoints.toLocaleString())
                 .replace(/\{\{total_points\}\}/g, totalPoints.toLocaleString())
@@ -15066,7 +15067,8 @@ console.log('권한 관리 함수 로드 완료')
                 institution: '서울구치소',
                 depositor_name: '김철수',
                 phone: '010-1234-5678',
-                address: '서울시 강남구',
+                po_box: '서울 강남우체국 사서함 12345호',
+                address: '서울 강남우체국 사서함 12345호',  // 하위 호환성
                 points: '50,000',
                 betting_points: '30,000',
                 total_points: '80,000',
