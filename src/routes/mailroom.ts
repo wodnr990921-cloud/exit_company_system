@@ -1115,12 +1115,13 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer, customPrompt?:
     uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')
   )
   
-  const promptText = customPrompt || `이 편지 이미지를 분석하세요.
+  const promptText = customPrompt || `이 편지 이미지를 분석하세요. **손글씨와 인쇄체를 모두 정확하게 인식하세요.**
 
 **중요: 발신자 정보는 절대 추출하지 마세요. 수신자 정보만 추출하세요.**
 
 **STEP 1: 봉투 판별** (이미지 상단 1/3 영역을 집중 분석)
 - 이미지 맨 위에 주소 정보가 있는지 확인하세요
+- 손글씨나 인쇄체로 작성되었을 수 있으니 주의 깊게 보세요
 - 다음 조건 중 **하나라도** 발견되면 [ENVELOPE: YES]:
   1. "OO 사서함 XX-YYYY" (예: 서울 사서함 211-1111)
   2. "OO사서함XX-YYYY" (띄어쓰기 없음)
@@ -1128,14 +1129,18 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer, customPrompt?:
   4. "OO 사 XX-YYYY" (사서함을 '사'로 표기)
   5. "OO P.O.BOX XX-YYYY" (영문 표기)
   6. 숫자 조합: "지역명 + 3자리 숫자-4자리 숫자" (예: 서울 211-1111)
+  7. **손글씨 특수 케이스**: 숫자나 글씨가 흐릿하거나 겹쳐 쓰인 경우도 최대한 읽으세요
 - **중요**: 반드시 하이픈(-)으로 연결된 숫자 조합이 있어야 함
 - 위 조건을 만족하지 않으면 → [ENVELOPE: NO]
 
 **STEP 2: 수신자 정보 추출 (봉투가 있으면)**
 - **수신자**: 편지를 **받는** 사람 이름 (상단 봉투에서만)
+  • 손글씨 이름도 정확히 읽으세요 (예: 김철수, 이영희, 박민수 등)
+  • 흐릿하거나 겹쳐진 글씨는 문맥을 고려해 추론하세요
 - **수용기관**: 주소에서 '사서함' 앞의 지역명 (예: "서울 사서함 211-1111" → "서울")
 - **사서함주소**: 하이픈 전까지 (예: "서울 사서함 211-1111" → "서울 사서함 211")
 - **수용번호**: 하이픈 뒤 숫자만 (예: "서울 사서함 211-1111" → "1111")
+  • **손글씨 숫자 주의**: 1과 7, 3과 8, 0과 6 등 헷갈릴 수 있는 숫자는 주변 문맥과 획의 방향을 고려하세요
 - **주소**: 전체 주소 그대로 (예: "서울 사서함 211-1111")
 
 **주소 형식 예시:**
@@ -1164,6 +1169,7 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer, customPrompt?:
 
 **STEP 3: 편지 요약 및 카테고리 분류**
 - **편지 요약**: 편지 내용을 2-3문장으로 간단히 요약 (핵심만)
+  • 손글씨 본문도 정확히 읽어서 요약하세요
 - **카테고리**: 다음 중 하나로 분류
   • 도서: 책 관련 요청
   • 베팅: 배팅/게임 관련
@@ -1174,7 +1180,15 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer, customPrompt?:
 
 **STEP 4: 원문 추출**
 - **이미지에 보이는 모든 텍스트를 그대로 추출**하세요
+- 손글씨와 인쇄체를 모두 정확하게 인식하세요
 - 줄바꿈과 문단 구조를 유지하세요
+- 읽기 어려운 글씨는 [불명확] 표시를 추가하세요
+
+**손글씨 인식 팁:**
+• 한글 자음·모음의 획 순서와 방향을 고려하세요
+• 숫자는 획의 굵기와 시작점을 참고하세요
+• 전체 문맥을 고려해 애매한 글자를 추론하세요
+• 겹쳐 쓰인 글자는 앞뒤 글자와 비교하세요
 
 **응답 형식 (정확히 이 형식으로):**
 [ENVELOPE: YES/NO]
@@ -1194,7 +1208,7 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer, customPrompt?:
       'Authorization': 'Bearer ' + apiKey
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'user',
@@ -1213,7 +1227,7 @@ async function callOpenAIVision(c: any, imageBuffer: ArrayBuffer, customPrompt?:
           ]
         }
       ],
-      max_tokens: 1500,
+      max_tokens: 2000,
       temperature: 0.1
     })
   })
