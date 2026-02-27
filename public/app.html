@@ -2768,6 +2768,85 @@
             </div>
         </div>
 
+        <!-- 이미지 크기 조정 모달 -->
+        <div id="image-resize-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full">
+                <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 rounded-t-lg">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-expand-arrows-alt mr-3"></i>이미지 크기 조정
+                        </h3>
+                        <button onclick="closeImageResizeModal()" class="text-white hover:text-gray-200">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <!-- 미리보기 -->
+                    <div class="mb-6 bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300 min-h-[200px] flex items-center justify-center overflow-hidden">
+                        <img id="resize-preview-image" src="" alt="Preview" class="max-w-full max-h-[400px] object-contain">
+                    </div>
+                    
+                    <!-- 크기 조정 옵션 -->
+                    <div class="space-y-4">
+                        <!-- 너비 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-arrows-alt-h mr-2"></i>너비 (픽셀)
+                            </label>
+                            <div class="flex gap-4 items-center">
+                                <input type="range" id="image-width-slider" min="50" max="800" value="300" 
+                                       class="flex-1" oninput="updateImagePreview()">
+                                <input type="number" id="image-width-input" min="50" max="800" value="300" 
+                                       class="w-24 px-3 py-2 border rounded" oninput="updateImagePreviewFromInput()">
+                                <span class="text-gray-600">px</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 빠른 선택 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-th mr-2"></i>빠른 선택
+                            </label>
+                            <div class="grid grid-cols-4 gap-2">
+                                <button onclick="setImageWidth(100)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm">
+                                    작게 (100px)
+                                </button>
+                                <button onclick="setImageWidth(200)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm">
+                                    보통 (200px)
+                                </button>
+                                <button onclick="setImageWidth(400)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm">
+                                    크게 (400px)
+                                </button>
+                                <button onclick="setImageWidth(600)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm">
+                                    매우 크게 (600px)
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 비율 유지 옵션 -->
+                        <div class="flex items-center">
+                            <input type="checkbox" id="keep-aspect-ratio" checked class="mr-2">
+                            <label for="keep-aspect-ratio" class="text-sm text-gray-700">
+                                <i class="fas fa-lock mr-1"></i>가로세로 비율 유지
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- 하단 버튼 -->
+                    <div class="mt-6 flex justify-end gap-3 pt-4 border-t">
+                        <button onclick="closeImageResizeModal()" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                            <i class="fas fa-times mr-2"></i>취소
+                        </button>
+                        <button onclick="insertResizedImage()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                            <i class="fas fa-check mr-2"></i>삽입
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 회원 변경 모달 -->
         <div id="change-member-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
             <div class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col">
@@ -15250,6 +15329,9 @@ console.log('권한 관리 함수 로드 완료')
         }
 
         // 이미지 업로드 (R2)
+        let pendingImageUrl = null
+        let pendingImagePosition = null
+        
         async function uploadTemplateImage(input) {
             if (!input.files || !input.files[0]) return
             
@@ -15265,16 +15347,81 @@ console.log('권한 관리 함수 로드 완료')
                 
                 const imageUrl = response.data.url
                 
-                // Quill 에디터에 이미지 삽입
-                const range = answerTemplateEditor.getSelection()
-                answerTemplateEditor.insertEmbed(range ? range.index : 0, 'image', imageUrl)
+                // 이미지 크기 조정 모달 열기
+                pendingImageUrl = imageUrl
+                pendingImagePosition = answerTemplateEditor.getSelection() || { index: 0, length: 0 }
+                openImageResizeModal(imageUrl)
                 
-                showToast('이미지가 업로드되었습니다', 'success')
+                showToast('이미지가 업로드되었습니다. 크기를 조정하세요', 'success')
                 input.value = '' // 초기화
             } catch (error) {
                 console.error('이미지 업로드 오류:', error)
                 showToast('이미지 업로드 실패', 'error')
             }
+        }
+        
+        // 이미지 크기 조정 모달 열기
+        function openImageResizeModal(imageUrl) {
+            document.getElementById('image-resize-modal').classList.remove('hidden')
+            document.getElementById('resize-preview-image').src = imageUrl
+            
+            // 기본값 설정
+            document.getElementById('image-width-slider').value = 300
+            document.getElementById('image-width-input').value = 300
+            updateImagePreview()
+        }
+        
+        // 이미지 크기 조정 모달 닫기
+        function closeImageResizeModal() {
+            document.getElementById('image-resize-modal').classList.add('hidden')
+            pendingImageUrl = null
+            pendingImagePosition = null
+        }
+        
+        // 이미지 미리보기 업데이트 (슬라이더)
+        function updateImagePreview() {
+            const width = document.getElementById('image-width-slider').value
+            document.getElementById('image-width-input').value = width
+            document.getElementById('resize-preview-image').style.width = width + 'px'
+            document.getElementById('resize-preview-image').style.height = 'auto'
+        }
+        
+        // 이미지 미리보기 업데이트 (입력 필드)
+        function updateImagePreviewFromInput() {
+            const width = document.getElementById('image-width-input').value
+            document.getElementById('image-width-slider').value = width
+            document.getElementById('resize-preview-image').style.width = width + 'px'
+            document.getElementById('resize-preview-image').style.height = 'auto'
+        }
+        
+        // 이미지 너비 설정 (빠른 선택)
+        function setImageWidth(width) {
+            document.getElementById('image-width-slider').value = width
+            document.getElementById('image-width-input').value = width
+            updateImagePreview()
+        }
+        
+        // 크기 조정된 이미지 삽입
+        function insertResizedImage() {
+            if (!pendingImageUrl || !pendingImagePosition) return
+            
+            const width = document.getElementById('image-width-input').value
+            
+            // Quill 에디터에 이미지 삽입
+            answerTemplateEditor.insertEmbed(pendingImagePosition.index, 'image', pendingImageUrl)
+            
+            // 삽입된 이미지에 스타일 적용
+            setTimeout(() => {
+                const images = answerTemplateEditor.root.querySelectorAll('img')
+                const lastImage = images[images.length - 1]
+                if (lastImage && lastImage.src === pendingImageUrl) {
+                    lastImage.style.width = width + 'px'
+                    lastImage.style.height = 'auto'
+                }
+            }, 100)
+            
+            closeImageResizeModal()
+            showToast('이미지가 삽입되었습니다', 'success')
         }
 
         // 미리보기 업데이트
