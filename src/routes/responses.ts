@@ -384,4 +384,59 @@ responses.get('/image/*', async (c) => {
   }
 })
 
+// 답변 템플릿 조회
+responses.get('/template', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const template = await DB.prepare(`
+      SELECT id, name, content as html_content, variables, is_active, created_at, updated_at
+      FROM response_templates
+      WHERE is_active = 1
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `).first()
+    
+    return c.json({ 
+      template: template || { html_content: '' }
+    })
+  } catch (error) {
+    console.error('템플릿 조회 오류:', error)
+    return c.json({ error: '템플릿 조회 실패' }, 500)
+  }
+})
+
+// 답변 템플릿 저장
+responses.put('/template', async (c) => {
+  const { DB } = c.env
+  const body = await c.req.json()
+  
+  const { html_content, updated_by } = body
+  
+  if (!html_content) {
+    return c.json({ error: 'html_content is required' }, 400)
+  }
+  
+  try {
+    // 기존 템플릿 비활성화
+    await DB.prepare(`
+      UPDATE response_templates SET is_active = 0
+    `).run()
+    
+    // 새 템플릿 추가
+    const result = await DB.prepare(`
+      INSERT INTO response_templates (name, content, is_active, created_by)
+      VALUES (?, ?, 1, ?)
+    `).bind('기본 템플릿', html_content, updated_by || 'system').run()
+    
+    return c.json({ 
+      message: '템플릿이 저장되었습니다',
+      id: result.meta.last_row_id
+    })
+  } catch (error) {
+    console.error('템플릿 저장 오류:', error)
+    return c.json({ error: '템플릿 저장 실패' }, 500)
+  }
+})
+
 export default responses
