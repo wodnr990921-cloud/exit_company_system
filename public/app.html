@@ -9413,11 +9413,15 @@ console.log('권한 관리 함수 로드 완료')
         
         // 답변 목록 렌더링
         function renderResponses(responses) {
-            const responseList = document.getElementById('responses-list')
-            if (!responseList) return
+            // 두 곳 모두 업데이트 (답변실과 티켓 상세 모달)
+            const responseList = document.getElementById('responses-list')  // 답변실
+            const responseListModal = document.getElementById('response-list')  // 티켓 상세 모달
+            
+            const emptyMessage = '<p class="text-gray-500 text-sm text-center py-4 bg-gray-50 rounded">저장된 답변이 없습니다.</p>'
             
             if (responses.length === 0) {
-                responseList.innerHTML = '<p class="text-gray-500 text-sm text-center py-4 bg-gray-50 rounded">저장된 답변이 없습니다.</p>'
+                if (responseList) responseList.innerHTML = emptyMessage
+                if (responseListModal) responseListModal.innerHTML = emptyMessage
                 return
             }
             
@@ -9442,7 +9446,9 @@ console.log('권한 관리 함수 로드 완료')
                 </div>
             `).join('')
             
-            responseList.innerHTML = responsesHtml
+            if (responseList) responseList.innerHTML = responsesHtml
+            if (responseListModal) responseListModal.innerHTML = responsesHtml
+        }
         }
         
         // 내부 메모 렌더링 (메신저 스타일)
