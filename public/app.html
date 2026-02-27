@@ -9677,11 +9677,11 @@ console.log('권한 관리 함수 로드 완료')
             const institution = currentTicket?.institution || '수용기관'
             const depositorName = currentTicket?.depositor_name || '입금자명'
             const phone = currentTicket?.member_phone || currentTicket?.depositor_phone || '전화번호'
-            const poBox = currentTicket?.po_box || currentTicket?.address || '사서함 주소'
+            const poBox = currentTicket?.po_box_address || currentTicket?.po_box || currentTicket?.address || '사서함 주소'
             
-            // 포인트 정보 (임시 - 실제 API에서 가져와야 함)
-            const points = currentTicket?.points || 0
-            const bettingPoints = currentTicket?.betting_points || 0
+            // 포인트 정보 (API에서 가져옴)
+            const points = currentTicket?.member_points || currentTicket?.points || 0
+            const bettingPoints = currentTicket?.member_betting_points || currentTicket?.betting_points || 0
             const totalPoints = points + bettingPoints
             
             // 날짜 정보

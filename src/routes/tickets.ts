@@ -120,7 +120,8 @@ tickets.get('/:id', async (c) => {
 
     const ticket = await c.env.DB.prepare(
       `SELECT t.*, 
-              m.name as member_name, m.member_number, m.institution, m.points as member_points, m.betting_points as member_betting_points,
+              m.name as member_name, m.member_number, m.institution, m.inmate_number, m.po_box_address,
+              m.points as member_points, m.betting_points as member_betting_points,
               s.name as assigned_to_name,
               c.name as created_by_name
        FROM tickets t
