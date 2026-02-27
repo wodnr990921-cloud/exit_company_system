@@ -471,6 +471,20 @@ transactions.post('/:id/approve', async (c) => {
     const transactionId = parseInt(c.req.param('id'))
     const { staff_id, memo } = await c.req.json()
     
+    // 거래 정보 조회 (회원 정보 포함)
+    const transaction = await c.env.DB.prepare(`
+      SELECT t.*, m.id as member_id, m.name as member_name, 
+             m.inmate_number, m.institution, m.points, m.betting_points
+      FROM transactions t
+      LEFT JOIN members m ON t.member_id = m.id
+      WHERE t.id = ?
+    `).bind(transactionId).first()
+    
+    if (!transaction) {
+      return c.json({ error: '거래를 찾을 수 없습니다' }, 404)
+    }
+    
+    // 거래 승인 처리
     await c.env.DB.prepare(`
       UPDATE transactions 
       SET 
@@ -480,6 +494,73 @@ transactions.post('/:id/approve', async (c) => {
         memo = COALESCE(?, memo)
       WHERE id = ?
     `).bind(staff_id, memo || null, transactionId).run()
+    
+    // 📝 입금 승인 시 티켓 자동 생성
+    if ((transaction as any).transaction_type === 'deposit' && (transaction as any).member_id) {
+      try {
+        const ticketNumber = `T${Date.now()}-DEP${transactionId}`
+        const memberId = (transaction as any).member_id
+        const memberName = (transaction as any).member_name || '회원'
+        const inmateNumber = (transaction as any).inmate_number || ''
+        const institution = (transaction as any).institution || ''
+        const amount = (transaction as any).amount || 0
+        const depositorName = (transaction as any).depositor_name || ''
+        
+        // 포인트 계산 (입금 금액이 포인트로 변환되었다고 가정)
+        const totalPoints = ((transaction as any).points || 0) + ((transaction as any).betting_points || 0)
+        
+        const ticketResult = await c.env.DB.prepare(`
+          INSERT INTO tickets (
+            ticket_number, title, content, priority, status,
+            member_id, member_name, inmate_number, institution,
+            ticket_type, created_by, assigned_to
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          ticketNumber,
+          '입금 확인 완료',
+          `${depositorName}님 입금 ${amount.toLocaleString()}원 처리 완료`,
+          'normal',
+          'pending',
+          memberId,
+          memberName,
+          inmateNumber,
+          institution,
+          'deposit_confirmation',
+          staff_id,
+          staff_id
+        ).run()
+        
+        const ticketId = ticketResult.meta.last_row_id
+        
+        // 답변 자동 추가
+        const responseContent = `
+          <p>${memberName}님, 입금이 확인되었습니다.</p>
+          <p><br></p>
+          <p>입금 내역:</p>
+          <p>• 입금자명: ${depositorName}</p>
+          <p>• 입금액: ${amount.toLocaleString()}원</p>
+          <p>• 처리 일시: ${new Date().toLocaleDateString('ko-KR')} ${new Date().toLocaleTimeString('ko-KR')}</p>
+          <p><br></p>
+          <p>현재 잔액: ${totalPoints.toLocaleString()}P</p>
+          <p>(일반 ${((transaction as any).points || 0).toLocaleString()}P + 배팅 ${((transaction as any).betting_points || 0).toLocaleString()}P)</p>
+          <p><br></p>
+          <p>답변 작성일: ${new Date().toLocaleDateString('ko-KR')}</p>
+          <p><br></p>
+          <p>감사합니다.</p>
+        `.trim()
+        
+        await c.env.DB.prepare(`
+          INSERT INTO ticket_comments (
+            ticket_id, content, created_by, comment_type
+          ) VALUES (?, ?, ?, 'response')
+        `).bind(ticketId, responseContent, staff_id).run()
+        
+        console.log(`✅ 입금 확인 티켓 자동 생성: ${ticketNumber} (티켓 ID: ${ticketId})`)
+      } catch (ticketError) {
+        console.error('티켓 자동 생성 오류 (입금 승인은 완료됨):', ticketError)
+        // 티켓 생성 실패해도 입금 승인은 완료됨
+      }
+    }
     
     return c.json({ success: true, message: '거래가 승인되었습니다' })
   } catch (error: any) {

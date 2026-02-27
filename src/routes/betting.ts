@@ -850,9 +850,9 @@ betting.post('/settlements/:id/approve', async (c) => {
       return c.json({ error: '이미 처리된 정산입니다.' }, 400)
     }
 
-    // 회원 현재 잔액 조회
+    // 회원 현재 잔액 및 정보 조회
     const member = await c.env.DB.prepare(
-      'SELECT betting_points FROM members WHERE id = ?'
+      'SELECT id, name, inmate_number, institution, betting_points, points FROM members WHERE id = ?'
     ).bind((settlement as any).member_id).first()
 
     if (!member) {
@@ -896,6 +896,60 @@ betting.post('/settlements/:id/approve', async (c) => {
     // 배치 실행 결과 확인
     if (!batchResults || batchResults.length !== 4) {
       throw new Error('배치 실행 실패: 정산 처리 동기화 실패')
+    }
+
+    // 📝 티켓 자동 생성: 배팅 당첨 알림
+    try {
+      const ticketNumber = `T${Date.now()}-BET${settlement_id}`
+      const totalPoints = ((member as any).points || 0) + newBalance
+      
+      const ticketResult = await c.env.DB.prepare(`
+        INSERT INTO tickets (
+          ticket_number, title, content, priority, status,
+          member_id, member_name, inmate_number, institution,
+          ticket_type, created_by, assigned_to
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        ticketNumber,
+        '배팅 당첨 알림',
+        `배팅 폴더 #${(settlement as any).folder_id} 당첨`,
+        'normal',
+        'pending',
+        (member as any).id,
+        (member as any).name,
+        (member as any).inmate_number || '',
+        (member as any).institution || '',
+        'point_adjustment',
+        approved_by,
+        approved_by
+      ).run()
+      
+      const ticketId = ticketResult.meta.last_row_id
+      
+      // 답변 자동 추가
+      const responseContent = `
+        <p>${(member as any).name}님, 축하드립니다!</p>
+        <p><br></p>
+        <p>배팅 당첨금이 지급되었습니다:</p>
+        <p>• 당첨금: ${(settlement as any).settlement_amount.toLocaleString()}P</p>
+        <p>• 현재 배팅 포인트: ${newBalance.toLocaleString()}P</p>
+        <p>• 전체 포인트: ${totalPoints.toLocaleString()}P (일반 ${((member as any).points || 0).toLocaleString()}P + 배팅 ${newBalance.toLocaleString()}P)</p>
+        <p><br></p>
+        <p>답변 작성일: ${new Date().toLocaleDateString('ko-KR')}</p>
+        <p><br></p>
+        <p>감사합니다.</p>
+      `.trim()
+      
+      await c.env.DB.prepare(`
+        INSERT INTO ticket_comments (
+          ticket_id, content, created_by, comment_type
+        ) VALUES (?, ?, ?, 'response')
+      `).bind(ticketId, responseContent, approved_by).run()
+      
+      console.log(`✅ 배팅 당첨 티켓 자동 생성: ${ticketNumber} (티켓 ID: ${ticketId})`)
+    } catch (ticketError) {
+      console.error('티켓 자동 생성 오류 (정산은 완료됨):', ticketError)
+      // 티켓 생성 실패해도 정산은 완료됨
     }
 
     return c.json({ success: true, new_balance: newBalance })
