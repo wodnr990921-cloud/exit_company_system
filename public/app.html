@@ -10943,6 +10943,13 @@ console.log('권한 관리 함수 로드 완료')
             if (tab === 'receive') loadPendingMail()
             if (tab === 'inspection') loadProcessedMail()
             if (tab === 'history') loadMailHistory()
+            
+            // 답변실 탭 진입 시 날짜 초기화
+            if (tab === 'responses') {
+                const today = new Date().toISOString().split('T')[0]
+                document.getElementById('response-start-date').value = today
+                document.getElementById('response-end-date').value = today
+            }
         }
 
         // 이미지 압축 함수
