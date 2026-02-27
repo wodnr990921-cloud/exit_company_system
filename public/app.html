@@ -2530,7 +2530,18 @@
                             <div id="answer-template-editor" class="bg-white border rounded" style="height: 400px;"></div>
                             <div class="mt-2 text-xs text-gray-500">
                                 <i class="fas fa-info-circle mr-1"></i>
-                                변수 사용: {{client_name}}, {{betting_result}}, {{total_balance}}, {{date}}
+                                <strong>사용 가능한 변수:</strong><br>
+                                • <code>{{member_name}}</code> - 회원명<br>
+                                • <code>{{inmate_number}}</code> - 수용번호<br>
+                                • <code>{{institution}}</code> - 수용기관<br>
+                                • <code>{{depositor_name}}</code> - 입금자명<br>
+                                • <code>{{phone}}</code> - 전화번호<br>
+                                • <code>{{address}}</code> - 주소<br>
+                                • <code>{{points}}</code> - 일반 포인트<br>
+                                • <code>{{betting_points}}</code> - 배팅 포인트<br>
+                                • <code>{{response_date}}</code> - 답변 작성일 (오늘 날짜)<br>
+                                • <code>{{ticket_created_date}}</code> - 편지 수령일 (티켓 생성일)<br>
+                                • <code>{{ticket_number}}</code> - 티켓 번호
                             </div>
                         </div>
 
@@ -9425,7 +9436,8 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
             
-            const responsesHtml = responses.map(r => `
+            // 티켓 모달용 (기존과 동일)
+            const responsesHtmlModal = responses.map(r => `
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div class="flex justify-between items-start mb-2">
                         <div class="flex items-center gap-2 text-sm text-gray-600">
@@ -9446,9 +9458,70 @@ console.log('권한 관리 함수 로드 완료')
                 </div>
             `).join('')
             
-            if (responseList) responseList.innerHTML = responsesHtml
-            if (responseListModal) responseListModal.innerHTML = responsesHtml
+            // 답변실용 (클릭 가능)
+            const responsesHtmlList = responses.map(r => {
+                const isExpanded = window.expandedResponseId === r.id
+                return `
+                    <div class="bg-white border rounded-lg hover:shadow-md transition-shadow">
+                        <div class="p-4 cursor-pointer" onclick="toggleResponseDetail(${r.id})">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <i class="fas fa-reply text-blue-600"></i>
+                                        <span class="text-sm text-gray-600">${new Date(r.created_at).toLocaleString('ko-KR')}</span>
+                                        <span class="font-medium text-sm">${r.created_by_name || r.staff_name}</span>
+                                        ${r.ticket_number ? '<span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">' + r.ticket_number + '</span>' : ''}
+                                    </div>
+                                    <div class="text-sm text-gray-700 line-clamp-2">
+                                        ${(r.content || r.comment).replace(/<[^>]*>/g, '').substring(0, 100)}...
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-${isExpanded ? 'up' : 'down'} text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div id="response-detail-${r.id}" class="border-t p-4 ${isExpanded ? '' : 'hidden'}">
+                            <div class="text-sm ql-editor mb-4" style="padding: 0;">${r.content || r.comment}</div>
+                            <div class="flex gap-2">
+                                ${r.ticket_id ? '<button onclick="openTicketFromResponse(' + r.ticket_id + '); event.stopPropagation();" class="btn btn-primary btn-sm"><i class="fas fa-external-link-alt mr-1"></i>티켓 열기</button>' : ''}
+                                <button onclick="editResponse(${r.id}); event.stopPropagation();" class="btn btn-secondary btn-sm"><i class="fas fa-edit mr-1"></i>수정</button>
+                                <button onclick="deleteResponse(${r.id}); event.stopPropagation();" class="btn btn-danger btn-sm"><i class="fas fa-trash mr-1"></i>삭제</button>
+                            </div>
+                        </div>
+                    </div>
+                `
+            }).join('')
+            
+            if (responseList) responseList.innerHTML = responsesHtmlList
+            if (responseListModal) responseListModal.innerHTML = responsesHtmlModal
         }
+        
+        // 답변 상세 토글
+        function toggleResponseDetail(responseId) {
+            const detail = document.getElementById('response-detail-' + responseId)
+            const wasExpanded = !detail.classList.contains('hidden')
+            
+            // 모든 답변 닫기
+            document.querySelectorAll('[id^="response-detail-"]').forEach(el => {
+                el.classList.add('hidden')
+            })
+            
+            // 클릭한 답변만 열기 (이미 열려있었으면 닫기)
+            if (!wasExpanded) {
+                detail.classList.remove('hidden')
+                window.expandedResponseId = responseId
+            } else {
+                window.expandedResponseId = null
+            }
+        }
+        
+        // 답변에서 티켓 열기
+        async function openTicketFromResponse(ticketId) {
+            try {
+                await openTicket(ticketId)
+            } catch (error) {
+                console.error('티켓 열기 오류:', error)
+                showToast('티켓을 불러올 수 없습니다', 'error')
+            }
         }
         
         // 내부 메모 렌더링 (메신저 스타일)
