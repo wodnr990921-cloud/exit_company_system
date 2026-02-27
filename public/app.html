@@ -2538,7 +2538,8 @@
                                 • <code>{{phone}}</code> - 전화번호<br>
                                 • <code>{{address}}</code> - 주소<br>
                                 • <code>{{points}}</code> - 일반 포인트<br>
-                                • <code>{{betting_points}}</code> - 배팅 포인트<br>
+                                • <code>{{betting_points}}</code> - 배팅 포인트 (내부용)<br>
+                                • <code>{{total_points}}</code> - 전체 포인트 (일반+배팅)<br>
                                 • <code>{{response_date}}</code> - 답변 작성일 (오늘 날짜)<br>
                                 • <code>{{ticket_created_date}}</code> - 편지 수령일 (티켓 생성일)<br>
                                 • <code>{{ticket_number}}</code> - 티켓 번호
@@ -8080,7 +8081,7 @@ console.log('권한 관리 함수 로드 완료')
                 }
                 
                 if (matches.length === 0) {
-                    alert('저장할 경기가 없습니다.')
+                    showToast('저장할 경기가 없습니다.', 'warning')
                     return
                 }
                 
@@ -8172,18 +8173,18 @@ console.log('권한 관리 함수 로드 완료')
                 })
 
                 if (matches.length === 0) {
-                    alert('저장할 경기가 없습니다.')
+                    showToast('저장할 경기가 없습니다.', 'warning')
                     return
                 }
 
                 // 일괄 저장
                 await axios.post(`${API_BASE}/betting/matches/bulk`, { matches })
-                alert('경기가 저장되었습니다.')
+                showToast('경기가 저장되었습니다.', 'success')
                 closeMatchManagementModal()
                 await loadBetting()
             } catch (error) {
                 console.error('경기 저장 오류:', error)
-                alert('경기 저장 실패: ' + (error.response?.data?.error || error.message))
+                showToast('경기 저장 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
 
@@ -9613,9 +9614,95 @@ console.log('권한 관리 함수 로드 완료')
         
         // 답변 저장 + 알림
         async function addResponseAndNotify() {
-            await addResponse()
-            // TODO: 알림 발송 구현
-            showToast('답변이 저장되었습니다. (알림 기능은 추후 추가 예정)', 'info')
+            if (!currentTicketId) return
+            
+            const content = responseEditor.root.innerHTML.trim()
+            if (!content || content === '<p><br></p>') {
+                showToast('답변 내용을 입력해주세요.', 'warning')
+                return
+            }
+            
+            try {
+                // 1. 답변 저장
+                const commentResponse = await axios.post(`${API_BASE}/tickets/${currentTicketId}/comments`, {
+                    content,
+                    created_by: currentStaff.id,
+                    comment_type: 'response'
+                })
+                
+                // 2. 티켓 정보 가져오기
+                const ticketResponse = await axios.get(`${API_BASE}/tickets/${currentTicketId}`)
+                const ticket = ticketResponse.data
+                
+                // 3. Telegram 알림 발송
+                if (ticket.member_phone || ticket.depositor_phone) {
+                    try {
+                        await axios.post(`${API_BASE}/telegram/notify`, {
+                            type: 'response_saved',
+                            data: {
+                                ticket_number: ticket.ticket_number,
+                                member_name: ticket.member_name,
+                                phone: ticket.member_phone || ticket.depositor_phone,
+                                response_preview: content.replace(/<[^>]*>/g, '').substring(0, 100)
+                            }
+                        })
+                        showToast('답변이 저장되고 알림이 발송되었습니다.', 'success')
+                    } catch (notifyError) {
+                        console.error('알림 발송 오류:', notifyError)
+                        showToast('답변은 저장되었으나 알림 발송에 실패했습니다.', 'warning')
+                    }
+                } else {
+                    showToast('답변이 저장되었습니다. (회원 전화번호 없음)', 'success')
+                }
+                
+                // 4. UI 업데이트
+                responseEditor.setContents([])
+                const templateSelect = document.getElementById('response-template')
+                if (templateSelect) templateSelect.value = ''
+                await loadTicketComments(currentTicketId)
+                
+            } catch (error) {
+                console.error('답변 저장 오류:', error)
+                showToast('답변 저장에 실패했습니다: ' + (error.response?.data?.error || error.message), 'error')
+            }
+        }
+        
+        // 답변 템플릿 변수 치환
+        function replaceVariables(content) {
+            if (!currentTicketId) return content
+            
+            // 회원 정보
+            const memberName = currentTicket?.member_name || '회원명'
+            const inmateNumber = currentTicket?.inmate_number || '수용번호'
+            const institution = currentTicket?.institution || '수용기관'
+            const depositorName = currentTicket?.depositor_name || '입금자명'
+            const phone = currentTicket?.member_phone || currentTicket?.depositor_phone || '전화번호'
+            const address = currentTicket?.address || '주소'
+            
+            // 포인트 정보 (임시 - 실제 API에서 가져와야 함)
+            const points = currentTicket?.points || 0
+            const bettingPoints = currentTicket?.betting_points || 0
+            const totalPoints = points + bettingPoints
+            
+            // 날짜 정보
+            const today = new Date().toLocaleDateString('ko-KR')
+            const ticketCreatedDate = currentTicket?.created_at ? new Date(currentTicket.created_at).toLocaleDateString('ko-KR') : '생성일'
+            const ticketNumber = currentTicket?.ticket_number || 'T0000'
+            
+            // 변수 치환
+            return content
+                .replace(/\{\{member_name\}\}/g, memberName)
+                .replace(/\{\{inmate_number\}\}/g, inmateNumber)
+                .replace(/\{\{institution\}\}/g, institution)
+                .replace(/\{\{depositor_name\}\}/g, depositorName)
+                .replace(/\{\{phone\}\}/g, phone)
+                .replace(/\{\{address\}\}/g, address)
+                .replace(/\{\{points\}\}/g, points.toLocaleString())
+                .replace(/\{\{betting_points\}\}/g, bettingPoints.toLocaleString())
+                .replace(/\{\{total_points\}\}/g, totalPoints.toLocaleString())
+                .replace(/\{\{response_date\}\}/g, today)
+                .replace(/\{\{ticket_created_date\}\}/g, ticketCreatedDate)
+                .replace(/\{\{ticket_number\}\}/g, ticketNumber)
         }
         
         // 답변 템플릿 삽입
@@ -9627,14 +9714,16 @@ console.log('권한 관리 함수 로드 완료')
                 order_received: '<p>주문이 정상적으로 접수되었습니다. 빠른 시일 내에 처리해 드리겠습니다.</p><p><br></p><p>감사합니다.</p>',
                 order_processing: '<p>주문하신 도서를 현재 처리 중입니다. 입고되는 대로 발송해 드리겠습니다.</p><p><br></p><p>감사합니다.</p>',
                 order_shipped: '<p>주문하신 도서가 발송되었습니다. 곧 수령하실 수 있습니다.</p><p><br></p><p>감사합니다.</p>',
-                point_adjusted: '<p>포인트 조정이 완료되었습니다. 현재 잔액을 확인해 주세요.</p><p><br></p><p>감사합니다.</p>',
-                inquiry_answer: '<p>문의하신 내용에 대해 답변드립니다.</p><p><br></p><p>[여기에 답변 내용을 입력하세요]</p><p><br></p><p>감사합니다.</p>',
-                need_more_info: '<p>정확한 처리를 위해 추가 정보가 필요합니다.</p><p><br></p><p>[필요한 정보를 구체적으로 기재해 주세요]</p><p><br></p><p>감사합니다.</p>',
-                completed: '<p>요청하신 사항이 처리 완료되었습니다.</p><p><br></p><p>감사합니다.</p>'
+                point_adjusted: '<p>{{member_name}}님, 포인트 조정이 완료되었습니다.</p><p><br></p><p>현재 잔액: {{total_points}}P (일반 {{points}}P + 배팅 {{betting_points}}P)</p><p><br></p><p>답변 작성일: {{response_date}}</p><p><br></p><p>감사합니다.</p>',
+                inquiry_answer: '<p>{{member_name}}님 ({{inmate_number}} / {{institution}})</p><p><br></p><p>편지 수령일: {{ticket_created_date}}</p><p><br></p><p>문의하신 내용에 대해 답변드립니다.</p><p><br></p><p>[여기에 답변 내용을 입력하세요]</p><p><br></p><p>답변 작성일: {{response_date}}</p><p><br></p><p>감사합니다.</p>',
+                need_more_info: '<p>{{member_name}}님, 정확한 처리를 위해 추가 정보가 필요합니다.</p><p><br></p><p>[필요한 정보를 구체적으로 기재해 주세요]</p><p><br></p><p>연락처: {{phone}}</p><p><br></p><p>감사합니다.</p>',
+                completed: '<p>{{member_name}}님, 요청하신 사항이 처리 완료되었습니다.</p><p><br></p><p>티켓번호: {{ticket_number}}</p><p><br></p><p>감사합니다.</p>'
             }
             
             if (templates[template]) {
-                responseEditor.clipboard.dangerouslyPasteHTML(templates[template])
+                // 변수 치환 적용
+                const replacedContent = replaceVariables(templates[template])
+                responseEditor.clipboard.dangerouslyPasteHTML(replacedContent)
             }
         }
         
@@ -9655,7 +9744,7 @@ console.log('권한 관리 함수 로드 완료')
                 input.value = ''
                 await loadTicketComments(currentTicketId)
             } catch (error) {
-                alert('저장 실패: ' + (error.response?.data?.error || error.message))
+                showToast('저장 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
         
@@ -9817,10 +9906,10 @@ console.log('권한 관리 함수 로드 완료')
                 await loadTicketComments(currentTicketId)
                 
                 if (commentType === 'response') {
-                    alert('회원 답변이 저장되었습니다. "답변 일괄 출력"으로 인쇄할 수 있습니다.')
+                    showToast('회원 답변이 저장되었습니다. "답변 일괄 출력"으로 인쇄할 수 있습니다.', 'success')
                 }
             } catch (error) {
-                alert('저장 실패: ' + (error.response?.data?.error || error.message))
+                showToast('저장 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
 
@@ -12856,12 +12945,12 @@ console.log('권한 관리 함수 로드 완료')
                     institution
                 })
                 
-                alert('임시 저장되었습니다.')
+                showToast('임시 저장되었습니다.', 'success')
                 closeInspectionDetail()
                 await loadProcessedMail()
             } catch (error) {
                 console.error('저장 오류:', error)
-                alert('저장 실패: ' + (error.response?.data?.error || error.message))
+                showToast('저장 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
         
@@ -14963,8 +15052,21 @@ console.log('권한 관리 함수 로드 완료')
         function updatePreview() {
             const htmlContent = answerTemplateEditor.root.innerHTML
             
-            // 변수 치환 예시
+            // 변수 치환 예시 (실제 데이터 대신 샘플 데이터 사용)
             const sampleData = {
+                member_name: '홍길동',
+                inmate_number: '2024-0001',
+                institution: '서울구치소',
+                depositor_name: '김철수',
+                phone: '010-1234-5678',
+                address: '서울시 강남구',
+                points: '50,000',
+                betting_points: '30,000',
+                total_points: '80,000',
+                response_date: new Date().toLocaleDateString('ko-KR'),
+                ticket_created_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR'),
+                ticket_number: 'T20260223001',
+                // 레거시 변수 (하위 호환성)
                 client_name: '홍길동',
                 betting_result: '당첨',
                 total_balance: '1,500,000',

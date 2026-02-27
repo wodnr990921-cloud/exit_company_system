@@ -473,6 +473,17 @@ telegram.post('/notify', async (c: Context) => {
         message += `총 처리 건수: ${data.total_count}건\n`
         message += `총 금액: ${Number(data.total_amount).toLocaleString()}P\n`
         break
+      
+      case 'response_saved':
+        message = `✉️ *답변 작성 완료*\n\n`
+        message += `티켓: \`${data.ticket_number}\`\n`
+        message += `회원: ${data.member_name}\n`
+        if (data.phone) {
+          message += `연락처: ${data.phone}\n`
+        }
+        message += `\n미리보기: ${data.response_preview}...\n`
+        message += `\n✅ 답변이 저장되었습니다. 인쇄 후 발송해주세요.`
+        break
         
       default:
         message = `📢 알림: ${JSON.stringify(data)}`
