@@ -9453,20 +9453,44 @@ console.log('권한 관리 함수 로드 완료')
                 return
             }
             
+            // 관리자인지 확인
+            const isAdmin = currentStaff && currentStaff.role === 'admin'
+            
             // 변경 사항 확인 다이얼로그
-            const confirmMsg = `다음 항목을 변경하시겠습니까?\n\n${changes.join('\n')}\n\n※ 티켓 상태 변경은 승인 후 적용됩니다.`
+            let confirmMsg = `다음 항목을 변경하시겠습니까?\n\n${changes.join('\n')}`
+            
+            if (!isAdmin) {
+                confirmMsg += `\n\n※ 직원 권한입니다. 관리자 승인이 필요합니다.`
+            }
+            
             if (!confirm(confirmMsg)) {
                 return
             }
 
             try {
-                await axios.patch(`${API_BASE}/tickets/${currentTicketId}`, {
-                    status,
-                    priority,
-                    assigned_to
-                })
+                if (isAdmin) {
+                    // 관리자: 직접 업데이트
+                    await axios.patch(`${API_BASE}/tickets/${currentTicketId}`, {
+                        status,
+                        priority,
+                        assigned_to
+                    })
+                    
+                    showToast('티켓 정보가 업데이트되었습니다.', 'success')
+                } else {
+                    // 직원: 승인 요청
+                    await axios.post(`${API_BASE}/modifications/request`, {
+                        target_type: 'ticket',
+                        target_id: currentTicketId,
+                        field_name: 'ticket_info',
+                        old_value: JSON.stringify({ status: currentStatus, priority: currentPriority }),
+                        new_value: JSON.stringify({ status, priority, assigned_to }),
+                        reason: changes.join(', ')
+                    })
+                    
+                    showToast('승인 요청이 전송되었습니다. 관리자 승인 후 적용됩니다.', 'info')
+                }
                 
-                showToast('티켓 정보가 업데이트되었습니다.', 'success')
                 await showTicketDetail(currentTicketId)
                 if (currentView === 'tickets') await loadTickets()
             } catch (error) {
@@ -15444,23 +15468,23 @@ console.log('권한 관리 함수 로드 완료')
         function insertResizedImage() {
             if (!pendingImageUrl || !pendingImagePosition) return
             
-            const width = document.getElementById('image-width-input').value
+            const width = parseInt(document.getElementById('image-width-input').value) || 300
             
-            // Quill 에디터에 이미지 삽입
-            answerTemplateEditor.insertEmbed(pendingImagePosition.index, 'image', pendingImageUrl)
+            // Quill Delta 포맷으로 이미지 삽입 (크기 지정 포함)
+            const delta = answerTemplateEditor.getContents()
+            const insertIndex = pendingImagePosition.index
             
-            // 삽입된 이미지에 스타일 적용
-            setTimeout(() => {
-                const images = answerTemplateEditor.root.querySelectorAll('img')
-                const lastImage = images[images.length - 1]
-                if (lastImage && lastImage.src === pendingImageUrl) {
-                    lastImage.style.width = width + 'px'
-                    lastImage.style.height = 'auto'
-                }
-            }, 100)
+            // 이미지 HTML을 직접 생성 (크기 포함)
+            const imageHtml = `<img src="${pendingImageUrl}" style="width: ${width}px; height: auto; max-width: 100%;">`
+            
+            // clipboard를 이용한 삽입 (스타일 유지)
+            answerTemplateEditor.clipboard.dangerouslyPasteHTML(insertIndex, imageHtml)
+            
+            // 커서 위치 이동
+            answerTemplateEditor.setSelection(insertIndex + 1)
             
             closeImageResizeModal()
-            showToast('이미지가 삽입되었습니다', 'success')
+            showToast(`이미지가 삽입되었습니다 (${width}px)`, 'success')
         }
 
         // 미리보기 업데이트
