@@ -3866,8 +3866,15 @@
 
                     <!-- 우측: 기존 티켓 정보 (60%) -->
                     <div class="w-3/5 flex flex-col overflow-hidden relative">
-                        <!-- 직원 소통 위젯 (티켓 모달 전용) -->
-                        <div id="staff-chat-widget" class="absolute bottom-4 right-4 w-96 bg-white shadow-2xl rounded-lg border z-30 flex flex-col" style="display: none; max-height: 500px;">
+                        <!-- 직원 소통 버튼 (티켓 모달 전용) -->
+                        <button onclick="toggleStaffChatWidget()" id="staff-chat-toggle-btn" class="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-full shadow-lg z-30 flex items-center gap-2" style="display: none;">
+                            <i class="fas fa-comments"></i>
+                            <span class="font-medium">직원 소통</span>
+                            <span id="unread-comments-badge-btn" class="px-2 py-0.5 text-xs bg-red-500 rounded-full font-bold animate-pulse" style="display: none;">0</span>
+                        </button>
+                        
+                        <!-- 직원 소통 위젯 -->
+                        <div id="staff-chat-widget" class="fixed bottom-20 right-4 w-96 bg-white shadow-2xl rounded-lg border z-30 flex flex-col" style="display: none; max-height: 500px;">
                             <!-- 위젯 헤더 -->
                             <div class="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-t-lg flex items-center justify-between px-4 py-3">
                                 <div class="flex items-center gap-2">
@@ -4001,11 +4008,11 @@
                                         </div>
                                         <div class="mt-3">
                                             <div class="flex gap-2">
-                                                <button onclick="addResponse()" class="btn btn-primary flex-1">
+                                                                <button onclick="addResponse()" class="btn btn-primary">
                                                     <i class="fas fa-paper-plane mr-2"></i>답변 저장
                                                 </button>
-                                                <button onclick="addResponseAndNotify()" class="btn btn-success flex-1">
-                                                    <i class="fas fa-bell mr-2"></i>답변 저장 + 알림 발송
+                                                <button onclick="addResponseAndNotify()" class="btn btn-success">
+                                                    <i class="fas fa-bell mr-2"></i>답변+알림
                                                 </button>
                                             </div>
                                         </div>
@@ -9504,7 +9511,7 @@ console.log('권한 관리 함수 로드 완료')
             
             const content = responseEditor.root.innerHTML.trim()
             if (!content || content === '<p><br></p>') {
-                alert('답변 내용을 입력해주세요.')
+                showToast('답변 내용을 입력해주세요.', 'warning')
                 return
             }
             
@@ -9515,11 +9522,13 @@ console.log('권한 관리 함수 로드 완료')
                     comment_type: 'response'
                 })
                 responseEditor.setContents([])
-                document.getElementById('response-template').value = ''
+                const templateSelect = document.getElementById('response-template')
+                if (templateSelect) templateSelect.value = ''
                 await loadTicketComments(currentTicketId)
                 showToast('회원 답변이 저장되었습니다. "답변 일괄 출력"으로 인쇄할 수 있습니다.', 'success')
             } catch (error) {
-                alert('저장 실패: ' + (error.response?.data?.error || error.message))
+                console.error('답변 저장 오류:', error)
+                showToast('저장 실패: ' + (error.response?.data?.error || error.message), 'error')
             }
         }
         
@@ -15524,29 +15533,34 @@ console.log('권한 관리 함수 로드 완료')
         // 직원 소통 위젯 토글
         function toggleStaffChatWidget() {
             const widget = document.getElementById('staff-chat-widget')
-            const chevron = document.getElementById('staff-widget-chevron')
-            const messages = document.getElementById('staff-chat-messages')
+            const btn = document.getElementById('staff-chat-toggle-btn')
             
-            if (messages.style.display === 'none') {
-                messages.style.display = 'block'
-                chevron.className = 'fas fa-chevron-down'
+            if (widget.style.display === 'none' || !widget.style.display) {
+                widget.style.display = 'flex'
+                btn.innerHTML = '<i class="fas fa-times"></i><span class="font-medium">닫기</span>'
             } else {
-                messages.style.display = 'none'
-                chevron.className = 'fas fa-chevron-up'
+                widget.style.display = 'none'
+                const badge = document.getElementById('unread-comments-badge-btn')
+                const count = badge.textContent
+                btn.innerHTML = `<i class="fas fa-comments"></i><span class="font-medium">직원 소통</span>${badge.style.display !== 'none' ? '<span class="px-2 py-0.5 text-xs bg-red-500 rounded-full font-bold animate-pulse">' + count + '</span>' : ''}`
             }
         }
         
         // 직원 소통 위젯 표시 (티켓 모달 열릴 때)
         function showStaffChatWidget() {
             const widget = document.getElementById('staff-chat-widget')
-            widget.style.display = 'flex'
+            const btn = document.getElementById('staff-chat-toggle-btn')
+            widget.style.display = 'none'  // 처음엔 숨김
+            btn.style.display = 'flex'  // 버튼만 표시
             loadStaffComments()
         }
         
         // 직원 소통 위젯 숨기기 (티켓 모달 닫힐 때)
         function hideStaffChatWidget() {
             const widget = document.getElementById('staff-chat-widget')
+            const btn = document.getElementById('staff-chat-toggle-btn')
             widget.style.display = 'none'
+            btn.style.display = 'none'
         }
         
         // 직원 댓글 로드
@@ -15623,13 +15637,21 @@ console.log('권한 관리 함수 로드 완료')
         function updateUnreadBadge(comments) {
             // 현재는 단순 카운트, 추후 읽음 상태 추적 필요
             const badge = document.getElementById('unread-comments-badge')
+            const badgeBtn = document.getElementById('unread-comments-badge-btn')
             const unreadCount = comments.filter(c => c.staff_id !== currentStaff.id).length
             
             if (unreadCount > 0) {
-                badge.textContent = unreadCount
-                badge.style.display = 'inline-block'
+                if (badge) {
+                    badge.textContent = unreadCount
+                    badge.style.display = 'inline-block'
+                }
+                if (badgeBtn) {
+                    badgeBtn.textContent = unreadCount
+                    badgeBtn.style.display = 'inline-block'
+                }
             } else {
-                badge.style.display = 'none'
+                if (badge) badge.style.display = 'none'
+                if (badgeBtn) badgeBtn.style.display = 'none'
             }
         }
         
@@ -15641,7 +15663,7 @@ console.log('권한 관리 함수 로드 완료')
             const content = input.value.trim()
             
             if (!content) {
-                alert('지시사항을 입력해주세요.')
+                showToast('지시사항을 입력해주세요.', 'warning')
                 return
             }
             
