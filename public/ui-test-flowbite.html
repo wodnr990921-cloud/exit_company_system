@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowbite + GSAP 테스트 - 강력한 애니메이션</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Flowbite -->
+    <link href="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.css" rel="stylesheet">
+    
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 네비게이션 -->
+    <nav class="bg-white border-gray-200 shadow-sm">
+        <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+            <a href="#" class="flex items-center space-x-3 rtl:space-x-reverse">
+                <span class="self-center text-2xl font-bold whitespace-nowrap text-gradient">Flowbite + GSAP</span>
+            </a>
+            <button data-collapse-toggle="navbar-default" type="button" class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200">
+                <span class="sr-only">메뉴</span>
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="hidden w-full md:block md:w-auto" id="navbar-default">
+                <ul class="font-medium flex flex-col p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:flex-row md:space-x-8 rtl:space-x-reverse md:mt-0 md:border-0 md:bg-white">
+                    <li><a href="#" class="block py-2 px-3 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0">홈</a></li>
+                    <li><a href="#" class="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0">서비스</a></li>
+                    <li><a href="#" class="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0">가격</a></li>
+                    <li><a href="#" class="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0">연락처</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 히어로 섹션 -->
+    <section class="gradient-bg">
+        <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16 lg:px-12">
+            <h1 id="hero-title" class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-white md:text-5xl lg:text-6xl opacity-0">
+                Flowbite + GSAP
+            </h1>
+            <p id="hero-subtitle" class="mb-8 text-lg font-normal text-white/90 lg:text-xl sm:px-16 xl:px-48 opacity-0">
+                강력한 애니메이션 라이브러리 GSAP과 Flowbite의 풍부한 컴포넌트를 결합하여 
+                프로페셔널한 웹 경험을 제공합니다.
+            </p>
+            <div id="hero-buttons" class="flex flex-col mb-8 lg:mb-16 space-y-4 sm:flex-row sm:justify-center sm:space-y-0 sm:space-x-4 opacity-0">
+                <a href="#" class="inline-flex justify-center items-center py-3 px-5 text-base font-medium text-center text-white rounded-lg bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300">
+                    <i class="fas fa-play mr-2"></i>
+                    시작하기
+                </a>
+                <a href="#" class="inline-flex justify-center items-center py-3 px-5 text-base font-medium text-center text-white rounded-lg border border-white hover:bg-white hover:text-blue-700 focus:ring-4 focus:ring-gray-100">
+                    <i class="fas fa-video mr-2"></i>
+                    데모 보기
+                </a>  
+            </div>
+        </div>
+    </section>
+
+    <!-- 통계 카드 -->
+    <section class="max-w-screen-xl mx-auto px-4 -mt-16 mb-16">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="stat-card bg-white rounded-lg shadow-lg p-6 transform opacity-0">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">전체 사용자</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2">45.2K</p>
+                        <p class="text-sm text-green-600 mt-1">
+                            <i class="fas fa-arrow-up"></i> 12.5%
+                        </p>
+                    </div>
+                    <div class="bg-blue-100 rounded-full p-4">
+                        <i class="fas fa-users text-blue-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card bg-white rounded-lg shadow-lg p-6 transform opacity-0">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">매출</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2">₩3.2M</p>
+                        <p class="text-sm text-green-600 mt-1">
+                            <i class="fas fa-arrow-up"></i> 18.1%
+                        </p>
+                    </div>
+                    <div class="bg-green-100 rounded-full p-4">
+                        <i class="fas fa-dollar-sign text-green-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card bg-white rounded-lg shadow-lg p-6 transform opacity-0">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">주문</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2">1.8K</p>
+                        <p class="text-sm text-green-600 mt-1">
+                            <i class="fas fa-arrow-up"></i> 5.3%
+                        </p>
+                    </div>
+                    <div class="bg-purple-100 rounded-full p-4">
+                        <i class="fas fa-shopping-cart text-purple-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card bg-white rounded-lg shadow-lg p-6 transform opacity-0">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">방문자</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2">89.3K</p>
+                        <p class="text-sm text-green-600 mt-1">
+                            <i class="fas fa-arrow-up"></i> 23.8%
+                        </p>
+                    </div>
+                    <div class="bg-orange-100 rounded-full p-4">
+                        <i class="fas fa-chart-line text-orange-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 특징 카드 -->
+    <section class="max-w-screen-xl mx-auto px-4 py-16">
+        <div class="text-center mb-12">
+            <h2 class="feature-title text-4xl font-bold text-gray-900 mb-4 opacity-0">강력한 기능</h2>
+            <p class="feature-subtitle text-lg text-gray-600 opacity-0">GSAP의 프로페셔널한 애니메이션을 경험하세요</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- 카드 1 -->
+            <div class="feature-card bg-white rounded-lg shadow-lg p-8 hover:shadow-2xl transition-shadow opacity-0">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+                    <i class="fas fa-rocket text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3">타임라인 애니메이션</h3>
+                <p class="text-gray-600 mb-4">
+                    복잡한 시퀀스 애니메이션을 쉽게 구현할 수 있습니다. 정밀한 타이밍 제어가 가능합니다.
+                </p>
+                <a href="#" class="text-blue-600 font-medium hover:text-blue-700">
+                    자세히 보기 <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            <!-- 카드 2 -->
+            <div class="feature-card bg-white rounded-lg shadow-lg p-8 hover:shadow-2xl transition-shadow opacity-0">
+                <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-red-600 rounded-lg flex items-center justify-center mb-6">
+                    <i class="fas fa-sliders-h text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3">스크롤 트리거</h3>
+                <p class="text-gray-600 mb-4">
+                    스크롤 위치에 따라 애니메이션을 제어할 수 있습니다. 패럴랙스 효과도 간단하게 구현됩니다.
+                </p>
+                <a href="#" class="text-blue-600 font-medium hover:text-blue-700">
+                    자세히 보기 <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            <!-- 카드 3 -->
+            <div class="feature-card bg-white rounded-lg shadow-lg p-8 hover:shadow-2xl transition-shadow opacity-0">
+                <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center mb-6">
+                    <i class="fas fa-bezier-curve text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3">이징 함수</h3>
+                <p class="text-gray-600 mb-4">
+                    다양한 이징 옵션으로 자연스러운 움직임을 만들 수 있습니다. 커스텀 이징도 지원합니다.
+                </p>
+                <a href="#" class="text-blue-600 font-medium hover:text-blue-700">
+                    자세히 보기 <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 타임라인 -->
+    <section class="max-w-screen-xl mx-auto px-4 py-16">
+        <div class="text-center mb-12">
+            <h2 class="timeline-title text-4xl font-bold text-gray-900 mb-4 opacity-0">프로젝트 로드맵</h2>
+            <p class="timeline-subtitle text-lg text-gray-600 opacity-0">단계별로 진행되는 개발 과정</p>
+        </div>
+
+        <ol class="relative border-l border-gray-200">
+            <li class="timeline-item mb-10 ml-6 opacity-0">
+                <span class="absolute flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full -left-4 ring-4 ring-white">
+                    <i class="fas fa-check text-blue-600"></i>
+                </span>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="flex items-center mb-1 text-lg font-semibold text-gray-900">
+                        디자인 완료
+                        <span class="bg-blue-100 text-blue-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded ml-3">완료</span>
+                    </h3>
+                    <time class="block mb-2 text-sm font-normal leading-none text-gray-400">2024년 1월 15일</time>
+                    <p class="mb-4 text-base font-normal text-gray-500">
+                        사용자 경험을 고려한 현대적인 UI 디자인 시스템을 완성했습니다.
+                    </p>
+                </div>
+            </li>
+            <li class="timeline-item mb-10 ml-6 opacity-0">
+                <span class="absolute flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full -left-4 ring-4 ring-white">
+                    <i class="fas fa-check text-blue-600"></i>
+                </span>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="mb-1 text-lg font-semibold text-gray-900">개발 진행</h3>
+                    <time class="block mb-2 text-sm font-normal leading-none text-gray-400">2024년 2월 10일</time>
+                    <p class="text-base font-normal text-gray-500">
+                        핵심 기능 개발이 완료되었고 현재 테스트 단계에 있습니다.
+                    </p>
+                </div>
+            </li>
+            <li class="timeline-item mb-10 ml-6 opacity-0">
+                <span class="absolute flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full -left-4 ring-4 ring-white">
+                    <i class="fas fa-spinner fa-spin text-gray-600"></i>
+                </span>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="flex items-center mb-1 text-lg font-semibold text-gray-900">
+                        베타 테스트
+                        <span class="bg-yellow-100 text-yellow-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded ml-3">진행중</span>
+                    </h3>
+                    <time class="block mb-2 text-sm font-normal leading-none text-gray-400">2024년 3월 5일</time>
+                    <p class="text-base font-normal text-gray-500">
+                        사용자 피드백을 받으며 서비스를 개선하고 있습니다.
+                    </p>
+                </div>
+            </li>
+            <li class="timeline-item ml-6 opacity-0">
+                <span class="absolute flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full -left-4 ring-4 ring-white">
+                    <i class="fas fa-clock text-gray-400"></i>
+                </span>
+                <div class="bg-white p-6 rounded-lg shadow-lg opacity-50">
+                    <h3 class="mb-1 text-lg font-semibold text-gray-900">정식 출시</h3>
+                    <time class="block mb-2 text-sm font-normal leading-none text-gray-400">2024년 4월 1일 (예정)</time>
+                    <p class="text-base font-normal text-gray-500">
+                        모든 기능이 완성되면 정식으로 서비스를 시작합니다.
+                    </p>
+                </div>
+            </li>
+        </ol>
+    </section>
+
+    <!-- 가격 카드 -->
+    <section class="max-w-screen-xl mx-auto px-4 py-16">
+        <div class="text-center mb-12">
+            <h2 class="pricing-title text-4xl font-bold text-gray-900 mb-4 opacity-0">합리적인 가격</h2>
+            <p class="pricing-subtitle text-lg text-gray-600 opacity-0">프로젝트 규모에 맞는 플랜을 선택하세요</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- 기본 -->
+            <div class="pricing-card bg-white rounded-lg shadow-lg p-8 opacity-0">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">기본</h3>
+                <div class="mb-6">
+                    <span class="text-4xl font-bold text-gray-900">₩29,000</span>
+                    <span class="text-gray-600">/월</span>
+                </div>
+                <ul class="mb-8 space-y-4">
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-600 mr-3"></i>
+                        <span class="text-gray-600">5개 프로젝트</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-600 mr-3"></i>
+                        <span class="text-gray-600">기본 지원</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-600 mr-3"></i>
+                        <span class="text-gray-600">월간 업데이트</span>
+                    </li>
+                </ul>
+                <button class="w-full py-3 px-6 text-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium rounded-lg transition-colors">
+                    시작하기
+                </button>
+            </div>
+
+            <!-- 프로 (추천) -->
+            <div class="pricing-card bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg shadow-2xl p-8 transform scale-105 opacity-0">
+                <div class="bg-yellow-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full inline-block mb-4">추천</div>
+                <h3 class="text-2xl font-bold text-white mb-4">프로</h3>
+                <div class="mb-6">
+                    <span class="text-4xl font-bold text-white">₩59,000</span>
+                    <span class="text-white/80">/월</span>
+                </div>
+                <ul class="mb-8 space-y-4">
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-white mr-3"></i>
+                        <span class="text-white">무제한 프로젝트</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-white mr-3"></i>
+                        <span class="text-white">우선 지원</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-white mr-3"></i>
+                        <span class="text-white">주간 업데이트</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-white mr-3"></i>
+                        <span class="text-white">고급 분석</span>
+                    </li>
+                </ul>
+                <button class="w-full py-3 px-6 text-center bg-white hover:bg-gray-100 text-blue-600 font-medium rounded-lg transition-colors">
+                    시작하기
+                </button>
+            </div>
+
+            <!-- 엔터프라이즈 -->
+            <div class="pricing-card bg-white rounded-lg shadow-lg p-8 opacity-0">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">엔터프라이즈</h3>
+                <div class="mb-6">
+                    <span class="text-4xl font-bold text-gray-900">₩99,000</span>
+                    <span class="text-gray-600">/월</span>
+                </div>
+                <ul class="mb-8 space-y-4">
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-600 mr-3"></i>
+                        <span class="text-gray-600">모든 프로 기능</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-600 mr-3"></i>
+                        <span class="text-gray-600">전담 매니저</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-600 mr-3"></i>
+                        <span class="text-gray-600">커스텀 개발</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-600 mr-3"></i>
+                        <span class="text-gray-600">SLA 보장</span>
+                    </li>
+                </ul>
+                <button class="w-full py-3 px-6 text-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium rounded-lg transition-colors">
+                    문의하기
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 푸터 -->
+    <footer class="bg-gray-800">
+        <div class="max-w-screen-xl mx-auto p-4 py-6 lg:py-8">
+            <div class="md:flex md:justify-between">
+                <div class="mb-6 md:mb-0">
+                    <a href="#" class="flex items-center">
+                        <span class="self-center text-2xl font-semibold whitespace-nowrap text-white">Flowbite</span>
+                    </a>
+                </div>
+                <div class="grid grid-cols-2 gap-8 sm:gap-6 sm:grid-cols-3">
+                    <div>
+                        <h2 class="mb-6 text-sm font-semibold text-white uppercase">리소스</h2>
+                        <ul class="text-gray-400 font-medium">
+                            <li class="mb-4"><a href="#" class="hover:underline">문서</a></li>
+                            <li><a href="#" class="hover:underline">튜토리얼</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h2 class="mb-6 text-sm font-semibold text-white uppercase">팔로우</h2>
+                        <ul class="text-gray-400 font-medium">
+                            <li class="mb-4"><a href="#" class="hover:underline">Github</a></li>
+                            <li><a href="#" class="hover:underline">Discord</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h2 class="mb-6 text-sm font-semibold text-white uppercase">법적</h2>
+                        <ul class="text-gray-400 font-medium">
+                            <li class="mb-4"><a href="#" class="hover:underline">개인정보</a></li>
+                            <li><a href="#" class="hover:underline">약관</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-6 border-gray-700 sm:mx-auto lg:my-8">
+            <div class="sm:flex sm:items-center sm:justify-between">
+                <span class="text-sm text-gray-400 sm:text-center">© 2024 <a href="#" class="hover:underline">Flowbite™</a>. All Rights Reserved.</span>
+                <div class="flex mt-4 sm:justify-center sm:mt-0 space-x-5">
+                    <a href="#" class="text-gray-400 hover:text-white">
+                        <i class="fab fa-facebook text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white">
+                        <i class="fab fa-twitter text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white">
+                        <i class="fab fa-github text-xl"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Flowbite JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.js"></script>
+    
+    <!-- GSAP 애니메이션 -->
+    <script>
+        // GSAP 초기화
+        gsap.registerPlugin(ScrollTrigger);
+
+        // 히어로 섹션 애니메이션
+        gsap.timeline()
+            .to('#hero-title', { opacity: 1, y: 0, duration: 1, ease: 'power3.out' })
+            .to('#hero-subtitle', { opacity: 1, y: 0, duration: 1, ease: 'power3.out' }, '-=0.5')
+            .to('#hero-buttons', { opacity: 1, y: 0, duration: 1, ease: 'power3.out' }, '-=0.5');
+
+        // 통계 카드 애니메이션
+        gsap.from('.stat-card', {
+            scrollTrigger: {
+                trigger: '.stat-card',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            y: 50,
+            duration: 0.8,
+            stagger: 0.2,
+            ease: 'power3.out'
+        });
+
+        // 특징 섹션 애니메이션
+        gsap.from('.feature-title', {
+            scrollTrigger: {
+                trigger: '.feature-title',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            y: 30,
+            duration: 0.8,
+            ease: 'power3.out'
+        });
+
+        gsap.from('.feature-subtitle', {
+            scrollTrigger: {
+                trigger: '.feature-subtitle',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            y: 30,
+            duration: 0.8,
+            delay: 0.2,
+            ease: 'power3.out'
+        });
+
+        gsap.from('.feature-card', {
+            scrollTrigger: {
+                trigger: '.feature-card',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            y: 50,
+            duration: 0.8,
+            stagger: 0.2,
+            ease: 'power3.out'
+        });
+
+        // 타임라인 애니메이션
+        gsap.from('.timeline-title', {
+            scrollTrigger: {
+                trigger: '.timeline-title',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            x: -50,
+            duration: 0.8,
+            ease: 'power3.out'
+        });
+
+        gsap.from('.timeline-subtitle', {
+            scrollTrigger: {
+                trigger: '.timeline-subtitle',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            x: -50,
+            duration: 0.8,
+            delay: 0.2,
+            ease: 'power3.out'
+        });
+
+        gsap.from('.timeline-item', {
+            scrollTrigger: {
+                trigger: '.timeline-item',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            x: -100,
+            duration: 0.8,
+            stagger: 0.3,
+            ease: 'power3.out'
+        });
+
+        // 가격 카드 애니메이션
+        gsap.from('.pricing-title', {
+            scrollTrigger: {
+                trigger: '.pricing-title',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            scale: 0.8,
+            duration: 0.8,
+            ease: 'back.out(1.7)'
+        });
+
+        gsap.from('.pricing-subtitle', {
+            scrollTrigger: {
+                trigger: '.pricing-subtitle',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            y: 30,
+            duration: 0.8,
+            delay: 0.2,
+            ease: 'power3.out'
+        });
+
+        gsap.from('.pricing-card', {
+            scrollTrigger: {
+                trigger: '.pricing-card',
+                start: 'top 80%',
+            },
+            opacity: 0,
+            y: 80,
+            duration: 1,
+            stagger: 0.2,
+            ease: 'power3.out'
+        });
+
+        // 카드 호버 애니메이션
+        document.querySelectorAll('.feature-card, .stat-card, .pricing-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                gsap.to(card, { y: -10, duration: 0.3, ease: 'power2.out' });
+            });
+            card.addEventListener('mouseleave', () => {
+                gsap.to(card, { y: 0, duration: 0.3, ease: 'power2.out' });
+            });
+        });
+    </script>
+</body>
+</html>

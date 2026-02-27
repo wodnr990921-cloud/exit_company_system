@@ -46,6 +46,7 @@ app.get('/', async (c) => {
 })
 
 // API 라우트 등록
+app.route('/ui-demo', uidemo)
 app.route('/api/auth', auth)
 app.route('/api/attendance', attendance)
 app.route('/api/members', members)
