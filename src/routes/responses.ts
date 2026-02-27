@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 
 type Bindings = {
   DB: D1Database
+  R2: R2Bucket
 }
 
 const responses = new Hono<{ Bindings: Bindings }>()
@@ -312,6 +313,74 @@ responses.put('/settings', async (c) => {
   } catch (error) {
     console.error('Failed to update settings:', error)
     return c.json({ error: 'Failed to update settings' }, 500)
+  }
+})
+
+// 이미지 업로드 (답변 양식용)
+responses.post('/upload-image', async (c) => {
+  try {
+    const formData = await c.req.formData()
+    const file = formData.get('image')
+    
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: '이미지 파일이 필요합니다' }, 400)
+    }
+    
+    // 파일 크기 제한 (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      return c.json({ error: '파일 크기는 10MB 이하여야 합니다' }, 400)
+    }
+    
+    // 파일 타입 확인
+    if (!file.type.startsWith('image/')) {
+      return c.json({ error: '이미지 파일만 업로드 가능합니다' }, 400)
+    }
+    
+    // R2에 업로드
+    const timestamp = Date.now()
+    const randomStr = Math.random().toString(36).substring(7)
+    const extension = file.name.split('.').pop() || 'jpg'
+    const key = `response-templates/${timestamp}-${randomStr}.${extension}`
+    
+    const arrayBuffer = await file.arrayBuffer()
+    await c.env.R2.put(key, arrayBuffer, {
+      httpMetadata: {
+        contentType: file.type
+      }
+    })
+    
+    // 공개 URL 반환 (실제 환경에 맞게 수정 필요)
+    const publicUrl = `/api/responses/image/${key}`
+    
+    return c.json({ 
+      success: true,
+      url: publicUrl,
+      key: key
+    })
+  } catch (error) {
+    console.error('이미지 업로드 오류:', error)
+    return c.json({ error: '이미지 업로드 실패' }, 500)
+  }
+})
+
+// 이미지 조회
+responses.get('/image/*', async (c) => {
+  try {
+    const path = c.req.path.replace('/api/responses/image/', '')
+    
+    const object = await c.env.R2.get(path)
+    if (!object) {
+      return c.json({ error: '이미지를 찾을 수 없습니다' }, 404)
+    }
+    
+    const headers = new Headers()
+    object.writeHttpMetadata(headers)
+    headers.set('Cache-Control', 'public, max-age=31536000')
+    
+    return new Response(object.body, { headers })
+  } catch (error) {
+    console.error('이미지 조회 오류:', error)
+    return c.json({ error: '이미지 조회 실패' }, 500)
   }
 })
 
