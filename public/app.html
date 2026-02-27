@@ -367,6 +367,31 @@
                 content: " (" attr(href) ")";
             }
         }
+        
+        /* Quill 에디터 이미지 인라인 스타일 */
+        .ql-editor img {
+            display: inline !important;
+            vertical-align: middle !important;
+            margin: 0 2px !important;
+            cursor: pointer !important;
+        }
+        
+        /* 이미지 선택 시 하이라이트 */
+        .ql-editor img:hover {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+        
+        /* 이미지 크기 조절 핸들 스타일 */
+        .image-resize-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #3b82f6;
+            border: 1px solid white;
+            border-radius: 50%;
+            cursor: nwse-resize;
+        }
     </style>
     
     <!-- SheetJS for Excel export -->
@@ -15209,6 +15234,38 @@ console.log('권한 관리 함수 로드 완료')
             
             // Quill 에디터 초기화 (처음만)
             if (!answerTemplateEditor) {
+                // 인라인 이미지 Blot 정의 (텍스트처럼 취급)
+                const Inline = Quill.import('blots/inline')
+                class InlineImageBlot extends Inline {
+                    static blotName = 'inlineImage'
+                    static tagName = 'img'
+                    
+                    static create(value) {
+                        const node = super.create()
+                        node.setAttribute('src', value.url || value)
+                        node.setAttribute('alt', value.alt || 'image')
+                        node.setAttribute('style', `
+                            display: inline;
+                            vertical-align: middle;
+                            max-width: ${value.width || '300'}px;
+                            height: auto;
+                            margin: 0 2px;
+                            cursor: pointer;
+                        `.trim())
+                        return node
+                    }
+                    
+                    static value(node) {
+                        return {
+                            url: node.getAttribute('src'),
+                            alt: node.getAttribute('alt'),
+                            width: node.style.maxWidth ? parseInt(node.style.maxWidth) : 300
+                        }
+                    }
+                }
+                
+                Quill.register(InlineImageBlot)
+                
                 // ImageResize 모듈 등록
                 Quill.register('modules/imageResize', ImageResize.default)
                 
@@ -15248,11 +15305,31 @@ console.log('권한 관리 함수 로드 완료')
                                                 const imageUrl = response.data.url
                                                 const range = this.quill.getSelection(true)
                                                 
-                                                // 이미지 삽입 (기본 크기로)
-                                                this.quill.insertEmbed(range.index, 'image', imageUrl)
+                                                // 인라인 이미지로 삽입 (텍스트처럼 취급)
+                                                this.quill.insertEmbed(range.index, 'inlineImage', {
+                                                    url: imageUrl,
+                                                    alt: 'image',
+                                                    width: 300
+                                                })
                                                 this.quill.setSelection(range.index + 1)
                                                 
                                                 showToast('이미지가 삽입되었습니다. 이미지를 클릭하여 크기를 조절하세요', 'success')
+                                                
+                                                // 이미지 클릭 이벤트로 크기 조절 가능하게
+                                                setTimeout(() => {
+                                                    const images = this.quill.root.querySelectorAll('img')
+                                                    images.forEach(img => {
+                                                        img.style.cursor = 'pointer'
+                                                        img.onclick = function(e) {
+                                                            const currentWidth = parseInt(img.style.maxWidth) || 300
+                                                            const newWidth = prompt('이미지 너비를 입력하세요 (px):', currentWidth)
+                                                            if (newWidth && !isNaN(newWidth)) {
+                                                                img.style.maxWidth = `${newWidth}px`
+                                                                showToast(`이미지 크기가 ${newWidth}px로 조정되었습니다`, 'success')
+                                                            }
+                                                        }
+                                                    })
+                                                }, 100)
                                             } catch (error) {
                                                 console.error('이미지 업로드 오류:', error)
                                                 showToast('이미지 업로드 실패', 'error')
@@ -15264,7 +15341,17 @@ console.log('권한 관리 함수 로드 완료')
                         },
                         imageResize: {
                             displaySize: true,
-                            modules: ['Resize', 'DisplaySize']
+                            modules: ['Resize', 'DisplaySize', 'Toolbar'],
+                            handleStyles: {
+                                backgroundColor: 'black',
+                                border: 'none',
+                                color: 'white'
+                            },
+                            displayStyles: {
+                                backgroundColor: 'black',
+                                border: 'none',
+                                color: 'white'
+                            }
                         }
                     }
                 })
@@ -15318,6 +15405,31 @@ console.log('권한 관리 함수 로드 완료')
                 
                 if (template.html_content) {
                     answerTemplateEditor.root.innerHTML = template.html_content
+                    
+                    // 로드된 이미지에 클릭 이벤트 추가
+                    setTimeout(() => {
+                        const images = answerTemplateEditor.root.querySelectorAll('img')
+                        images.forEach(img => {
+                            // 인라인 스타일 적용
+                            if (!img.style.display || img.style.display === 'block') {
+                                img.style.display = 'inline'
+                                img.style.verticalAlign = 'middle'
+                                img.style.margin = '0 2px'
+                            }
+                            img.style.cursor = 'pointer'
+                            
+                            // 클릭 이벤트
+                            img.onclick = function(e) {
+                                const currentWidth = parseInt(img.style.maxWidth) || parseInt(img.width) || 300
+                                const newWidth = prompt('이미지 너비를 입력하세요 (px):', currentWidth)
+                                if (newWidth && !isNaN(newWidth)) {
+                                    img.style.maxWidth = `${newWidth}px`
+                                    img.style.height = 'auto'
+                                    showToast(`이미지 크기가 ${newWidth}px로 조정되었습니다`, 'success')
+                                }
+                            }
+                        })
+                    }, 100)
                 }
             } catch (error) {
                 console.log('템플릿 로드 실패:', error)
