@@ -685,9 +685,20 @@ betting.post('/folders', async (c) => {
     })
   } catch (error) {
     console.error('❌ 배팅 폴더 생성 오류:', error)
-    console.error('에러 상세:', (error as Error).message)
+    console.error('에러 타입:', error.constructor.name)
+    console.error('에러 메시지:', (error as Error).message)
     console.error('스택:', (error as Error).stack)
-    return c.json({ error: '배팅 폴더 생성 중 오류가 발생했습니다.', details: (error as Error).message }, 500)
+    
+    // D1 에러의 경우 더 자세한 정보 출력
+    if (error && typeof error === 'object' && 'cause' in error) {
+      console.error('원인:', error.cause)
+    }
+    
+    return c.json({ 
+      error: '배팅 폴더 생성 중 오류가 발생했습니다.', 
+      details: (error as Error).message,
+      type: error.constructor.name
+    }, 500)
   }
 })
 
