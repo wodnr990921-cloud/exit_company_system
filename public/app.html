@@ -14191,7 +14191,7 @@ console.log('권한 관리 함수 로드 완료')
                 const response = await axios.post(`${API_BASE}/betting/folders`, {
                     ticket_id: currentTicketId,
                     member_id: memberId,
-                    folder_type: folderType === '단폴더' ? 'single' : 'multi',
+                    folder_type: folderType, // 이미 'single' 또는 'multi' 값임
                     total_bet_amount: betAmount,
                     bets: selectedMatches.map(m => ({
                         match_id: m.matchId,
