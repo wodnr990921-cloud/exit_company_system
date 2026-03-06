@@ -177,6 +177,51 @@ betting.post('/matches/bulk', async (c) => {
   }
 })
 
+// 경기 엑셀 업로드
+betting.post('/matches/upload', async (c) => {
+  try {
+    // FormData에서 파일 가져오기
+    const formData = await c.req.formData()
+    const file = formData.get('file')
+    
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: '파일이 필요합니다.' }, 400)
+    }
+    
+    // 파일 검증
+    if (!file.name.match(/\.(xlsx|xls)$/)) {
+      return c.json({ error: '엑셀 파일만 업로드 가능합니다.' }, 400)
+    }
+    
+    return c.json({ 
+      error: '엑셀 업로드 기능은 현재 구현 중입니다. 경기 관리에서 직접 추가하거나 일괄 저장을 사용해주세요.' 
+    }, 501)
+  } catch (error) {
+    console.error('엑셀 업로드 오류:', error)
+    return c.json({ error: '엑셀 업로드 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
+// 경기 템플릿 다운로드
+betting.get('/matches/template', async (c) => {
+  try {
+    // 간단한 CSV 템플릿 반환
+    const template = `match_name,home_team,away_team,match_date,league,home_odds,draw_odds,away_odds,over_line,over_odds,under_odds,handicap_line,handicap_home_odds,handicap_away_odds
+프리미어리그 1라운드,맨시티,리버풀,2026-03-01 20:00,EPL,2.10,3.40,3.50,2.5,1.85,1.95,0.5,1.90,1.90
+라리가 1라운드,레알 마드리드,바르셀로나,2026-03-02 21:00,LA_LIGA,2.20,3.20,3.30,3.5,2.00,1.80,1.0,2.10,1.70`
+    
+    return new Response(template, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="match_template.csv"'
+      }
+    })
+  } catch (error) {
+    console.error('템플릿 다운로드 오류:', error)
+    return c.json({ error: '템플릿 다운로드 중 오류가 발생했습니다.' }, 500)
+  }
+})
+
 // 경기 배당 수정
 betting.patch('/matches/:id', async (c) => {
   try {
